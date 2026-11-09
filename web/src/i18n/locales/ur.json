@@ -363,7 +363,21 @@
     "discount_invalid": "رعایت 100 تک فیصد یا کل رقم تک ہونی چاہیے۔",
     "discount_reason_required": "رعایت کی وجہ لکھیں۔",
     "idempotency_key_reused": "یہ فارم پہلے ہی کسی دوسرے ریکارڈ کے لیے استعمال ہو چکا ہے۔ صفحہ دوبارہ لوڈ کر کے کوشش کریں۔",
-    "priority_invalid": "درست ترجیح منتخب کریں۔"
+    "priority_invalid": "درست ترجیح منتخب کریں۔",
+    "identity_confirmation_required": "نمونہ لینے سے پہلے مریض کی شناخت (دو شناختی نشانیاں) کی تصدیق کریں۔",
+    "sample_not_at_branch": "یہ نمونہ آپ کی برانچ میں نہیں ہے۔",
+    "sample_not_collected": "اس نمونے کی وصولی ابھی نہیں ہوئی۔",
+    "sample_already_collected": "یہ نمونہ پہلے ہی لیا جا چکا ہے۔",
+    "sample_already_received": "یہ نمونہ پہلے ہی موصول ہو چکا ہے۔",
+    "sample_invalid_state": "یہ نمونہ اس مرحلے سے آگے بڑھ چکا ہے۔",
+    "sample_closed": "یہ نمونہ مسترد یا منسوخ ہو چکا ہے۔",
+    "nothing_to_collect": "اس آرڈر کا کوئی نمونہ اس برانچ میں وصولی کا منتظر نہیں۔",
+    "nothing_to_recollect": "اس نمونے کے تمام ٹیسٹ منسوخ ہیں یا ان پر کام شروع ہو چکا ہے۔",
+    "recollection_exists": "متبادل نمونہ پہلے ہی منصوبہ بند ہے۔",
+    "rejection_reason_invalid": "مسترد کرنے کی وجہ منتخب کریں۔",
+    "rejection_note_required": "اس وجہ کے ساتھ مختصر وضاحت درکار ہے۔",
+    "payment_required_before_collection": "نمونہ لینے سے پہلے اس آرڈر کی ادائیگی ضروری ہے۔",
+    "reason_code_taken": "اس کوڈ کی وجہ پہلے سے موجود ہے۔"
   },
   "table": {
     "showing": "{{total}} میں سے {{from}}–{{to}}",

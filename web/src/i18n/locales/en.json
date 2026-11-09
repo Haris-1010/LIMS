@@ -363,7 +363,21 @@
     "discount_invalid": "The discount must be a percentage up to 100 or an amount up to the total.",
     "discount_reason_required": "Give a reason for the discount.",
     "idempotency_key_reused": "This form was already used for a different record. Reload the page and try again.",
-    "priority_invalid": "Choose a valid priority."
+    "priority_invalid": "Choose a valid priority.",
+    "identity_confirmation_required": "Confirm the patient's identity (two identifiers) before collecting.",
+    "sample_not_at_branch": "This sample is not at your branch.",
+    "sample_not_collected": "This sample has not been collected yet.",
+    "sample_already_collected": "This sample was already collected.",
+    "sample_already_received": "This sample was already received.",
+    "sample_invalid_state": "This sample is already past that step.",
+    "sample_closed": "This sample has been rejected or cancelled.",
+    "nothing_to_collect": "This order has no samples waiting to be collected at this branch.",
+    "nothing_to_recollect": "All tests on this sample were cancelled or are already being processed.",
+    "recollection_exists": "A replacement sample has already been planned.",
+    "rejection_reason_invalid": "Choose a rejection reason.",
+    "rejection_note_required": "This reason needs a short explanation.",
+    "payment_required_before_collection": "This order must be paid before the sample is collected.",
+    "reason_code_taken": "A reason with this code already exists."
   },
   "table": {
     "showing": "{{from}}–{{to}} of {{total}}",

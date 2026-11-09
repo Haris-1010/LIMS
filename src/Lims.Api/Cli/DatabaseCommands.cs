@@ -104,6 +104,19 @@ public static class DatabaseCommands
             case "create-admin":
                 return await CreateAdminAsync(app, db, args, log);
 
+            case "plan-samples":
+                // Plans samples (with barcodes) for orders created before samples existed. Safe to run repeatedly.
+                foreach (var targetOrg in await db.Organizations.Select(o => o.Id).ToListAsync())
+                {
+                    using var orgScope = app.Services.CreateScope();
+                    var orgCtx = orgScope.ServiceProvider.GetRequiredService<RequestContext>();
+                    orgCtx.BecomeSystem();
+                    orgCtx.OrganizationId = targetOrg;
+                    var planned = await orgScope.ServiceProvider.GetRequiredService<Lims.Infrastructure.Samples.SampleService>().BackfillAsync(CancellationToken.None);
+                    log.LogInformation("Organisation {OrgId}: samples planned for {Count} order(s)", targetOrg, planned);
+                }
+                return 0;
+
             default:
                 log.LogError("Unknown command 'db {Command}'. Use: db migrate | db seed-demo | db create-admin <ORG> <username> [display name]", args[1]);
                 return 1;

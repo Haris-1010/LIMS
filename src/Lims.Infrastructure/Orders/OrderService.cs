@@ -15,7 +15,7 @@ namespace Lims.Infrastructure.Orders;
 /// Order registration and cancellation. Prices always come from the catalog; totals are computed here.
 /// Order, invoice, lines and the first payment are written in one transaction.
 /// </summary>
-public sealed class OrderService(LimsDbContext db, INumberSequenceService numbers, ILabClock clock, BillingService billing)
+public sealed class OrderService(LimsDbContext db, INumberSequenceService numbers, ILabClock clock, BillingService billing, Samples.SampleService samples)
 {
     private sealed record PlannedTest(int Id, string Code, string NameEn, string? NameUr);
     private sealed record PlannedLine(InvoiceLineKind Kind, int? TestId, int? PackageId, string Code, string NameEn, string? NameUr, decimal Price, List<PlannedTest> Tests);
@@ -100,6 +100,9 @@ public sealed class OrderService(LimsDbContext db, INumberSequenceService number
                     });
             await db.SaveChangesAsync(ct);
 
+            // One sample (tube) per sample type, with barcodes, in the same transaction as the order.
+            await samples.PlanForItemsAsync(order, order.Items.ToList(), null, ct);
+
             if (input.Payment is { } pay)
                 await billing.ReceiveAsync(invoice, new PaymentCreate(Guid.NewGuid(), pay.Method, pay.Amount, pay.Reference), ct);
 
@@ -136,6 +139,7 @@ public sealed class OrderService(LimsDbContext db, INumberSequenceService number
     {
         if (string.IsNullOrWhiteSpace(reason)) throw new BusinessRuleException("cancel_reason_required", "Give a reason for the cancellation.");
         var now = clock.UtcNow;
+        var cancelledItems = new List<LabOrderItem>();
         foreach (var line in lines)
         {
             if (line.IsCancelled) throw BusinessRuleException.Conflict("line_already_cancelled", "This test is already cancelled.");
@@ -153,6 +157,7 @@ public sealed class OrderService(LimsDbContext db, INumberSequenceService number
                 i.Status = OrderItemStatus.Cancelled;
                 i.CancelledAtUtc = now;
                 i.CancelledByUserId = db.Request.UserId;
+                cancelledItems.Add(i);
             }
             db.AddBusinessAudit("Order.TestCancelled", nameof(LabOrder), order.Id, new { line.Code, line.Price }, reason.Trim());
         }
@@ -164,6 +169,7 @@ public sealed class OrderService(LimsDbContext db, INumberSequenceService number
             order.CancelledByUserId = db.Request.UserId;
             order.CancelReason = reason.Trim();
         }
+        await samples.OnItemsCancelledAsync(order.Id, cancelledItems, ct);   // samples with no tests left are cancelled too
         InvoiceCalculator.Recalculate(invoice);
         await db.SaveChangesAsync(ct);
     }

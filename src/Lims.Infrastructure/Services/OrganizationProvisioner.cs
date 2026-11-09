@@ -63,6 +63,13 @@ public sealed class OrganizationProvisioner(LimsDbContext db) : IOrganizationPro
         foreach (var (key, value) in DefaultSettings)
             db.BusinessSettings.Add(new BusinessSetting { OrganizationId = org.Id, Key = key, Value = value });
 
+        var sort = 0;
+        foreach (var r in Domain.Samples.SampleRejectionReasonDefaults.All)
+            db.SampleRejectionReasons.Add(new Domain.Samples.SampleRejectionReason
+            {
+                OrganizationId = org.Id, Code = r.Code, NameEn = r.NameEn, NameUr = r.NameUr, RequiresNote = r.RequiresNote, SortOrder = ++sort * 10,
+            });
+
         var permissionIds = await db.Permissions.ToDictionaryAsync(p => p.Key, p => p.Id, ct);
         foreach (var template in DefaultRoles.All)
         {

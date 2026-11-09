@@ -2367,6 +2367,405 @@ namespace Lims.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Lims.Domain.Samples.Sample", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Barcode")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(40)");
+
+                    b.Property<DateTime?>("CancelledAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<DateTime?>("CollectedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("CollectedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CollectionNotes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("CurrentBranchId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("DestinationBranchId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IdentityConfirmed")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("LabelPrintCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("LastLabelPrintedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<long>("OrderId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OriginBranchId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PatientId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ReceivedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("ReceivedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("RejectedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("RejectedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RejectionNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int?>("RejectionReasonId")
+                        .HasColumnType("int");
+
+                    b.Property<long?>("ReplacesSampleId")
+                        .HasColumnType("bigint");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("SampleTypeId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("UpdatedByUserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId");
+
+                    b.HasIndex("SampleTypeId");
+
+                    b.HasIndex("OrderId", "SampleTypeId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Samples_OneLivePerOrderType")
+                        .HasFilter("[Status] <> 80 AND [Status] <> 90");
+
+                    b.HasIndex("OrganizationId", "Barcode")
+                        .IsUnique();
+
+                    b.HasIndex("OrganizationId", "CurrentBranchId");
+
+                    b.HasIndex("OrganizationId", "DestinationBranchId");
+
+                    b.HasIndex("OrganizationId", "OrderId");
+
+                    b.HasIndex("OrganizationId", "OriginBranchId");
+
+                    b.HasIndex("OrganizationId", "PatientId");
+
+                    b.HasIndex("OrganizationId", "RejectionReasonId");
+
+                    b.HasIndex("OrganizationId", "ReplacesSampleId");
+
+                    b.HasIndex("OrganizationId", "Status", "CurrentBranchId");
+
+                    b.ToTable("Samples", "lab", t =>
+                        {
+                            t.HasCheckConstraint("CK_Samples_Collected", "[Status] IN (0,90) OR ([CollectedAtUtc] IS NOT NULL AND [CollectedByUserId] IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_Samples_InTransit", "[Status] <> 15 OR [DestinationBranchId] IS NOT NULL");
+
+                            t.HasCheckConstraint("CK_Samples_Priority", "[Priority] IN (0,1)");
+
+                            t.HasCheckConstraint("CK_Samples_Received", "[Status] <> 20 OR ([ReceivedAtUtc] IS NOT NULL AND [ReceivedByUserId] IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_Samples_Rejected", "[Status] <> 80 OR ([RejectedAtUtc] IS NOT NULL AND [RejectedByUserId] IS NOT NULL AND [RejectionReasonId] IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_Samples_Status", "[Status] IN (0,10,15,20,80,90)");
+                        });
+                });
+
+            modelBuilder.Entity("Lims.Domain.Samples.SampleEvent", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("AtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("BranchId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<long>("SampleId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(40)");
+
+                    b.Property<int?>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId", "SampleId");
+
+                    b.HasIndex("SampleId", "Id");
+
+                    b.ToTable("SampleEvents", "lab");
+                });
+
+            modelBuilder.Entity("Lims.Domain.Samples.SampleRejectionReason", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(30)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("NameEn")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("NameUr")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("RequiresNote")
+                        .HasColumnType("bit");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("UpdatedByUserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId", "Code")
+                        .IsUnique();
+
+                    b.ToTable("SampleRejectionReasons", "lab");
+                });
+
+            modelBuilder.Entity("Lims.Domain.Samples.SampleTest", b =>
+                {
+                    b.Property<long>("SampleId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("OrderItemId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.HasKey("SampleId", "OrderItemId");
+
+                    b.HasIndex("OrderItemId");
+
+                    b.HasIndex("OrganizationId", "OrderItemId");
+
+                    b.HasIndex("OrganizationId", "SampleId");
+
+                    b.ToTable("SampleTests", "lab");
+                });
+
+            modelBuilder.Entity("Lims.Domain.Samples.SampleTransfer", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("CompletedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("DispatchedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int>("DispatchedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("FromBranchId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ToBranchId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TransferNo")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(30)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("UpdatedByUserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId", "FromBranchId");
+
+                    b.HasIndex("OrganizationId", "ToBranchId");
+
+                    b.HasIndex("OrganizationId", "TransferNo")
+                        .IsUnique();
+
+                    b.HasIndex("OrganizationId", "Status", "ToBranchId");
+
+                    b.ToTable("SampleTransfers", "lab", t =>
+                        {
+                            t.HasCheckConstraint("CK_SampleTransfers_Branches", "[FromBranchId] <> [ToBranchId]");
+
+                            t.HasCheckConstraint("CK_SampleTransfers_Status", "[Status] IN (0,1,2)");
+                        });
+                });
+
+            modelBuilder.Entity("Lims.Domain.Samples.SampleTransferItem", b =>
+                {
+                    b.Property<long>("TransferId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("SampleId")
+                        .HasColumnType("bigint");
+
+                    b.Property<bool>("MarkedMissing")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ReceivedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("ReceivedByUserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("TransferId", "SampleId");
+
+                    b.HasIndex("SampleId");
+
+                    b.HasIndex("OrganizationId", "SampleId");
+
+                    b.HasIndex("OrganizationId", "TransferId");
+
+                    b.ToTable("SampleTransferItems", "lab");
+                });
+
             modelBuilder.Entity("Lims.Domain.Security.LoginHistory", b =>
                 {
                     b.Property<long>("Id")
@@ -3417,6 +3816,135 @@ namespace Lims.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
                 });
 
+            modelBuilder.Entity("Lims.Domain.Samples.Sample", b =>
+                {
+                    b.HasOne("Lims.Domain.Catalog.SampleType", null)
+                        .WithMany()
+                        .HasForeignKey("SampleTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lims.Domain.Core.Branch", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "CurrentBranchId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lims.Domain.Core.Branch", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "DestinationBranchId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Lims.Domain.Orders.LabOrder", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "OrderId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lims.Domain.Core.Branch", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "OriginBranchId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lims.Domain.Patients.Patient", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "PatientId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lims.Domain.Samples.SampleRejectionReason", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "RejectionReasonId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Lims.Domain.Samples.Sample", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "ReplacesSampleId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("Lims.Domain.Samples.SampleEvent", b =>
+                {
+                    b.HasOne("Lims.Domain.Samples.Sample", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "SampleId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Lims.Domain.Samples.SampleRejectionReason", b =>
+                {
+                    b.HasOne("Lims.Domain.Core.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Lims.Domain.Samples.SampleTest", b =>
+                {
+                    b.HasOne("Lims.Domain.Orders.LabOrderItem", "OrderItem")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "OrderItemId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lims.Domain.Samples.Sample", "Sample")
+                        .WithMany("Tests")
+                        .HasForeignKey("OrganizationId", "SampleId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("OrderItem");
+
+                    b.Navigation("Sample");
+                });
+
+            modelBuilder.Entity("Lims.Domain.Samples.SampleTransfer", b =>
+                {
+                    b.HasOne("Lims.Domain.Core.Branch", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "FromBranchId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lims.Domain.Core.Branch", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "ToBranchId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Lims.Domain.Samples.SampleTransferItem", b =>
+                {
+                    b.HasOne("Lims.Domain.Samples.Sample", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "SampleId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lims.Domain.Samples.SampleTransfer", null)
+                        .WithMany("Items")
+                        .HasForeignKey("OrganizationId", "TransferId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Lims.Domain.Security.Role", b =>
                 {
                     b.HasOne("Lims.Domain.Core.Organization", null)
@@ -3537,6 +4065,16 @@ namespace Lims.Infrastructure.Persistence.Migrations
                 });
 
             modelBuilder.Entity("Lims.Domain.Orders.LabOrder", b =>
+                {
+                    b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("Lims.Domain.Samples.Sample", b =>
+                {
+                    b.Navigation("Tests");
+                });
+
+            modelBuilder.Entity("Lims.Domain.Samples.SampleTransfer", b =>
                 {
                     b.Navigation("Items");
                 });

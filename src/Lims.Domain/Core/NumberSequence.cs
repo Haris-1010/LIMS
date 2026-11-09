@@ -22,6 +22,7 @@ public static class SequenceTypes
     public const string CorporateInvoice = "CorporateInvoice";
     public const string PurchaseReceipt = "PurchaseReceipt";
     public const string Refund = "Refund";
+    public const string Transfer = "Transfer";
 
     /// <summary>
     /// Default numbering for each type. New organisations get all of them; a type added in a later
@@ -36,6 +37,7 @@ public static class SequenceTypes
             [Receipt] = ("RCP", 5, SequenceResetPolicy.Monthly),
             [Refund] = ("RFD", 4, SequenceResetPolicy.Monthly),
             [Sample] = ("S", 4, SequenceResetPolicy.Daily),
+            [Transfer] = ("TRF", 4, SequenceResetPolicy.Monthly),
             [CorporateInvoice] = ("CINV", 4, SequenceResetPolicy.Yearly),
             [PurchaseReceipt] = ("GRN", 4, SequenceResetPolicy.Yearly),
         };

@@ -38,6 +38,13 @@ public sealed partial class LimsDbContext(DbContextOptions<LimsDbContext> option
     public DbSet<Domain.Billing.Payment> Payments => Set<Domain.Billing.Payment>();
     public DbSet<Domain.Billing.Refund> Refunds => Set<Domain.Billing.Refund>();
     public DbSet<Domain.Billing.CashDrawerSession> CashDrawerSessions => Set<Domain.Billing.CashDrawerSession>();
+    // ---- samples (visibility is applied explicitly in SampleService, see its VISIBILITY-GATE lines)
+    public DbSet<Domain.Samples.Sample> Samples => Set<Domain.Samples.Sample>();
+    public DbSet<Domain.Samples.SampleTest> SampleTests => Set<Domain.Samples.SampleTest>();
+    public DbSet<Domain.Samples.SampleEvent> SampleEvents => Set<Domain.Samples.SampleEvent>();
+    public DbSet<Domain.Samples.SampleRejectionReason> SampleRejectionReasons => Set<Domain.Samples.SampleRejectionReason>();
+    public DbSet<Domain.Samples.SampleTransfer> SampleTransfers => Set<Domain.Samples.SampleTransfer>();
+    public DbSet<Domain.Samples.SampleTransferItem> SampleTransferItems => Set<Domain.Samples.SampleTransferItem>();
     // ---- catalog reference data
     public DbSet<Unit> Units => Set<Unit>();
     public DbSet<SampleType> SampleTypes => Set<SampleType>();

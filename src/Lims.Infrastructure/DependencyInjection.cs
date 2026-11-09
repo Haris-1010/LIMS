@@ -35,6 +35,7 @@ public static class DependencyInjection
         services.AddScoped<Patients.DoctorService>();
         services.AddScoped<Catalog.CatalogService>();
         services.AddScoped<Catalog.ReferenceRangeService>();
+        services.AddScoped<Samples.SampleService>();
         services.AddScoped<Orders.BillingService>();
         services.AddScoped<Orders.OrderService>();
         return services;
