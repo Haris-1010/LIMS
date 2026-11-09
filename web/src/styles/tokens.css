@@ -1,0 +1,113 @@
+/*
+ * LIMS design tokens — "Clinical Navy".
+ * Every colour, radius, shadow and spacing value in the app comes from here.
+ * Components use logical properties (inline-start/end) so the same CSS works for LTR and RTL.
+ */
+:root {
+  color-scheme: light;
+
+  /* Brand — navy primary */
+  --primary-25: #f5f8fc;
+  --primary-50: #eef4fb;
+  --primary-100: #d9e6f5;
+  --primary-200: #b3cdea;
+  --primary-300: #7fa7d6;
+  --primary-500: #2c64a6;
+  --primary-600: #1d4e89;
+  --primary-700: #163b69;
+  --primary-800: #10294a;
+  --primary-900: #0b1c33;
+
+  /* Accent — teal, used sparingly */
+  --accent-50: #e7f7f6;
+  --accent-100: #c4ece9;
+  --accent-500: #0e9f9a;
+  --accent-600: #0b827e;
+
+  /* Neutrals */
+  --bg: #f7f8fa;
+  --surface: #ffffff;
+  --surface-2: #fbfcfd;
+  --surface-hover: #f4f6f9;
+  --border: #e4e7ec;
+  --border-strong: #d0d5dd;
+  --text: #0f172a;
+  --text-2: #344054;
+  --muted: #64748b;
+  --subtle: #98a2b3;
+
+  /* Status — always paired with an icon or label */
+  --success: #12a26b;
+  --success-text: #0b7a4f;
+  --success-bg: #e8f7f0;
+  --warning: #d98b0b;
+  --warning-text: #9a5f00;
+  --warning-bg: #fdf4e3;
+  --danger: #d64545;
+  --danger-text: #b42f2f;
+  --danger-bg: #fcecec;
+  --info: #2f80ed;
+  --info-text: #1d5fbf;
+  --info-bg: #eaf2fd;
+
+  /* Charts (validated for colour-blind separation on white) */
+  --chart-1: #2c64a6;
+  --chart-2: #0e9f9a;
+  --chart-grid: #eef0f3;
+  --chart-axis: #98a2b3;
+
+  /* Shape */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 999px;
+
+  /* Elevation */
+  --shadow-xs: 0 1px 2px rgba(16, 24, 40, 0.05);
+  --shadow-sm: 0 1px 3px rgba(16, 24, 40, 0.07), 0 1px 2px rgba(16, 24, 40, 0.04);
+  --shadow-md: 0 6px 16px -4px rgba(16, 24, 40, 0.08), 0 2px 4px -2px rgba(16, 24, 40, 0.04);
+  --shadow-lg: 0 20px 40px -12px rgba(16, 24, 40, 0.2);
+  --ring: 0 0 0 3px rgba(44, 100, 166, 0.22);
+  --ring-danger: 0 0 0 3px rgba(214, 69, 69, 0.2);
+
+  /* Spacing (4px scale) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  /* Typography */
+  --font-sans: 'Inter Variable', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-urdu: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', 'Segoe UI', serif;
+  --font-body: var(--font-sans);
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+  --leading: 1.5;
+
+  /* Layout */
+  --sidebar-w: 256px;
+  --sidebar-w-collapsed: 72px;
+  --header-h: 64px;
+  --content-max: 1440px;
+  --transition: 160ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Urdu: Nastaliq needs a larger size and taller lines to stay legible. */
+:root[lang='ur'] {
+  --font-body: var(--font-urdu), var(--font-sans);
+  --leading: 2;
+  --text-xs: 0.8125rem;
+  --text-sm: 0.875rem;
+  --text-base: 0.9375rem;
+}

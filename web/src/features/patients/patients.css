@@ -1,0 +1,138 @@
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: 550;
+  color: var(--muted);
+}
+.back-link:hover { color: var(--primary-600); }
+
+/* Profile header */
+.patient-hero {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  padding: var(--space-5) var(--space-6);
+  background:
+    linear-gradient(120deg, var(--primary-25), transparent 55%),
+    var(--surface);
+}
+.patient-avatar {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  border-radius: var(--radius-xl);
+  background: linear-gradient(135deg, var(--primary-600), var(--accent-500));
+  color: #fff;
+  font-family: var(--font-sans);
+  font-size: 1.6rem;
+  font-weight: 650;
+  box-shadow: var(--shadow-md);
+}
+.patient-hero-main { flex: 1; min-width: 0; }
+.patient-hero-top { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-3); }
+.patient-hero-top h2 { font-size: var(--text-xl); }
+.patient-no {
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  background: var(--primary-50);
+  color: var(--primary-700);
+  font-size: var(--text-sm);
+  font-weight: 650;
+}
+.patient-name-ur { font-family: var(--font-urdu); color: var(--text-2); line-height: 2; }
+.patient-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px var(--space-4);
+  margin-top: 6px;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+.patient-facts > span { display: inline-flex; align-items: center; gap: 6px; }
+.patient-facts > span + span::before {
+  content: '';
+  width: 4px;
+  height: 4px;
+  margin-inline-end: var(--space-2);
+  border-radius: 50%;
+  background: var(--border-strong);
+}
+.patient-hero-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+/* Detail lists */
+.details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4) var(--space-6);
+  margin: 0;
+}
+.details-grid.one-col { grid-template-columns: 1fr; gap: var(--space-3); }
+.detail { min-width: 0; }
+.detail.wide { grid-column: 1 / -1; }
+.detail dt { font-size: var(--text-xs); color: var(--muted); font-weight: 550; margin-bottom: 2px; }
+.detail dd { margin: 0; font-size: var(--text-base); color: var(--text); overflow-wrap: anywhere; }
+.detail-empty { color: var(--subtle); }
+.urdu-text { font-family: var(--font-urdu); line-height: 2; }
+.one-col .detail { display: grid; grid-template-columns: 130px 1fr; gap: var(--space-3); align-items: baseline; }
+
+/* Patient form */
+.patient-grid { grid-template-columns: 120px minmax(0, 1fr) minmax(0, 1fr); }
+.patient-grid > :nth-child(4) { grid-column: 2 / 4; }
+@media (max-width: 640px) { .patient-grid { grid-template-columns: 1fr; } .patient-grid > :nth-child(4) { grid-column: auto; } }
+.age-grid { display: grid; grid-template-columns: repeat(3, 110px); gap: var(--space-3); margin-bottom: 6px; }
+.search-wide { flex: 1; max-width: 520px; }
+.search-wide .search-input { max-width: none; }
+
+/* Duplicate warning */
+.dup-panel {
+  margin-bottom: var(--space-5);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid #f6e0b5;
+  border-radius: var(--radius-lg);
+  background: var(--warning-bg);
+}
+.dup-panel.is-blocking { border-color: var(--warning); box-shadow: 0 0 0 3px rgba(217, 139, 11, 0.15); }
+.dup-head { display: flex; gap: var(--space-3); color: var(--warning-text); }
+.dup-head svg { flex-shrink: 0; margin-top: 3px; }
+.dup-head p { font-size: var(--text-sm); color: var(--text-2); }
+.dup-panel ul { margin: var(--space-3) 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.dup-panel li {
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1.4fr) 90px 110px minmax(0, 1.2fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 8px var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  font-size: var(--text-sm);
+}
+.dup-reasons { font-size: var(--text-xs); color: var(--warning-text); font-weight: 550; }
+
+@media (max-width: 900px) {
+  .patient-hero { flex-wrap: wrap; }
+  .dup-panel li { grid-template-columns: 1fr 1fr; }
+  .details-grid { grid-template-columns: 1fr; }
+}
+
+/* ---------- Printing: only the registration slip ---------- */
+.print-slip { display: none; }
+@media print {
+  @page { size: A5 portrait; margin: 12mm; }
+  body { background: #fff; }
+  .sidebar, .header, .no-print, .toasts { display: none !important; }
+  .main { margin: 0 !important; }
+  .page { padding: 0; max-width: none; }
+  .print-slip { display: block; color: #000; font-size: 11pt; }
+  .print-slip header { display: flex; flex-direction: column; gap: 2px; padding-bottom: 6mm; border-bottom: 1px solid #000; }
+  .print-slip header strong { font-size: 14pt; }
+  .slip-no { margin: 6mm 0; font-size: 26pt; font-weight: 700; letter-spacing: 0.04em; text-align: center; }
+  .print-slip table { width: 100%; border-collapse: collapse; }
+  .print-slip th, .print-slip td { padding: 2mm 0; border-bottom: 0.5pt solid #bbb; text-align: start; vertical-align: top; }
+  .print-slip th { width: 38%; font-weight: 600; color: #333; }
+  .print-slip footer { margin-top: 8mm; font-size: 9pt; color: #444; text-align: center; }
+}

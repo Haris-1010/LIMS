@@ -1,0 +1,85 @@
+@import '../patients/patients.css';
+
+/* ---------- New order layout ---------- */
+.order-layout { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(320px, 1fr); gap: var(--space-4); align-items: start; }
+.bill-panel { position: sticky; top: calc(var(--header-h) + var(--space-4)); }
+@media (max-width: 1100px) { .order-layout { grid-template-columns: 1fr; } .bill-panel { position: static; } }
+
+.picked-patient { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); border: 1px solid var(--primary-100); border-radius: var(--radius-lg); background: var(--primary-25); }
+
+.picker-list { margin: 6px 0 0; padding: 4px; list-style: none; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow-md); }
+.picker-list button {
+  display: grid; grid-template-columns: 92px minmax(0, 1fr) auto; align-items: center; gap: var(--space-3);
+  width: 100%; padding: 9px var(--space-3); border: 0; border-radius: var(--radius-md); background: none; font-size: var(--text-sm); text-align: start; cursor: pointer;
+}
+.picker-list button:hover, .picker-list button:focus-visible { background: var(--primary-50); box-shadow: none; }
+.picker-empty { padding: var(--space-3); font-size: var(--text-sm); color: var(--muted); }
+
+.cart { margin: 0; padding: 0; list-style: none; }
+.cart li { display: grid; grid-template-columns: minmax(0, 1fr) auto 36px; align-items: center; gap: var(--space-3); padding: 10px 0; border-bottom: 1px solid var(--border); }
+.cart li:last-child { border-bottom: 0; }
+
+/* ---------- Bill ---------- */
+.bill-lines { margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.bill-lines > div { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); font-size: var(--text-sm); color: var(--text-2); }
+.bill-lines dt { margin: 0; }
+.bill-lines dd { margin: 0; }
+.bill-net { padding-top: 10px; border-top: 1px dashed var(--border-strong); font-size: var(--text-md) !important; font-weight: 650; color: var(--text) !important; }
+.bill-net dd { font-size: var(--text-xl); }
+.bill-discount { flex-direction: column; align-items: stretch !important; gap: var(--space-3) !important; }
+.discount-fields { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-3); border-radius: var(--radius-md); background: var(--surface-2); }
+.invoice-totals { padding: var(--space-4) var(--space-5); border-top: 1px solid var(--border); background: var(--surface-2); border-radius: 0 0 var(--radius-lg) var(--radius-lg); }
+.bill-balance dd { font-weight: 650; }
+.bill-balance.is-open { color: var(--danger-text) !important; }
+
+.method-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: var(--space-2); }
+.method { height: 38px; padding: 0 var(--space-2); border: 1px solid var(--border-strong); border-radius: var(--radius-md); background: var(--surface); font-size: var(--text-sm); font-weight: 550; color: var(--text-2); cursor: pointer; }
+.method:hover { border-color: var(--primary-300); }
+.method.is-on { border-color: var(--primary-600); background: var(--primary-50); color: var(--primary-700); box-shadow: inset 0 0 0 1px var(--primary-600); }
+.change-due { display: flex; align-items: center; justify-content: space-between; padding: 10px var(--space-3); border-radius: var(--radius-md); background: var(--success-bg); color: var(--success-text); font-size: var(--text-sm); }
+.change-due.is-warning { background: var(--warning-bg); color: var(--warning-text); }
+.change-due strong { font-size: var(--text-md); }
+
+/* ---------- Order detail ---------- */
+.order-hero { display: flex; gap: var(--space-5); padding: var(--space-5) var(--space-6); }
+.order-hero h2 { font-size: var(--text-xl); }
+.struck { text-decoration: line-through; color: var(--subtle) !important; }
+.table tr.is-retired td { color: var(--subtle); }
+.ledger { margin: 0; padding: 0; list-style: none; }
+.ledger li { display: grid; grid-template-columns: minmax(0, 1fr) auto 36px; align-items: center; gap: var(--space-3); padding: 10px 0; border-bottom: 1px solid var(--border); }
+.ledger li:last-child { border-bottom: 0; }
+.ledger li.is-refund .num { color: var(--danger-text); }
+
+/* ---------- Cash drawer ---------- */
+.drawer-figures { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-4); margin: 0; }
+.drawer-figures dt { font-size: var(--text-xs); color: var(--muted); font-weight: 550; }
+.drawer-figures dd { margin: 4px 0 0; font-size: var(--text-xl); font-weight: 650; }
+.drawer-figures .is-total { padding-inline-start: var(--space-4); border-inline-start: 1px solid var(--border); }
+.drawer-open-form { display: flex; align-items: flex-end; justify-content: center; gap: var(--space-3); margin: 0 auto var(--space-6); max-width: 420px; }
+.drawer-open-form .field { flex: 1; }
+@media (max-width: 800px) { .drawer-figures { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ---------- Receipt (printed only) ---------- */
+.receipt { display: none; }
+@media print {
+  body.printing-receipt #root { display: none !important; }
+  body.printing-receipt .toasts, body.printing-receipt .overlay { display: none !important; }
+  body.printing-receipt .receipt { display: block; width: 76mm; margin: 0 auto; padding: 2mm 0; color: #000; font-size: 9.5pt; line-height: 1.35; }
+  body.printing-receipt { background: #fff; }
+  .receipt header { display: flex; flex-direction: column; align-items: center; gap: 1px; padding-bottom: 3mm; border-bottom: 1px dashed #000; text-align: center; }
+  .receipt header strong { font-size: 12pt; }
+  .receipt-title { margin-top: 2mm; font-weight: 700; letter-spacing: 0.04em; }
+  .receipt dl { margin: 3mm 0; }
+  .receipt dl div { display: flex; justify-content: space-between; gap: 4mm; }
+  .receipt dt { color: #333; }
+  .receipt dd { margin: 0; font-weight: 600; text-align: end; }
+  .receipt table { width: 100%; border-collapse: collapse; }
+  .receipt td { padding: 1mm 0; vertical-align: top; }
+  .receipt td:last-child { text-align: end; white-space: nowrap; }
+  .receipt tfoot tr:first-child td { border-top: 1px dashed #000; padding-top: 2mm; }
+  .receipt tfoot .strong td { font-weight: 700; }
+  .receipt-paid, .receipt-balance { display: flex; justify-content: space-between; margin-top: 2mm; }
+  .receipt-paid { padding: 2mm 0; border-top: 1px solid #000; border-bottom: 1px solid #000; font-size: 11pt; }
+  .receipt footer { display: flex; flex-direction: column; gap: 1mm; margin-top: 4mm; font-size: 8pt; color: #333; text-align: center; }
+  @page { size: 80mm auto; margin: 3mm; }
+}
