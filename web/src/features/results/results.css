@@ -1,0 +1,32 @@
+@import '../patients/patients.css';
+
+/* ---------- Result entry ---------- */
+.entry-banner { display: flex; flex-wrap: wrap; gap: var(--space-5); align-items: flex-start; padding: var(--space-5) var(--space-6); }
+.entry-banner h2 { font-size: var(--text-xl); }
+.entry-table { width: 100%; border-collapse: collapse; }
+.entry-table th { padding: 8px var(--space-3); text-align: start; font-size: var(--text-xs); font-weight: 650; color: var(--muted); border-bottom: 1px solid var(--border); }
+.entry-table td { padding: 8px var(--space-3); border-bottom: 1px solid var(--border); vertical-align: middle; }
+.entry-table tr.group-row td { padding-top: var(--space-4); font-size: var(--text-xs); font-weight: 650; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; background: var(--surface-2); }
+:root[lang='ur'] .entry-table tr.group-row td { text-transform: none; letter-spacing: 0; font-size: var(--text-sm); }
+.entry-table tr.is-critical td { background: var(--danger-bg); }
+.entry-table tr.is-abnormal td { background: var(--warning-bg); }
+.entry-input { width: 100%; min-width: 120px; font-size: var(--text-md); font-variant-numeric: tabular-nums; }
+.entry-input[data-numeric='true'] { direction: ltr; text-align: end; }
+.entry-value { font-weight: 650; font-variant-numeric: tabular-nums; }
+.entry-actions { position: sticky; bottom: 0; display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; justify-content: flex-end; padding: var(--space-3) var(--space-5); border-top: 1px solid var(--border); background: var(--surface); border-radius: 0 0 var(--radius-lg) var(--radius-lg); }
+.entry-actions .grow { flex: 1; color: var(--muted); font-size: var(--text-sm); }
+.notice { display: flex; gap: var(--space-3); align-items: flex-start; padding: 10px var(--space-4); border-radius: var(--radius-md); font-size: var(--text-sm); }
+.notice.is-info { background: var(--info-bg); color: var(--info-text); }
+.notice.is-warning { background: var(--warning-bg); color: var(--warning-text); }
+.notice.is-danger { background: var(--danger-bg); color: var(--danger-text); }
+.overdue { color: var(--danger-text); font-weight: 600; }
+
+/* ---------- Worklist sheet (printed) ---------- */
+@media print {
+  body.printing-dialog #root, body.printing-dialog .toasts { display: none !important; }
+  body.printing-dialog { background: #fff; overflow: visible !important; }
+  body.printing-dialog .overlay { position: static; display: block; padding: 0; background: none; backdrop-filter: none; }
+  body.printing-dialog .modal { max-height: none; width: 100%; max-width: none; border: 0; box-shadow: none; }
+  body.printing-dialog .modal-body { overflow: visible; }
+  body.printing-dialog .modal-footer, body.printing-dialog .modal-header .icon-btn, body.printing-dialog .no-print { display: none; }
+}

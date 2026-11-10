@@ -10,6 +10,7 @@ import { EmptyState } from '../ui/EmptyState'
 import { Skeleton } from '../ui/Skeleton'
 import { Header } from './Header'
 import { Sidebar } from './Sidebar'
+import { LabelPrintHost } from '../../features/samples/LabelPrintHost'
 
 const COLLAPSE_KEY = 'lims.sidebar.collapsed'
 
@@ -21,6 +22,7 @@ export function Splash() {
         <BrandMark />
         <span>{t('common.starting')}</span>
       </div>
+      <LabelPrintHost />
     </div>
   )
 }
@@ -84,6 +86,7 @@ export function AppShell() {
           )}
         </main>
       </div>
+      <LabelPrintHost />
     </div>
   )
 }

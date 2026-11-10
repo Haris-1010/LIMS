@@ -1,0 +1,63 @@
+@import '../patients/patients.css';
+
+/* ---------- Label (on screen preview and printed) ---------- */
+.sample-label {
+  box-sizing: border-box; width: var(--label-w, 50mm); height: var(--label-h, 25mm); padding: 1.2mm 1.8mm; overflow: hidden;
+  display: flex; flex-direction: column; gap: 0.3mm; background: #fff; color: #000; font-size: 6.5pt; line-height: 1.15;
+}
+.sl-top { display: flex; align-items: baseline; justify-content: space-between; gap: 2mm; }
+.sl-name { font-size: 8pt; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sl-urgent { flex: none; padding: 0 1mm; border: 0.2mm solid #000; font-size: 6pt; font-weight: 700; }
+.sl-meta, .sl-code { white-space: nowrap; }
+.sl-code { text-align: center; font-size: 7pt; letter-spacing: 0.08em; }
+.sl-bars { flex: 1; min-height: 0; display: flex; align-items: stretch; }
+.sl-bars .barcode { height: 100% !important; }
+.sl-foot { display: flex; justify-content: space-between; gap: 2mm; white-space: nowrap; overflow: hidden; }
+.sl-foot > :first-child { overflow: hidden; text-overflow: ellipsis; }
+.sl-date { color: #222; }
+
+.label-preview { display: flex; justify-content: center; padding: var(--space-4); border-radius: var(--radius-md); background: var(--surface-2); border: 1px dashed var(--border-strong); }
+.label-preview .sample-label { border: 1px solid #000; box-shadow: var(--shadow-sm); transform-origin: top center; zoom: 1.8; }
+
+.label-sheet { display: none; }
+@media print {
+  body.printing-labels #root, body.printing-labels .toasts, body.printing-labels .overlay { display: none !important; }
+  body.printing-labels { background: #fff; margin: 0; }
+  body.printing-labels .label-sheet { display: block; }
+  body.printing-labels .sample-label { break-after: page; page-break-after: always; }
+}
+
+@media print {
+  body.printing-manifest #root, body.printing-manifest .toasts { display: none !important; }
+  body.printing-manifest { background: #fff; overflow: visible !important; }
+  body.printing-manifest .overlay { position: static; display: block; padding: 0; background: none; backdrop-filter: none; }
+  body.printing-manifest .modal { max-height: none; width: 100%; max-width: none; border: 0; box-shadow: none; }
+  body.printing-manifest .modal-body { overflow: visible; }
+  body.printing-manifest .modal-footer, body.printing-manifest .modal-header .icon-btn { display: none; }
+}
+
+/* ---------- Scan box ---------- */
+.scan-box { display: flex; gap: var(--space-3); align-items: flex-end; flex-wrap: wrap; }
+.scan-box .field { flex: 1; min-width: 240px; }
+.scan-input { font-size: var(--text-lg); letter-spacing: 0.04em; }
+
+.queue-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--space-3); }
+.queue-card { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); }
+.queue-card.is-urgent { border-color: var(--danger); box-shadow: inset 3px 0 0 var(--danger); }
+.queue-card header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-2); }
+.queue-card footer { display: flex; gap: var(--space-2); margin-top: auto; }
+.cap-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 1px solid var(--border-strong); margin-inline-end: 6px; background: var(--cap, #ccc); }
+
+/* ---------- Timeline ---------- */
+.timeline { margin: 0; padding: 0; list-style: none; position: relative; }
+.timeline li { position: relative; padding-inline-start: 22px; padding-bottom: var(--space-4); }
+.timeline li::before { content: ''; position: absolute; inset-inline-start: 4px; top: 6px; width: 9px; height: 9px; border-radius: 50%; background: var(--primary-500); }
+.timeline li::after { content: ''; position: absolute; inset-inline-start: 8px; top: 15px; bottom: -2px; width: 1px; background: var(--border-strong); }
+.timeline li:last-child::after { display: none; }
+.timeline li.is-bad::before { background: var(--danger); }
+.timeline li.is-good::before { background: var(--success); }
+
+.manifest-pick { display: flex; flex-direction: column; gap: 6px; max-height: 260px; overflow: auto; }
+.manifest-pick label { display: flex; align-items: center; gap: var(--space-3); padding: 8px var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-md); cursor: pointer; font-size: var(--text-sm); }
+.manifest-pick label:hover { background: var(--primary-25); }
+.sr-live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }

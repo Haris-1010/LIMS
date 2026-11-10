@@ -11,8 +11,27 @@ namespace Lims.Api.Controllers;
 [ApiController]
 [Route("api/users")]
 [HasPermission(Permissions.UsersManage)]
-public sealed class UsersController(UserService users) : ControllerBase
+public sealed class UsersController(UserService users, Lims.Infrastructure.Reports.SignatureService signatures) : ControllerBase
 {
+    [HttpPut("{id:int}/signature")]
+    [RequestSizeLimit(Lims.Domain.Reports.ImageSniffer.MaxSignatureBytes + 100_000)]
+    public async Task<IActionResult> SetSignature(int id, IFormFile file, CancellationToken ct)
+    {
+        if (file.Length > Lims.Domain.Reports.ImageSniffer.MaxSignatureBytes) throw new Lims.Application.Common.BusinessRuleException("image_too_large", "The image is too large.", 400, new { maxBytes = Lims.Domain.Reports.ImageSniffer.MaxSignatureBytes });
+        await using var s = file.OpenReadStream();
+        var bytes = new byte[file.Length];
+        await s.ReadExactlyAsync(bytes, ct);
+        await signatures.SetAsync(id, bytes, ct);
+        return NoContent();
+    }
+
+    [HttpDelete("{id:int}/signature")]
+    public async Task<IActionResult> DeleteSignature(int id, CancellationToken ct)
+    {
+        await signatures.DeleteAsync(id, ct);
+        return NoContent();
+    }
+
     [HttpGet]
     public async Task<IActionResult> List([FromQuery] UserQuery query, CancellationToken ct) => Ok(await users.ListAsync(query, ct));
 

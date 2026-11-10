@@ -10,7 +10,10 @@ internal sealed class UserConfig : IEntityTypeConfiguration<User>
     public void Configure(EntityTypeBuilder<User> b)
     {
         b.ToTable("Users", "security", t =>
-            t.HasCheckConstraint("CK_Users_PreferredLanguage", "[PreferredLanguage] IN ('en','ur')"));
+        {
+            t.HasCheckConstraint("CK_Users_PreferredLanguage", "[PreferredLanguage] IN ('en','ur')");
+            t.HasCheckConstraint("CK_Users_Signature", "[SignatureImage] IS NULL OR (DATALENGTH([SignatureImage]) <= 204800 AND [SignatureContentType] IN ('image/png','image/jpeg'))");
+        });
         b.HasAlternateKey(x => new { x.OrganizationId, x.Id });
         b.Property(x => x.Username).HasMaxLength(64);
         b.Property(x => x.DisplayNameEn).HasMaxLength(Len.Name);
@@ -18,6 +21,8 @@ internal sealed class UserConfig : IEntityTypeConfiguration<User>
         b.Property(x => x.Email).HasMaxLength(Len.Email);
         b.Property(x => x.Phone).HasMaxLength(Len.Phone);
         b.Property(x => x.Designation).HasMaxLength(Len.Name);
+        b.Property(x => x.RegistrationNo).HasMaxLength(50);
+        b.Property(x => x.SignatureContentType).HasMaxLength(50).IsUnicode(false);
         b.Property(x => x.PasswordHash).HasMaxLength(512).IsUnicode(false);
         b.Property(x => x.SecurityStamp).HasMaxLength(64).IsUnicode(false);
         b.Property(x => x.PreferredLanguage).HasMaxLength(2).IsUnicode(false);

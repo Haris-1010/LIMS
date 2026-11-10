@@ -21,6 +21,8 @@ public sealed record QuoteRequest
 {
     public OrderLineRequest[] Items { get; init; } = [];
     public DiscountRequest? Discount { get; init; }
+    /// <summary>Price the quote as a credit order for this corporate client (contract prices and discount).</summary>
+    public int? CorporateClientId { get; init; }
 }
 
 public sealed record OrderCreate
@@ -34,6 +36,8 @@ public sealed record OrderCreate
     public OrderLineRequest[] Items { get; init; } = [];
     public DiscountRequest? Discount { get; init; }
     public PaymentRequest? Payment { get; init; }
+    /// <summary>Bill this order on account to a corporate client (credit order). No payment is taken at the counter.</summary>
+    public int? CorporateClientId { get; init; }
 }
 
 public sealed record PaymentCreate(Guid IdempotencyKey, PaymentMethod Method, [Range(typeof(decimal), "0.01", "10000000")] decimal Amount, [MaxLength(100)] string? Reference);
@@ -88,7 +92,7 @@ public sealed record OrderItemDto(long Id, long InvoiceLineId, string TestCode, 
 public sealed record OrderDetail(
     long Id, string OrderNo, DateTime CreatedAtUtc, string? CreatedByName, int BranchId, string BranchName, string? BranchNameUr,
     OrderPatient Patient, int? ReferringDoctorId, string? ReferringDoctorName, OrderPriority Priority, string? ClinicalNotes,
-    OrderStatus Status, string? CancelReason, IReadOnlyList<OrderItemDto> Items, InvoiceDto Invoice);
+    OrderStatus Status, string? CancelReason, IReadOnlyList<OrderItemDto> Items, InvoiceDto Invoice, int? CorporateClientId = null, string? CorporateClientName = null);
 
 public sealed record OrderListItem(
     long Id, string OrderNo, DateTime CreatedAtUtc, int PatientId, string PatientNo, string PatientName, string? PatientNameUr,

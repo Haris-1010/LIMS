@@ -45,6 +45,36 @@ public sealed partial class LimsDbContext(DbContextOptions<LimsDbContext> option
     public DbSet<Domain.Samples.SampleRejectionReason> SampleRejectionReasons => Set<Domain.Samples.SampleRejectionReason>();
     public DbSet<Domain.Samples.SampleTransfer> SampleTransfers => Set<Domain.Samples.SampleTransfer>();
     public DbSet<Domain.Samples.SampleTransferItem> SampleTransferItems => Set<Domain.Samples.SampleTransferItem>();
+
+    // ---- results (TestResults are not branch-filtered; ResultService applies the visibility rule explicitly)
+    public DbSet<Domain.Results.TestResult> TestResults => Set<Domain.Results.TestResult>();
+    public DbSet<Domain.Results.TestResultValue> TestResultValues => Set<Domain.Results.TestResultValue>();
+    public DbSet<Domain.Results.ResultApproval> ResultApprovals => Set<Domain.Results.ResultApproval>();
+    public DbSet<Domain.Results.CriticalValueAlert> CriticalValueAlerts => Set<Domain.Results.CriticalValueAlert>();
+    public DbSet<Domain.Results.Worklist> Worklists => Set<Domain.Results.Worklist>();
+    public DbSet<Domain.Results.WorklistItem> WorklistItems => Set<Domain.Results.WorklistItem>();
+
+    // ---- reports (LabReports are not branch-filtered; ReportService applies the visibility rule explicitly)
+    public DbSet<Domain.Reports.LabReport> LabReports => Set<Domain.Reports.LabReport>();
+    public DbSet<Domain.Reports.ReportTemplate> ReportTemplates => Set<Domain.Reports.ReportTemplate>();
+    public DbSet<Domain.Reports.ReportTemplateTranslation> ReportTemplateTranslations => Set<Domain.Reports.ReportTemplateTranslation>();
+
+    // ---- corporate billing
+    public DbSet<Domain.Billing.CorporateClient> CorporateClients => Set<Domain.Billing.CorporateClient>();
+    public DbSet<Domain.Billing.CorporateContract> CorporateContracts => Set<Domain.Billing.CorporateContract>();
+    public DbSet<Domain.Billing.CorporateContractPrice> CorporateContractPrices => Set<Domain.Billing.CorporateContractPrice>();
+    public DbSet<Domain.Billing.CorporateReceipt> CorporateReceipts => Set<Domain.Billing.CorporateReceipt>();
+    public DbSet<Domain.Billing.CorporateAllocation> CorporateAllocations => Set<Domain.Billing.CorporateAllocation>();
+
+    // ---- inventory
+    public DbSet<Domain.Inventory.Supplier> Suppliers => Set<Domain.Inventory.Supplier>();
+    public DbSet<Domain.Inventory.StockItem> StockItems => Set<Domain.Inventory.StockItem>();
+    public DbSet<Domain.Inventory.StockBatch> StockBatches => Set<Domain.Inventory.StockBatch>();
+    public DbSet<Domain.Inventory.StockMovement> StockMovements => Set<Domain.Inventory.StockMovement>();
+    public DbSet<Domain.Inventory.PurchaseReceipt> PurchaseReceipts => Set<Domain.Inventory.PurchaseReceipt>();
+    public DbSet<Domain.Inventory.PurchaseLine> PurchaseLines => Set<Domain.Inventory.PurchaseLine>();
+    public DbSet<Domain.Inventory.ConsumptionProfileLine> ConsumptionProfileLines => Set<Domain.Inventory.ConsumptionProfileLine>();
+    public DbSet<Domain.Inventory.StockShortfall> StockShortfalls => Set<Domain.Inventory.StockShortfall>();
     // ---- catalog reference data
     public DbSet<Unit> Units => Set<Unit>();
     public DbSet<SampleType> SampleTypes => Set<SampleType>();

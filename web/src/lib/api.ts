@@ -63,7 +63,9 @@ function buildUrl(path: string, query?: Query) {
 export async function api<T = void>(path: string, opts: RequestOptions = {}, retried = false): Promise<T> {
   const method = opts.method ?? 'GET'
   const headers: Record<string, string> = { Accept: 'application/json' }
-  if (opts.body !== undefined) headers['Content-Type'] = 'application/json'
+  // A FormData body (file upload) sets its own multipart content type.
+  const isForm = typeof FormData !== 'undefined' && opts.body instanceof FormData
+  if (opts.body !== undefined && !isForm) headers['Content-Type'] = 'application/json'
   if (method !== 'GET') headers['X-XSRF-TOKEN'] = csrfToken ?? (await fetchCsrf())
 
   let res: Response
@@ -72,7 +74,7 @@ export async function api<T = void>(path: string, opts: RequestOptions = {}, ret
       method,
       headers,
       credentials: 'same-origin',
-      body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
+      body: opts.body === undefined ? undefined : isForm ? (opts.body as FormData) : JSON.stringify(opts.body),
     })
   } catch {
     throw new ApiError(0, 'network', 'Could not reach the server. Check the network connection.')

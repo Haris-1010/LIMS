@@ -23,6 +23,10 @@ public static class SequenceTypes
     public const string PurchaseReceipt = "PurchaseReceipt";
     public const string Refund = "Refund";
     public const string Transfer = "Transfer";
+    public const string Worklist = "Worklist";
+    public const string Report = "Report";
+    public const string CorporateReceipt = "CorporateReceipt";
+    public const string StockTransfer = "StockTransfer";
 
     /// <summary>
     /// Default numbering for each type. New organisations get all of them; a type added in a later
@@ -38,6 +42,10 @@ public static class SequenceTypes
             [Refund] = ("RFD", 4, SequenceResetPolicy.Monthly),
             [Sample] = ("S", 4, SequenceResetPolicy.Daily),
             [Transfer] = ("TRF", 4, SequenceResetPolicy.Monthly),
+            [Worklist] = ("WL", 4, SequenceResetPolicy.Daily),
+            [Report] = ("REP", 4, SequenceResetPolicy.Monthly),
+            [CorporateReceipt] = ("CRC", 4, SequenceResetPolicy.Monthly),
+            [StockTransfer] = ("STR", 4, SequenceResetPolicy.Monthly),
             [CorporateInvoice] = ("CINV", 4, SequenceResetPolicy.Yearly),
             [PurchaseReceipt] = ("GRN", 4, SequenceResetPolicy.Yearly),
         };

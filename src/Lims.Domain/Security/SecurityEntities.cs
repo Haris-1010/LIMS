@@ -14,6 +14,11 @@ public class User : AuditableEntity<int>, ITenantEntity, IAudited
     public string? Phone { get; set; }
     /// <summary>Professional title printed on reports for signatories, e.g. "Consultant Pathologist".</summary>
     public string? Designation { get; set; }
+    /// <summary>Professional registration number (e.g. medical council) printed under a signatory's name.</summary>
+    public string? RegistrationNo { get; set; }
+    /// <summary>PNG or JPEG of the signature printed on reports this person approves. Kept out of the audit log.</summary>
+    [Sensitive] public byte[]? SignatureImage { get; set; }
+    public string? SignatureContentType { get; set; }
 
     [Sensitive] public string PasswordHash { get; set; } = "";
     /// <summary>Changes on password/role changes to invalidate existing sessions.</summary>

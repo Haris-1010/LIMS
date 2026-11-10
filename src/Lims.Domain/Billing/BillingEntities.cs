@@ -22,6 +22,8 @@ public enum PaymentMethod
     BankTransfer = 3,
     MobileWallet = 4,
     Cheque = 5,
+    /// <summary>Money matched to a credit (corporate) invoice from a corporate receipt. Never taken at the counter.</summary>
+    Corporate = 6,
 }
 
 /// <summary>
@@ -47,6 +49,12 @@ public class Invoice : AuditableEntity<long>, IBranchEntity, IAudited
     public decimal Refunded { get; set; }
     public decimal Balance { get; set; }
     public InvoiceStatus Status { get; set; }
+
+    /// <summary>Set for a credit invoice: it is billed to this corporate client, who pays later by receipt and allocation.</summary>
+    public int? CorporateClientId { get; set; }
+    public int? ContractId { get; set; }
+    /// <summary>When a credit invoice falls due (invoice date plus the client's payment terms).</summary>
+    public DateOnly? DueDate { get; set; }
 
     public ICollection<InvoiceLine> Lines { get; } = [];
     public ICollection<Payment> Payments { get; } = [];

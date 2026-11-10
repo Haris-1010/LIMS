@@ -19,6 +19,8 @@ import { useToast } from '../../components/ui/Toast'
 import { localName } from '../catalog/catalogApi'
 import { formatAge, patientName } from '../patients/patientsApi'
 import { METHODS, invoiceTone, newKey, orderKeys, type InvoiceLineDto, type OrderDetail, type PaymentDto, type PaymentMethod } from './ordersApi'
+import { OrderResultsCard } from '../results/OrderResultsCard'
+import { OrderSamplesCard } from '../samples/OrderSamplesCard'
 import { Receipt } from './Receipt'
 import './orders.css'
 
@@ -70,6 +72,7 @@ export function OrderDetailPage() {
             <h2 className="num">{o.orderNo}</h2>
             <Badge tone={invoiceTone[inv.status]} dot>{t(`invoiceStatus.${inv.status}`)}</Badge>
             {o.priority === 1 && <Badge tone="danger">{t('orders.urgent')}</Badge>}
+            {o.corporateClientId && <Badge tone="info">{t('orders.creditOrder', { client: o.corporateClientName })}</Badge>}
             {cancelled && <Badge>{t('orders.cancelled')}</Badge>}
           </div>
           <dl className="test-facts" style={{ gridTemplateColumns: 'repeat(4, minmax(0, auto))' }}>
@@ -125,7 +128,7 @@ export function OrderDetailPage() {
           title={t('orders.payments')}
           actions={
             <span className="toolbar">
-              {inv.balance > 0 && can('payments.collect') && <Button size="sm" variant="primary" icon={<Banknote size={14} />} onClick={() => setPay(true)}>{t('orders.collectPayment')}</Button>}
+              {inv.balance > 0 && can('payments.collect') && !o.corporateClientId && <Button size="sm" variant="primary" icon={<Banknote size={14} />} onClick={() => setPay(true)}>{t('orders.collectPayment')}</Button>}
               {inv.balance < 0 && can('billing.refund') && <Button size="sm" variant="primary" icon={<RotateCcw size={14} />} onClick={() => setRefund(true)}>{t('orders.refund')}</Button>}
             </span>
           }
@@ -158,6 +161,9 @@ export function OrderDetailPage() {
           )}
         </Card>
       </div>
+
+      {can('samples.view') && <div className="section-gap no-print"><OrderSamplesCard orderId={o.id} cancelled={cancelled} /></div>}
+      {can('results.view') && <div className="section-gap no-print"><OrderResultsCard orderId={o.id} /></div>}
 
       {receipt && <Receipt order={o} payment={receipt} onDone={() => setReceipt(null)} />}
       {pay && <PaymentModal order={o} onClose={() => setPay(false)} onDone={async (p) => { setPay(false); toast.show({ tone: 'success', title: t('orders.paymentDone') }); await refresh(); if (p) setReceipt(p) }} />}

@@ -13,6 +13,10 @@ public sealed record SampleQuery : PageQuery
     public SampleStatus? Status { get; init; }
     public int? BranchId { get; init; }
     public long? OrderId { get; init; }
+    /// <summary>Only samples the working branch can receive now: collected here, or in transit to here.</summary>
+    public bool AwaitingReceipt { get; init; }
+    /// <summary>Only samples physically at the working branch now.</summary>
+    public bool HeldHere { get; init; }
     public DateOnly? From { get; init; }
     public DateOnly? To { get; init; }
 }
@@ -93,3 +97,5 @@ public sealed record TransferListItem(
 public sealed record TransferDetail(
     TransferListItem Transfer, string? Notes, DateTime? CompletedAtUtc, string? CompletedByName,
     IReadOnlyList<TransferItemDto> Items, bool CanReceive, bool CanCancel, bool CanComplete);
+
+public sealed record BranchOption(int Id, string Code, string NameEn, string? NameUr);

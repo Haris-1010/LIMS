@@ -28,6 +28,9 @@ public class LabOrder : AuditableEntity<long>, IBranchEntity, IAudited
     public string OrderNo { get; set; } = "";
     public int PatientId { get; set; }
     public int? ReferringDoctorId { get; set; }
+    /// <summary>Billed on account to this corporate client (credit order).</summary>
+    public int? CorporateClientId { get; set; }
+    public int? ContractId { get; set; }
     public OrderPriority Priority { get; set; }
     public string? ClinicalNotes { get; set; }
     public OrderStatus Status { get; set; }

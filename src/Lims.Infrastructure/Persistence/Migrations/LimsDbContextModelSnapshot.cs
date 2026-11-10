@@ -180,6 +180,330 @@ namespace Lims.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Lims.Domain.Billing.CorporateAllocation", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("AllocatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int>("AllocatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<long>("InvoiceId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<long>("PaymentId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("ReceiptId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvoiceId");
+
+                    b.HasIndex("PaymentId")
+                        .IsUnique();
+
+                    b.HasIndex("ReceiptId");
+
+                    b.HasIndex("OrganizationId", "InvoiceId");
+
+                    b.HasIndex("OrganizationId", "ReceiptId");
+
+                    b.ToTable("CorporateAllocations", "billing", t =>
+                        {
+                            t.HasCheckConstraint("CK_CorporateAllocations_Amount", "[Amount] > 0");
+                        });
+                });
+
+            modelBuilder.Entity("Lims.Domain.Billing.CorporateClient", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AddressEn")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("AddressUr")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<string>("ContactName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("CreditLimit")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("NameEn")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("NameUr")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PaymentTermsDays")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("UpdatedByUserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId", "Code")
+                        .IsUnique();
+
+                    b.ToTable("CorporateClients", "billing", t =>
+                        {
+                            t.HasCheckConstraint("CK_CorporateClients_Credit", "[CreditLimit] IS NULL OR [CreditLimit] >= 0");
+
+                            t.HasCheckConstraint("CK_CorporateClients_Terms", "[PaymentTermsDays] BETWEEN 0 AND 365");
+                        });
+                });
+
+            modelBuilder.Entity("Lims.Domain.Billing.CorporateContract", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ClientId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("DiscountPercent")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("UpdatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateOnly>("ValidFrom")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly?>("ValidTo")
+                        .HasColumnType("date");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClientId", "IsActive");
+
+                    b.HasIndex("OrganizationId", "ClientId");
+
+                    b.ToTable("CorporateContracts", "billing", t =>
+                        {
+                            t.HasCheckConstraint("CK_CorporateContracts_Dates", "[ValidTo] IS NULL OR [ValidTo] >= [ValidFrom]");
+
+                            t.HasCheckConstraint("CK_CorporateContracts_Discount", "[DiscountPercent] >= 0 AND [DiscountPercent] <= 100");
+                        });
+                });
+
+            modelBuilder.Entity("Lims.Domain.Billing.CorporateContractPrice", b =>
+                {
+                    b.Property<int>("ContractId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TestId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Price")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("ContractId", "TestId");
+
+                    b.HasIndex("OrganizationId", "ContractId");
+
+                    b.HasIndex("OrganizationId", "TestId");
+
+                    b.ToTable("CorporateContractPrices", "billing", t =>
+                        {
+                            t.HasCheckConstraint("CK_CorporateContractPrices_Price", "[Price] >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("Lims.Domain.Billing.CorporateReceipt", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<decimal>("Allocated")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("ClientId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("IdempotencyKey")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("Method")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("ReceiptNo")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(30)");
+
+                    b.Property<DateTime>("ReceivedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int>("ReceivedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Reference")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("UpdatedByUserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClientId", "ReceivedAtUtc");
+
+                    b.HasIndex("OrganizationId", "ClientId");
+
+                    b.HasIndex("OrganizationId", "IdempotencyKey")
+                        .IsUnique();
+
+                    b.HasIndex("OrganizationId", "ReceiptNo")
+                        .IsUnique();
+
+                    b.ToTable("CorporateReceipts", "billing", t =>
+                        {
+                            t.HasCheckConstraint("CK_CorporateReceipts_Amount", "[Amount] > 0 AND [Allocated] >= 0 AND [Allocated] <= [Amount]");
+
+                            t.HasCheckConstraint("CK_CorporateReceipts_Kind", "([Kind] = 1 AND [Method] BETWEEN 1 AND 5) OR ([Kind] = 2 AND [Method] IS NULL AND [Reason] IS NOT NULL)");
+                        });
+                });
+
             modelBuilder.Entity("Lims.Domain.Billing.Invoice", b =>
                 {
                     b.Property<long>("Id")
@@ -193,6 +517,12 @@ namespace Lims.Infrastructure.Persistence.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("BranchId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ContractId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("CorporateClientId")
                         .HasColumnType("int");
 
                     b.Property<DateTime>("CreatedAtUtc")
@@ -216,6 +546,9 @@ namespace Lims.Infrastructure.Persistence.Migrations
                     b.Property<string>("DiscountReason")
                         .HasMaxLength(300)
                         .HasColumnType("nvarchar(300)");
+
+                    b.Property<DateOnly?>("DueDate")
+                        .HasColumnType("date");
 
                     b.Property<decimal>("Gross")
                         .HasPrecision(18, 2)
@@ -267,6 +600,9 @@ namespace Lims.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("OrganizationId", "BranchId");
+
+                    b.HasIndex("OrganizationId", "CorporateClientId")
+                        .HasFilter("[CorporateClientId] IS NOT NULL");
 
                     b.HasIndex("OrganizationId", "InvoiceNo")
                         .IsUnique();
@@ -470,7 +806,7 @@ namespace Lims.Infrastructure.Persistence.Migrations
 
                             t.HasCheckConstraint("CK_Payments_CashDrawer", "[Method] <> 1 OR [DrawerSessionId] IS NOT NULL");
 
-                            t.HasCheckConstraint("CK_Payments_Method", "[Method] BETWEEN 1 AND 5");
+                            t.HasCheckConstraint("CK_Payments_Method", "[Method] BETWEEN 1 AND 6");
                         });
                 });
 
@@ -1962,6 +2298,514 @@ namespace Lims.Infrastructure.Persistence.Migrations
                     b.ToTable("Organizations", "core");
                 });
 
+            modelBuilder.Entity("Lims.Domain.Inventory.ConsumptionProfileLine", b =>
+                {
+                    b.Property<int>("TestId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ItemId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("QuantityPerTest")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)");
+
+                    b.HasKey("TestId", "ItemId");
+
+                    b.HasIndex("OrganizationId", "ItemId");
+
+                    b.HasIndex("OrganizationId", "TestId");
+
+                    b.ToTable("ConsumptionProfileLines", "inventory", t =>
+                        {
+                            t.HasCheckConstraint("CK_ConsumptionProfileLines_Quantity", "[QuantityPerTest] > 0");
+                        });
+                });
+
+            modelBuilder.Entity("Lims.Domain.Inventory.PurchaseLine", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("BatchId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("BatchNo")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<DateOnly?>("ExpiryDate")
+                        .HasColumnType("date");
+
+                    b.Property<int>("ItemId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<long>("ReceiptId")
+                        .HasColumnType("bigint");
+
+                    b.Property<decimal?>("UnitCost")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId", "BatchId");
+
+                    b.HasIndex("OrganizationId", "ItemId");
+
+                    b.HasIndex("OrganizationId", "ReceiptId");
+
+                    b.ToTable("PurchaseLines", "inventory", t =>
+                        {
+                            t.HasCheckConstraint("CK_PurchaseLines_Quantity", "[Quantity] > 0 AND ([UnitCost] IS NULL OR [UnitCost] >= 0)");
+                        });
+                });
+
+            modelBuilder.Entity("Lims.Domain.Inventory.PurchaseReceipt", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("BranchId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("IdempotencyKey")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ReceiptNo")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(30)");
+
+                    b.Property<DateTime>("ReceivedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("SupplierId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SupplierInvoiceNo")
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("UpdatedByUserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId", "BranchId");
+
+                    b.HasIndex("OrganizationId", "IdempotencyKey")
+                        .IsUnique();
+
+                    b.HasIndex("OrganizationId", "ReceiptNo")
+                        .IsUnique();
+
+                    b.HasIndex("OrganizationId", "SupplierId");
+
+                    b.ToTable("PurchaseReceipts", "inventory");
+                });
+
+            modelBuilder.Entity("Lims.Domain.Inventory.StockBatch", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("BatchNo")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<int>("BranchId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateOnly?>("ExpiryDate")
+                        .HasColumnType("date");
+
+                    b.Property<int>("ItemId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("QuantityOnHand")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int?>("SupplierId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("UnitCost")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("UpdatedByUserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId", "ItemId");
+
+                    b.HasIndex("OrganizationId", "SupplierId");
+
+                    b.HasIndex("ItemId", "BranchId", "BatchNo")
+                        .IsUnique();
+
+                    b.HasIndex("OrganizationId", "BranchId", "ExpiryDate");
+
+                    b.ToTable("StockBatches", "inventory", t =>
+                        {
+                            t.HasCheckConstraint("CK_StockBatches_NotNegative", "[QuantityOnHand] >= 0 OR [BatchNo] = 'UNBATCHED'");
+                        });
+                });
+
+            modelBuilder.Entity("Lims.Domain.Inventory.StockItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(30)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("DefaultSupplierId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("int");
+
+                    b.Property<string>("NameEn")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("NameUr")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("ReorderLevel")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<bool>("TracksExpiry")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("UnitName")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("UpdatedByUserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId", "Code")
+                        .IsUnique();
+
+                    b.HasIndex("OrganizationId", "DefaultSupplierId");
+
+                    b.ToTable("StockItems", "inventory", t =>
+                        {
+                            t.HasCheckConstraint("CK_StockItems_Kind", "[Kind] IN (1,2)");
+
+                            t.HasCheckConstraint("CK_StockItems_Reorder", "[ReorderLevel] >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("Lims.Domain.Inventory.StockMovement", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("AtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<decimal>("BalanceAfter")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<long>("BatchId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("BranchId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ConsumptionKey")
+                        .HasMaxLength(60)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(60)");
+
+                    b.Property<int>("ItemId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<long?>("PairedMovementId")
+                        .HasColumnType("bigint");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("Reference")
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ItemId", "AtUtc");
+
+                    b.HasIndex("OrganizationId", "BatchId");
+
+                    b.HasIndex("OrganizationId", "ConsumptionKey")
+                        .IsUnique()
+                        .HasFilter("[ConsumptionKey] IS NOT NULL");
+
+                    b.HasIndex("OrganizationId", "ItemId");
+
+                    b.HasIndex("OrganizationId", "BranchId", "AtUtc");
+
+                    b.ToTable("StockMovements", "inventory", t =>
+                        {
+                            t.HasCheckConstraint("CK_StockMovements_Direction", "([Type] IN (1,4,8) AND [Quantity] > 0) OR ([Type] IN (2,3,5,6,7) AND [Quantity] < 0)");
+
+                            t.HasCheckConstraint("CK_StockMovements_Quantity", "[Quantity] <> 0");
+
+                            t.HasCheckConstraint("CK_StockMovements_Type", "[Type] BETWEEN 1 AND 8");
+                        });
+                });
+
+            modelBuilder.Entity("Lims.Domain.Inventory.StockShortfall", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("AtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int>("BranchId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ItemId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<string>("Reference")
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<string>("ResolutionNote")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<DateTime?>("ResolvedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("ResolvedByUserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId", "ItemId");
+
+                    b.HasIndex("OrganizationId", "BranchId", "ResolvedAtUtc");
+
+                    b.ToTable("StockShortfalls", "inventory", t =>
+                        {
+                            t.HasCheckConstraint("CK_StockShortfalls_Quantity", "[Quantity] > 0");
+                        });
+                });
+
+            modelBuilder.Entity("Lims.Domain.Inventory.Supplier", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<string>("ContactName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("NameEn")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("NameUr")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("UpdatedByUserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId", "Code")
+                        .IsUnique();
+
+                    b.ToTable("Suppliers", "inventory");
+                });
+
             modelBuilder.Entity("Lims.Domain.Orders.LabOrder", b =>
                 {
                     b.Property<long>("Id")
@@ -1987,6 +2831,12 @@ namespace Lims.Infrastructure.Persistence.Migrations
                     b.Property<string>("ClinicalNotes")
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int?>("ContractId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("CorporateClientId")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasPrecision(3)
@@ -2365,6 +3215,706 @@ namespace Lims.Infrastructure.Persistence.Migrations
                         {
                             t.HasCheckConstraint("CK_Patients_Sex", "[Sex] IN (0,1,2,3)");
                         });
+                });
+
+            modelBuilder.Entity("Lims.Domain.Reports.LabReport", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("ActiveTestCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("AmendmentReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("IssuedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int>("IssuedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("LabBranchId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Language")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("LastPrintedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<DateTime?>("LatestApprovedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int>("OrderBranchId")
+                        .HasColumnType("int");
+
+                    b.Property<long>("OrderId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PatientId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PrintCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ReleasedCount")
+                        .HasColumnType("int");
+
+                    b.Property<long?>("ReplacesReportId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ReportNo")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(30)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("SnapshotHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("char(64)")
+                        .IsFixedLength();
+
+                    b.Property<string>("SnapshotJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("UpdatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId", "Version")
+                        .IsUnique();
+
+                    b.HasIndex("OrganizationId", "LabBranchId");
+
+                    b.HasIndex("OrganizationId", "OrderBranchId");
+
+                    b.HasIndex("OrganizationId", "OrderId");
+
+                    b.HasIndex("OrganizationId", "PatientId");
+
+                    b.HasIndex("OrganizationId", "ReplacesReportId");
+
+                    b.HasIndex("OrganizationId", "ReportNo");
+
+                    b.HasIndex("OrganizationId", "Status", "LabBranchId");
+
+                    b.HasIndex(new[] { "OrderId" }, "UX_LabReports_OneLivePerOrder")
+                        .IsUnique()
+                        .HasFilter("[Status] <> 90");
+
+                    b.ToTable("LabReports", "lab", t =>
+                        {
+                            t.HasCheckConstraint("CK_LabReports_Counts", "[ReleasedCount] >= 1 AND [ActiveTestCount] >= [ReleasedCount] AND [PrintCount] >= 0");
+
+                            t.HasCheckConstraint("CK_LabReports_Final", "[Status] <> 1 OR [ReleasedCount] = [ActiveTestCount]");
+
+                            t.HasCheckConstraint("CK_LabReports_Hash", "LEN([SnapshotHash]) = 64 AND LEN([SnapshotJson]) > 2");
+
+                            t.HasCheckConstraint("CK_LabReports_Language", "[Language] BETWEEN 0 AND 2");
+
+                            t.HasCheckConstraint("CK_LabReports_Status", "[Status] IN (0,1,90)");
+
+                            t.HasCheckConstraint("CK_LabReports_Version", "[Version] >= 1 AND ([Version] = 1 OR [AmendmentReason] IS NOT NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("Lims.Domain.Reports.ReportTemplate", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("LogoContentType")
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<byte[]>("LogoImage")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("UpdatedByUserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId")
+                        .IsUnique();
+
+                    b.ToTable("ReportTemplates", "lab", t =>
+                        {
+                            t.HasCheckConstraint("CK_ReportTemplates_Logo", "[LogoImage] IS NULL OR (DATALENGTH([LogoImage]) <= 307200 AND [LogoContentType] IN ('image/png','image/jpeg'))");
+                        });
+                });
+
+            modelBuilder.Entity("Lims.Domain.Reports.ReportTemplateTranslation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Disclaimer")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("FooterNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("HeaderNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(2)");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TemplateId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId", "TemplateId");
+
+                    b.HasIndex("TemplateId", "Language")
+                        .IsUnique();
+
+                    b.ToTable("ReportTemplateTranslations", "lab", t =>
+                        {
+                            t.HasCheckConstraint("CK_ReportTemplateTranslations_Language", "[Language] IN ('en','ur')");
+                        });
+                });
+
+            modelBuilder.Entity("Lims.Domain.Results.CriticalValueAlert", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Comment")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsHigh")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("LabBranchId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("Limit")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<int?>("Method")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("NotifiedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("NotifiedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("NotifiedTo")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<long>("OrderItemId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ParameterId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PatientId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("ReadBackConfirmed")
+                        .HasColumnType("bit");
+
+                    b.Property<long>("ResultId")
+                        .HasColumnType("bigint");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("UpdatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ValueText")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId", "LabBranchId");
+
+                    b.HasIndex("OrganizationId", "PatientId");
+
+                    b.HasIndex("OrganizationId", "ResultId");
+
+                    b.HasIndex("ResultId", "ParameterId");
+
+                    b.HasIndex("OrganizationId", "Status", "LabBranchId");
+
+                    b.ToTable("CriticalValueAlerts", "lab", t =>
+                        {
+                            t.HasCheckConstraint("CK_CriticalValueAlerts_Method", "[Method] IS NULL OR [Method] IN (1,2,3)");
+
+                            t.HasCheckConstraint("CK_CriticalValueAlerts_Notified", "[Status] = 0 OR ([NotifiedTo] IS NOT NULL AND [Method] IS NOT NULL AND [NotifiedByUserId] IS NOT NULL AND [NotifiedAtUtc] IS NOT NULL AND [ReadBackConfirmed] = 1)");
+
+                            t.HasCheckConstraint("CK_CriticalValueAlerts_Status", "[Status] IN (0,1)");
+                        });
+                });
+
+            modelBuilder.Entity("Lims.Domain.Results.ResultApproval", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("AtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("Comment")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<long>("ResultId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Step")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId", "ResultId");
+
+                    b.HasIndex("ResultId", "Id");
+
+                    b.ToTable("ResultApprovals", "lab");
+                });
+
+            modelBuilder.Entity("Lims.Domain.Results.TestResult", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("AmendmentReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("ApprovedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("ApprovedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Comment")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("EnteredByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("LabBranchId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OrderBranchId")
+                        .HasColumnType("int");
+
+                    b.Property<long>("OrderId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("OrderItemId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PatientId")
+                        .HasColumnType("int");
+
+                    b.Property<long?>("ReplacesResultId")
+                        .HasColumnType("bigint");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<long>("SampleId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("SubmittedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("UpdatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("VerifiedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("VerifiedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderItemId", "Version")
+                        .IsUnique();
+
+                    b.HasIndex("OrganizationId", "LabBranchId");
+
+                    b.HasIndex("OrganizationId", "OrderBranchId");
+
+                    b.HasIndex("OrganizationId", "OrderId");
+
+                    b.HasIndex("OrganizationId", "OrderItemId");
+
+                    b.HasIndex("OrganizationId", "PatientId");
+
+                    b.HasIndex("OrganizationId", "ReplacesResultId");
+
+                    b.HasIndex("OrganizationId", "SampleId");
+
+                    b.HasIndex("OrganizationId", "Status", "LabBranchId");
+
+                    b.HasIndex(new[] { "OrderItemId" }, "UX_TestResults_OneInProgress")
+                        .IsUnique()
+                        .HasFilter("[Status] < 30");
+
+                    b.HasIndex(new[] { "OrderItemId" }, "UX_TestResults_OneReleased")
+                        .IsUnique()
+                        .HasFilter("[Status] = 30");
+
+                    b.ToTable("TestResults", "lab", t =>
+                        {
+                            t.HasCheckConstraint("CK_TestResults_Approved", "[Status] < 30 OR ([ApprovedByUserId] IS NOT NULL AND [ApprovedAtUtc] IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_TestResults_DraftClean", "[Status] <> 0 OR ([VerifiedByUserId] IS NULL AND [ApprovedByUserId] IS NULL)");
+
+                            t.HasCheckConstraint("CK_TestResults_Status", "[Status] IN (0,10,20,30,90)");
+
+                            t.HasCheckConstraint("CK_TestResults_Submitted", "[Status] = 0 OR ([EnteredByUserId] IS NOT NULL AND [SubmittedAtUtc] IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_TestResults_Verified", "[Status] < 20 OR ([VerifiedByUserId] IS NOT NULL AND [VerifiedAtUtc] IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_TestResults_Version", "[Version] >= 1 AND ([Version] = 1 OR [AmendmentReason] IS NOT NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("Lims.Domain.Results.TestResultValue", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("DecimalPlaces")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Flag")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("OptionId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ParameterId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("RangeCriticalHigh")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<decimal?>("RangeCriticalLow")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<decimal?>("RangeHigh")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<int?>("RangeId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("RangeLow")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<string>("RangeText")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<long>("ResultId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("UnitText")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<decimal?>("ValueNumeric")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<string>("ValueText")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("ValueTextUr")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OptionId");
+
+                    b.HasIndex("RangeId");
+
+                    b.HasIndex("OrganizationId", "ParameterId");
+
+                    b.HasIndex("OrganizationId", "ResultId");
+
+                    b.HasIndex("ResultId", "ParameterId")
+                        .IsUnique();
+
+                    b.ToTable("TestResultValues", "lab", t =>
+                        {
+                            t.HasCheckConstraint("CK_TestResultValues_Decimals", "[DecimalPlaces] BETWEEN 0 AND 6");
+
+                            t.HasCheckConstraint("CK_TestResultValues_Flag", "[Flag] BETWEEN 0 AND 6");
+
+                            t.HasCheckConstraint("CK_TestResultValues_OneKind", "([ValueNumeric] IS NOT NULL AND [OptionId] IS NULL AND [ValueText] IS NULL) OR ([OptionId] IS NOT NULL AND [ValueNumeric] IS NULL) OR ([ValueNumeric] IS NULL AND [OptionId] IS NULL AND [ValueText] IS NOT NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("Lims.Domain.Results.Worklist", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("BranchId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ClosedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("ClosedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("DepartmentId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("UpdatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("WorklistNo")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(30)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId", "DepartmentId");
+
+                    b.HasIndex("OrganizationId", "WorklistNo")
+                        .IsUnique();
+
+                    b.HasIndex("OrganizationId", "BranchId", "Status");
+
+                    b.ToTable("Worklists", "lab", t =>
+                        {
+                            t.HasCheckConstraint("CK_Worklists_Closed", "[Status] = 0 OR [ClosedAtUtc] IS NOT NULL");
+
+                            t.HasCheckConstraint("CK_Worklists_Status", "[Status] IN (0,1)");
+                        });
+                });
+
+            modelBuilder.Entity("Lims.Domain.Results.WorklistItem", b =>
+                {
+                    b.Property<long>("WorklistId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("OrderItemId")
+                        .HasColumnType("bigint");
+
+                    b.Property<bool>("IsOpen")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.HasKey("WorklistId", "OrderItemId");
+
+                    b.HasIndex("OrderItemId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_WorklistItems_OneOpen")
+                        .HasFilter("[IsOpen] = 1");
+
+                    b.HasIndex("OrganizationId", "OrderItemId");
+
+                    b.HasIndex("OrganizationId", "WorklistId");
+
+                    b.ToTable("WorklistItems", "lab");
                 });
 
             modelBuilder.Entity("Lims.Domain.Samples.Sample", b =>
@@ -3230,6 +4780,22 @@ namespace Lims.Infrastructure.Persistence.Migrations
                             DescriptionUr = "بیک اپ اور بحالی",
                             Key = "backup.manage",
                             Module = "Administration"
+                        },
+                        new
+                        {
+                            Id = 49,
+                            DescriptionEn = "Issue (finalise) laboratory reports",
+                            DescriptionUr = "لیبارٹری رپورٹس جاری کریں",
+                            Key = "reports.issue",
+                            Module = "Reports"
+                        },
+                        new
+                        {
+                            Id = 50,
+                            DescriptionEn = "Edit the report template and logo",
+                            DescriptionUr = "رپورٹ ٹیمپلیٹ اور لوگو میں ترمیم",
+                            Key = "reports.templates",
+                            Module = "Reports"
                         });
                 });
 
@@ -3391,6 +4957,10 @@ namespace Lims.Infrastructure.Persistence.Migrations
                         .IsUnicode(false)
                         .HasColumnType("varchar(2)");
 
+                    b.Property<string>("RegistrationNo")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()
@@ -3402,6 +4972,14 @@ namespace Lims.Infrastructure.Persistence.Migrations
                         .HasMaxLength(64)
                         .IsUnicode(false)
                         .HasColumnType("varchar(64)");
+
+                    b.Property<string>("SignatureContentType")
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<byte[]>("SignatureImage")
+                        .HasColumnType("varbinary(max)");
 
                     b.Property<DateTime?>("UpdatedAtUtc")
                         .HasPrecision(3)
@@ -3425,6 +5003,8 @@ namespace Lims.Infrastructure.Persistence.Migrations
                     b.ToTable("Users", "security", t =>
                         {
                             t.HasCheckConstraint("CK_Users_PreferredLanguage", "[PreferredLanguage] IN ('en','ur')");
+
+                            t.HasCheckConstraint("CK_Users_Signature", "[SignatureImage] IS NULL OR (DATALENGTH([SignatureImage]) <= 204800 AND [SignatureContentType] IN ('image/png','image/jpeg'))");
                         });
                 });
 
@@ -3489,6 +5069,66 @@ namespace Lims.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Lims.Domain.Billing.CorporateAllocation", b =>
+                {
+                    b.HasOne("Lims.Domain.Billing.Payment", null)
+                        .WithMany()
+                        .HasForeignKey("PaymentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lims.Domain.Billing.Invoice", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "InvoiceId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lims.Domain.Billing.CorporateReceipt", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "ReceiptId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Lims.Domain.Billing.CorporateContract", b =>
+                {
+                    b.HasOne("Lims.Domain.Billing.CorporateClient", null)
+                        .WithMany("Contracts")
+                        .HasForeignKey("OrganizationId", "ClientId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Lims.Domain.Billing.CorporateContractPrice", b =>
+                {
+                    b.HasOne("Lims.Domain.Billing.CorporateContract", null)
+                        .WithMany("Prices")
+                        .HasForeignKey("OrganizationId", "ContractId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lims.Domain.Catalog.LabTest", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "TestId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Lims.Domain.Billing.CorporateReceipt", b =>
+                {
+                    b.HasOne("Lims.Domain.Billing.CorporateClient", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "ClientId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Lims.Domain.Billing.Invoice", b =>
                 {
                     b.HasOne("Lims.Domain.Core.Branch", null)
@@ -3497,6 +5137,12 @@ namespace Lims.Infrastructure.Persistence.Migrations
                         .HasPrincipalKey("OrganizationId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("Lims.Domain.Billing.CorporateClient", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "CorporateClientId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Lims.Domain.Orders.LabOrder", null)
                         .WithOne()
@@ -3744,6 +5390,137 @@ namespace Lims.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
                 });
 
+            modelBuilder.Entity("Lims.Domain.Inventory.ConsumptionProfileLine", b =>
+                {
+                    b.HasOne("Lims.Domain.Inventory.StockItem", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "ItemId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lims.Domain.Catalog.LabTest", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "TestId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Lims.Domain.Inventory.PurchaseLine", b =>
+                {
+                    b.HasOne("Lims.Domain.Inventory.StockBatch", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "BatchId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lims.Domain.Inventory.StockItem", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "ItemId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lims.Domain.Inventory.PurchaseReceipt", null)
+                        .WithMany("Lines")
+                        .HasForeignKey("OrganizationId", "ReceiptId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Lims.Domain.Inventory.PurchaseReceipt", b =>
+                {
+                    b.HasOne("Lims.Domain.Core.Branch", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "BranchId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lims.Domain.Inventory.Supplier", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "SupplierId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Lims.Domain.Inventory.StockBatch", b =>
+                {
+                    b.HasOne("Lims.Domain.Core.Branch", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "BranchId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lims.Domain.Inventory.StockItem", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "ItemId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lims.Domain.Inventory.Supplier", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "SupplierId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("Lims.Domain.Inventory.StockItem", b =>
+                {
+                    b.HasOne("Lims.Domain.Inventory.Supplier", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "DefaultSupplierId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("Lims.Domain.Inventory.StockMovement", b =>
+                {
+                    b.HasOne("Lims.Domain.Inventory.StockBatch", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "BatchId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lims.Domain.Core.Branch", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "BranchId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lims.Domain.Inventory.StockItem", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "ItemId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Lims.Domain.Inventory.StockShortfall", b =>
+                {
+                    b.HasOne("Lims.Domain.Core.Branch", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "BranchId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lims.Domain.Inventory.StockItem", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "ItemId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Lims.Domain.Orders.LabOrder", b =>
                 {
                     b.HasOne("Lims.Domain.Core.Branch", null)
@@ -3814,6 +5591,208 @@ namespace Lims.Infrastructure.Persistence.Migrations
                         .HasForeignKey("OrganizationId", "RegisteredBranchId")
                         .HasPrincipalKey("OrganizationId", "Id")
                         .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("Lims.Domain.Reports.LabReport", b =>
+                {
+                    b.HasOne("Lims.Domain.Core.Branch", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "LabBranchId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lims.Domain.Core.Branch", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "OrderBranchId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lims.Domain.Orders.LabOrder", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "OrderId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lims.Domain.Patients.Patient", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "PatientId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lims.Domain.Reports.LabReport", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "ReplacesReportId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("Lims.Domain.Reports.ReportTemplate", b =>
+                {
+                    b.HasOne("Lims.Domain.Core.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Lims.Domain.Reports.ReportTemplateTranslation", b =>
+                {
+                    b.HasOne("Lims.Domain.Reports.ReportTemplate", null)
+                        .WithMany("Translations")
+                        .HasForeignKey("OrganizationId", "TemplateId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Lims.Domain.Results.CriticalValueAlert", b =>
+                {
+                    b.HasOne("Lims.Domain.Core.Branch", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "LabBranchId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lims.Domain.Patients.Patient", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "PatientId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lims.Domain.Results.TestResult", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "ResultId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Lims.Domain.Results.ResultApproval", b =>
+                {
+                    b.HasOne("Lims.Domain.Results.TestResult", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "ResultId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Lims.Domain.Results.TestResult", b =>
+                {
+                    b.HasOne("Lims.Domain.Core.Branch", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "LabBranchId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lims.Domain.Core.Branch", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "OrderBranchId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lims.Domain.Orders.LabOrder", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "OrderId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lims.Domain.Orders.LabOrderItem", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "OrderItemId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lims.Domain.Patients.Patient", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "PatientId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lims.Domain.Results.TestResult", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "ReplacesResultId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Lims.Domain.Samples.Sample", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "SampleId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Lims.Domain.Results.TestResultValue", b =>
+                {
+                    b.HasOne("Lims.Domain.Catalog.ParameterOption", null)
+                        .WithMany()
+                        .HasForeignKey("OptionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Lims.Domain.Catalog.ReferenceRange", null)
+                        .WithMany()
+                        .HasForeignKey("RangeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Lims.Domain.Catalog.TestParameter", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "ParameterId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lims.Domain.Results.TestResult", null)
+                        .WithMany("Values")
+                        .HasForeignKey("OrganizationId", "ResultId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Lims.Domain.Results.Worklist", b =>
+                {
+                    b.HasOne("Lims.Domain.Core.Branch", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "BranchId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lims.Domain.Core.Department", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "DepartmentId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Lims.Domain.Results.WorklistItem", b =>
+                {
+                    b.HasOne("Lims.Domain.Orders.LabOrderItem", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "OrderItemId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lims.Domain.Results.Worklist", null)
+                        .WithMany("Items")
+                        .HasForeignKey("OrganizationId", "WorklistId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Lims.Domain.Samples.Sample", b =>
@@ -4031,6 +6010,16 @@ namespace Lims.Infrastructure.Persistence.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Lims.Domain.Billing.CorporateClient", b =>
+                {
+                    b.Navigation("Contracts");
+                });
+
+            modelBuilder.Entity("Lims.Domain.Billing.CorporateContract", b =>
+                {
+                    b.Navigation("Prices");
+                });
+
             modelBuilder.Entity("Lims.Domain.Billing.Invoice", b =>
                 {
                     b.Navigation("Lines");
@@ -4064,7 +6053,27 @@ namespace Lims.Infrastructure.Persistence.Migrations
                     b.Navigation("Branches");
                 });
 
+            modelBuilder.Entity("Lims.Domain.Inventory.PurchaseReceipt", b =>
+                {
+                    b.Navigation("Lines");
+                });
+
             modelBuilder.Entity("Lims.Domain.Orders.LabOrder", b =>
+                {
+                    b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("Lims.Domain.Reports.ReportTemplate", b =>
+                {
+                    b.Navigation("Translations");
+                });
+
+            modelBuilder.Entity("Lims.Domain.Results.TestResult", b =>
+                {
+                    b.Navigation("Values");
+                });
+
+            modelBuilder.Entity("Lims.Domain.Results.Worklist", b =>
                 {
                     b.Navigation("Items");
                 });

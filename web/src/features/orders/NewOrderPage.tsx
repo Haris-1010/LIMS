@@ -10,7 +10,7 @@ import { useSession } from '../../app/session'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
-import { Switch, TextAreaField } from '../../components/ui/Controls'
+import { SelectField, Switch, TextAreaField } from '../../components/ui/Controls'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { Field } from '../../components/ui/Field'
 import { useToast } from '../../components/ui/Toast'
@@ -46,6 +46,7 @@ export function NewOrderPage() {
   const [discValue, setDiscValue] = useState('')
   const [discReason, setDiscReason] = useState('')
   const [payNow, setPayNow] = useState(true)
+  const [clientId, setClientId] = useState('')   // bill to a corporate client (credit order); empty = the patient pays
   const [method, setMethod] = useState<PaymentMethod>(1)
   const [amount, setAmount] = useState('')
   const [reference, setReference] = useState('')
@@ -63,16 +64,18 @@ export function NewOrderPage() {
   }, [patientParam])
 
   const doctors = useQuery({ queryKey: ['doctors', 'options'], queryFn: () => api<DoctorOption[]>('/api/doctors/options'), staleTime: 60_000 })
+  const clients = useQuery({ queryKey: ['corporate', 'clients', 'options'], queryFn: () => api<{ items: { id: number; code: string; nameEn: string; nameUr: string | null }[] }>('/api/corporate/clients', { query: { isActive: true, pageSize: 100 } }), enabled: can('corporate.invoice'), staleTime: 60_000 })
+  const credit = clientId !== ''
   const drawer = useQuery({ queryKey: orderKeys.drawer, queryFn: () => api<{ drawer: DrawerDto | null }>('/api/billing/drawer'), enabled: can('payments.collect') && branchSelected })
 
   // Server-side pricing: the form only shows what the server returns.
-  const discountBody = discOn && Number(discValue) > 0
+  const discountBody = !credit && discOn && Number(discValue) > 0
     ? { percent: discMode === 'percent' ? Number(discValue) : null, amount: discMode === 'amount' ? Number(discValue) : null, reason: discReason || null }
     : null
   const itemsBody = items.map((i) => (i.kind === 'test' ? { testId: i.id } : { packageId: i.id }))
   const quote = useQuery({
-    queryKey: ['orders', 'quote', itemsBody, discountBody?.percent, discountBody?.amount],
-    queryFn: () => api<Quote>('/api/orders/quote', { method: 'POST', body: { items: itemsBody, discount: discountBody } }),
+    queryKey: ['orders', 'quote', itemsBody, discountBody?.percent, discountBody?.amount, clientId],
+    queryFn: () => api<Quote>('/api/orders/quote', { method: 'POST', body: { items: itemsBody, discount: discountBody, corporateClientId: credit ? Number(clientId) : null } }),
     enabled: items.length > 0 && branchSelected,
     placeholderData: (prev) => prev,
     retry: false,
@@ -80,7 +83,7 @@ export function NewOrderPage() {
   const net = quote.data?.net ?? 0
   useEffect(() => setAmount(net > 0 ? String(net) : ''), [net])
 
-  const cashNeedsDrawer = payNow && method === 1 && !drawer.data?.drawer
+  const cashNeedsDrawer = !credit && payNow && method === 1 && !drawer.data?.drawer
   const quoteError = quote.error ? errorMessage(t, quote.error) : null
   const payAmount = Number(amount)
   const change = method === 1 && Number(tendered) > payAmount ? Number(tendered) - payAmount : 0
@@ -95,7 +98,7 @@ export function NewOrderPage() {
     if (!patient) return setFailure(t('errors.patient_invalid'))
     if (items.length === 0) return setFailure(t('errors.items_required'))
     if (discountBody && !discReason.trim()) return setFailure(t('errors.discount_reason_required'))
-    if (payNow && (!(payAmount > 0) || payAmount > net)) return setFailure(t('errors.payment_exceeds_balance'))
+    if (!credit && payNow && (!(payAmount > 0) || payAmount > net)) return setFailure(t('errors.payment_exceeds_balance'))
     setSubmitting(true)
     try {
       const order = await api<OrderDetail>('/api/orders', {
@@ -108,7 +111,8 @@ export function NewOrderPage() {
           clinicalNotes: notes.trim() || null,
           items: itemsBody,
           discount: discountBody,
-          payment: payNow && payAmount > 0 ? { method, amount: payAmount, reference: reference.trim() || null } : null,
+          payment: !credit && payNow && payAmount > 0 ? { method, amount: payAmount, reference: reference.trim() || null } : null,
+          corporateClientId: credit ? Number(clientId) : null,
         },
       })
       toast.show({ tone: 'success', title: t('orders.created', { no: order.orderNo }) })
@@ -204,10 +208,18 @@ export function NewOrderPage() {
         </div>
 
         <aside className="stack bill-panel">
+          {can('corporate.invoice') && (
+            <Card title={t('orders.billTo')}>
+              <SelectField label={t('orders.billToLabel')} value={clientId} onChange={(e) => setClientId(e.target.value)} hint={credit ? t('orders.creditHint') : undefined}>
+                <option value="">{t('orders.patientPays')}</option>
+                {clients.data?.items.map((c) => <option key={c.id} value={c.id}>{i18n.language === 'ur' && c.nameUr ? c.nameUr : c.nameEn} ({c.code})</option>)}
+              </SelectField>
+            </Card>
+          )}
           <Card title={t('orders.bill')}>
             <dl className="bill-lines">
               <div><dt>{t('orders.gross')}</dt><dd className="num">{formatMoney(quote.data?.gross ?? 0)}</dd></div>
-              {can('billing.discount') && (
+              {can('billing.discount') && !credit && (
                 <div className="bill-discount">
                   <Switch checked={discOn} onChange={setDiscOn} label={t('orders.addDiscount')} />
                   {discOn && (
@@ -227,7 +239,7 @@ export function NewOrderPage() {
             </dl>
           </Card>
 
-          {can('payments.collect') && (
+          {can('payments.collect') && !credit && (
             <Card>
               <Switch checked={payNow} onChange={setPayNow} label={t('orders.payNow')} />
               {payNow && (

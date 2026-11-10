@@ -59,13 +59,15 @@ public sealed record UserDetail(
     int Id, string Username, string DisplayNameEn, string? DisplayNameUr, string? Designation, string? Email, string? Phone,
     bool IsActive, bool IsLocked, DateTime? LockoutEndUtc, bool MustChangePassword, DateTime? LastLoginAtUtc,
     string PreferredLanguage, bool AllBranches, int? DefaultBranchId, IReadOnlyList<int> RoleIds, IReadOnlyList<int> BranchIds,
-    DateTime CreatedAtUtc, string RowVersion);
+    DateTime CreatedAtUtc, string RowVersion, string? RegistrationNo, bool HasSignature);
 
 public record UserEdit
 {
     [Required, MaxLength(200)] public string DisplayNameEn { get; init; } = "";
     [MaxLength(200)] public string? DisplayNameUr { get; init; }
     [MaxLength(200)] public string? Designation { get; init; }
+    /// <summary>Professional registration number printed under the name on reports this person signs.</summary>
+    [MaxLength(50)] public string? RegistrationNo { get; init; }
     [EmailAddress, MaxLength(256)] public string? Email { get; init; }
     [MaxLength(30)] public string? Phone { get; init; }
     [RegularExpression("^(en|ur)$")] public string PreferredLanguage { get; init; } = "en";

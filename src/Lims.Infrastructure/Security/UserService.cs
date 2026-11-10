@@ -61,7 +61,7 @@ public sealed partial class UserService(LimsDbContext db, IPasswordHasher<User> 
                 u.LockoutEndUtc != null && u.LockoutEndUtc > now, u.LockoutEndUtc, u.MustChangePassword, u.LastLoginAtUtc,
                 u.PreferredLanguage, u.AllBranches, u.DefaultBranchId,
                 u.Roles.Select(r => r.RoleId).ToList(), u.Branches.Select(b => b.BranchId).ToList(),
-                u.CreatedAtUtc, Convert.ToBase64String(u.RowVersion)))
+                u.CreatedAtUtc, Convert.ToBase64String(u.RowVersion), u.RegistrationNo, u.SignatureImage != null))
             .SingleOrDefaultAsync(ct) ?? throw BusinessRuleException.NotFound("User");
     }
 
@@ -148,6 +148,7 @@ public sealed partial class UserService(LimsDbContext db, IPasswordHasher<User> 
         user.DisplayNameEn = input.DisplayNameEn.Trim();
         user.DisplayNameUr = Blank(input.DisplayNameUr);
         user.Designation = Blank(input.Designation);
+        user.RegistrationNo = Blank(input.RegistrationNo);
         user.Email = Blank(input.Email);
         user.Phone = Blank(input.Phone);
         user.PreferredLanguage = input.PreferredLanguage;

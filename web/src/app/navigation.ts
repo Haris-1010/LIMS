@@ -74,6 +74,8 @@ export const navigation: NavGroup[] = [
         permission: 'samples.view',
         children: [
           { key: 'collection', path: '/samples/collection', permission: 'samples.collect', phase: 7 },
+          { key: 'receiving', path: '/samples/receiving', permission: 'samples.receive', phase: 7 },
+          { key: 'transfers', path: '/samples/transfers', permission: 'samples.view', phase: 7 },
           { key: 'tracking', path: '/samples/tracking', permission: 'samples.view', phase: 7 },
           { key: 'rejections', path: '/samples/rejections', permission: 'samples.reject', phase: 7 },
         ],
@@ -85,7 +87,7 @@ export const navigation: NavGroup[] = [
         permission: 'results.view',
         children: [
           { key: 'resultEntry', path: '/results/entry', permission: 'results.enter', phase: 8 },
-          { key: 'verification', path: '/results/verification', permission: 'results.approve', phase: 8 },
+          { key: 'verification', path: '/results/verification', permission: 'results.verify', phase: 8 },
         ],
       },
       { key: 'criticalAlerts', path: '/critical-alerts', icon: AlertTriangle, permission: 'results.critical', phase: 8 },
@@ -133,6 +135,7 @@ export const navigation: NavGroup[] = [
           { key: 'referenceRanges', path: '/catalog/reference-ranges', permission: 'catalog.clinical', phase: 5 },
         ],
       },
+      { key: 'reportTemplate', path: '/reports/template', icon: FileText, permission: 'reports.templates', phase: 9 },
       { key: 'branches', path: '/admin/branches', icon: Building2, permission: 'org.manage', phase: 3 },
     ],
   },

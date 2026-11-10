@@ -63,6 +63,8 @@ internal sealed class InvoiceConfig : IEntityTypeConfiguration<Invoice>
         b.HasOne<Patient>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.PatientId }).HasPrincipalKey(x => new { x.OrganizationId, x.Id });
         b.HasIndex(x => new { x.OrganizationId, x.InvoiceNo }).IsUnique();
         b.HasIndex(x => new { x.OrganizationId, x.Status });
+        b.HasOne<Domain.Billing.CorporateClient>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.CorporateClientId }).HasPrincipalKey(c => new { c.OrganizationId, c.Id });
+        b.HasIndex(x => new { x.OrganizationId, x.CorporateClientId }).HasFilter("[CorporateClientId] IS NOT NULL");
     }
 }
 
@@ -92,7 +94,7 @@ internal sealed class PaymentConfig : IEntityTypeConfiguration<Payment>
         b.ToTable("Payments", "billing", t =>
         {
             t.HasCheckConstraint("CK_Payments_Amount", "[Amount] > 0");
-            t.HasCheckConstraint("CK_Payments_Method", "[Method] BETWEEN 1 AND 5");
+            t.HasCheckConstraint("CK_Payments_Method", "[Method] BETWEEN 1 AND 6");
             t.HasCheckConstraint("CK_Payments_CashDrawer", "[Method] <> 1 OR [DrawerSessionId] IS NOT NULL");
         });
         b.Property(x => x.ReceiptNo).HasMaxLength(30).IsUnicode(false);

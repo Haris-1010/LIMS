@@ -28,6 +28,30 @@ const OrdersPage = lazy(() => import('./features/orders/OrdersPage').then((m) =>
 const OrderDetailPage = lazy(() => import('./features/orders/OrderDetailPage').then((m) => ({ default: m.OrderDetailPage })))
 const PaymentsPage = lazy(() => import('./features/orders/PaymentsPage').then((m) => ({ default: m.PaymentsPage })))
 const CashDrawerPage = lazy(() => import('./features/orders/CashDrawerPage').then((m) => ({ default: m.CashDrawerPage })))
+const CollectionPage = lazy(() => import('./features/samples/CollectionPage').then((m) => ({ default: m.CollectionPage })))
+const ReceivingPage = lazy(() => import('./features/samples/ReceivingPage').then((m) => ({ default: m.ReceivingPage })))
+const TrackingPage = lazy(() => import('./features/samples/TrackingPage').then((m) => ({ default: m.TrackingPage })))
+const RejectionsPage = lazy(() => import('./features/samples/RejectionsPage').then((m) => ({ default: m.RejectionsPage })))
+const TransfersPage = lazy(() => import('./features/samples/TransfersPage').then((m) => ({ default: m.TransfersPage })))
+const WorklistsPage = lazy(() => import('./features/results/WorklistsPage').then((m) => ({ default: m.WorklistsPage })))
+const ResultQueuePage = lazy(() => import('./features/results/ResultQueuePage').then((m) => ({ default: m.ResultQueuePage })))
+const ResultEntryPage = lazy(() => import('./features/results/ResultEntryPage').then((m) => ({ default: m.ResultEntryPage })))
+const VerificationPage = lazy(() => import('./features/results/VerificationPage').then((m) => ({ default: m.VerificationPage })))
+const CriticalAlertsPage = lazy(() => import('./features/results/CriticalAlertsPage').then((m) => ({ default: m.CriticalAlertsPage })))
+const ReportsPage = lazy(() => import('./features/reports/ReportsPage').then((m) => ({ default: m.ReportsPage })))
+const ReportOrderPage = lazy(() => import('./features/reports/ReportOrderPage').then((m) => ({ default: m.ReportOrderPage })))
+const ReportTemplatePage = lazy(() => import('./features/reports/ReportTemplatePage').then((m) => ({ default: m.ReportTemplatePage })))
+const ClientsPage = lazy(() => import('./features/corporate/ClientsPage').then((m) => ({ default: m.ClientsPage })))
+const ClientAccountPage = lazy(() => import('./features/corporate/ClientAccountPage').then((m) => ({ default: m.ClientAccountPage })))
+const CorporateInvoicesPage = lazy(() => import('./features/corporate/CorporateListPages').then((m) => ({ default: m.CorporateInvoicesPage })))
+const CorporateReceiptsPage = lazy(() => import('./features/corporate/CorporateListPages').then((m) => ({ default: m.CorporateReceiptsPage })))
+const StockItemsPage = lazy(() => import('./features/inventory/InventoryPages').then((m) => ({ default: m.StockItemsPage })))
+const SuppliersPage = lazy(() => import('./features/inventory/InventoryPages').then((m) => ({ default: m.SuppliersPage })))
+const PurchasesPage = lazy(() => import('./features/inventory/InventoryPages').then((m) => ({ default: m.PurchasesPage })))
+const LedgerPage = lazy(() => import('./features/inventory/InventoryPages').then((m) => ({ default: m.LedgerPage })))
+const StockItemPage = lazy(() => import('./features/inventory/StockItemPage').then((m) => ({ default: m.StockItemPage })))
+const AuditPage = lazy(() => import('./features/admin/AuditPage').then((m) => ({ default: m.AuditPage })))
+const SettingsPage = lazy(() => import('./features/admin/SettingsPage').then((m) => ({ default: m.SettingsPage })))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -46,6 +70,8 @@ const pages: Record<string, ReactNode> = {
   '/admin/users': <UsersPage />,
   '/admin/roles': <RolesPage />,
   '/admin/branches': <OrganizationPage />,
+  '/admin/audit': <AuditPage />,
+  '/admin/settings': <SettingsPage />,
   '/patients': <PatientsPage />,
   '/doctors': <DoctorsPage />,
   '/catalog/tests': <TestsPage />,
@@ -57,6 +83,24 @@ const pages: Record<string, ReactNode> = {
   '/billing/invoices': <OrdersPage />,
   '/billing/payments': <PaymentsPage />,
   '/billing/cash-drawer': <CashDrawerPage />,
+  '/samples/collection': <CollectionPage />,
+  '/samples/receiving': <ReceivingPage />,
+  '/samples/tracking': <TrackingPage />,
+  '/samples/rejections': <RejectionsPage />,
+  '/samples/transfers': <TransfersPage />,
+  '/worklists': <WorklistsPage />,
+  '/results/entry': <ResultQueuePage />,
+  '/results/verification': <VerificationPage />,
+  '/critical-alerts': <CriticalAlertsPage />,
+  '/corporate/clients': <ClientsPage />,
+  '/corporate/invoices': <CorporateInvoicesPage />,
+  '/corporate/receipts': <CorporateReceiptsPage />,
+  '/inventory/items': <StockItemsPage />,
+  '/inventory/purchases': <PurchasesPage />,
+  '/inventory/suppliers': <SuppliersPage />,
+  '/inventory/ledger': <LedgerPage />,
+  '/reports': <ReportsPage />,
+  '/reports/template': <ReportTemplatePage />,
 }
 
 const router = createBrowserRouter([
@@ -69,6 +113,10 @@ const router = createBrowserRouter([
       { path: '/patients/:id', element: <PatientProfilePage /> },
       { path: '/catalog/tests/:id', element: <TestEditorPage /> },
       { path: '/orders/:id', element: <OrderDetailPage /> },
+      { path: '/results/item/:orderItemId', element: <ResultEntryPage /> },
+      { path: '/corporate/clients/:id', element: <ClientAccountPage /> },
+      { path: '/inventory/items/:id', element: <StockItemPage /> },
+      { path: '/reports/order/:orderId', element: <ReportOrderPage /> },
       { path: '*', element: <PlaceholderPage /> },
     ],
   },

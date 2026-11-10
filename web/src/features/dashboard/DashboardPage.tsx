@@ -11,10 +11,8 @@ import {
   CheckCircle2,
   ClipboardCheck,
   ClipboardList,
-  Download,
   FileCheck2,
   FlaskConical,
-  Info,
   RefreshCw,
   Table2,
   TestTube2,
@@ -30,25 +28,26 @@ import { Card } from '../../components/ui/Card'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { StatCard } from '../../components/ui/StatCard'
-import { useToast } from '../../components/ui/Toast'
 import { formatCompact, formatLongDate, formatMoney, formatNumber, formatShortDate } from '../../lib/format'
-import { fetchDashboardSummary, type ActivityType, type DashboardRange, type DashboardSummary } from './dashboardApi'
+import { dashboardKeys, fetchDashboardSummary, type ActivityType, type DashboardRange, type DashboardSummary } from './dashboardApi'
 import './dashboard.css'
 
 export function DashboardPage() {
   const { t, i18n } = useTranslation()
   const { user } = useSession()
   const branchId = user?.activeBranchId ?? 'all'
-  const toast = useToast()
   const [range, setRange] = useState<DashboardRange>('today')
 
   const { data, isLoading, isFetching, refetch } = useQuery({
-    queryKey: ['dashboard', range, branchId],
-    queryFn: () => fetchDashboardSummary(range, branchId),
+    queryKey: dashboardKeys.summary(range, branchId),
+    queryFn: () => fetchDashboardSummary(range),
+    refetchInterval: 60_000, // the figures are live: refresh once a minute while the page is open
   })
 
   const firstName = user ? displayName(user, i18n.language).split(' ')[0] : ''
   const s = data?.stats
+  // While loading everything shows as a skeleton; afterwards a part the person may not see is left out.
+  const show = (k: keyof DashboardSummary['sections']) => !data || data.sections[k]
 
   return (
     <div className="page">
@@ -74,107 +73,112 @@ export function DashboardPage() {
             onClick={() => refetch()}
             icon={<RefreshCw size={16} className={isFetching ? 'spin' : undefined} />}
           />
-          <Button
-            icon={<Download size={16} />}
-            onClick={() => toast.show({ tone: 'info', title: t('toast.exported'), text: t('toast.exportedText') })}
-          >
-            {t('dashboard.export')}
-          </Button>
         </div>
       </div>
 
-      {data?.isPreview && (
-        <div className="banner" style={{ marginBottom: 16 }}>
-          <Info size={16} aria-hidden style={{ flexShrink: 0 }} />
-          <span>{t('dashboard.preview')}</span>
-        </div>
-      )}
-
       <div className="grid-stats">
-        <StatCard
-          loading={isLoading}
-          label={t('dashboard.stats.totalPatients')}
-          value={s ? formatNumber(s.totalPatients) : ''}
-          icon={<Users size={18} />}
-          foot={t('dashboard.stats.allTime')}
-        />
-        <StatCard
-          loading={isLoading}
-          label={t('dashboard.stats.todayRegistrations')}
-          value={s ? formatNumber(s.registrations) : ''}
-          icon={<UserPlus size={18} />}
-          tone="accent"
-          delta={s?.registrationsDelta}
-          foot={t('dashboard.vsPrevious')}
-        />
-        <StatCard
-          loading={isLoading}
-          label={t('dashboard.stats.todayOrders')}
-          value={s ? formatNumber(s.orders) : ''}
-          icon={<ClipboardList size={18} />}
-          delta={s?.ordersDelta}
-          foot={t('dashboard.vsPrevious')}
-        />
-        <StatCard
-          loading={isLoading}
-          label={t('dashboard.stats.cashCollection')}
-          value={s ? formatMoney(s.cashCollected) : ''}
-          icon={<Banknote size={18} />}
-          tone="success"
-          delta={s?.cashDelta}
-          foot={t('dashboard.vsPrevious')}
-        />
+        {show('patients') && (
+          <StatCard
+            loading={isLoading}
+            label={t('dashboard.stats.totalPatients')}
+            value={s ? formatNumber(s.totalPatients) : ''}
+            icon={<Users size={18} />}
+            foot={t('dashboard.stats.allTime')}
+          />
+        )}
+        {show('patients') && (
+          <StatCard
+            loading={isLoading}
+            label={t('dashboard.stats.todayRegistrations')}
+            value={s ? formatNumber(s.registrations) : ''}
+            icon={<UserPlus size={18} />}
+            tone="accent"
+            delta={s?.registrationsDelta}
+            foot={t('dashboard.vsPrevious')}
+          />
+        )}
+        {show('orders') && (
+          <StatCard
+            loading={isLoading}
+            label={t('dashboard.stats.todayOrders')}
+            value={s ? formatNumber(s.orders) : ''}
+            icon={<ClipboardList size={18} />}
+            delta={s?.ordersDelta}
+            foot={t('dashboard.vsPrevious')}
+          />
+        )}
+        {show('money') && (
+          <StatCard
+            loading={isLoading}
+            label={t('dashboard.stats.cashCollection')}
+            value={s ? formatMoney(s.cashCollected) : ''}
+            icon={<Banknote size={18} />}
+            tone="success"
+            delta={s?.cashDelta}
+            foot={t('dashboard.vsPrevious')}
+          />
+        )}
       </div>
 
       <div className="grid-stats cols-5 section-gap">
-        <StatCard
-          loading={isLoading}
-          label={t('dashboard.stats.pendingSamples')}
-          value={s ? formatNumber(s.pendingSamples) : ''}
-          icon={<TestTube2 size={18} />}
-          tone="warning"
-          foot={s && <span className="text-warning">{t('dashboard.stats.toCollect', { count: s.overdueSamples })}</span>}
-        />
-        <StatCard
-          loading={isLoading}
-          label={t('dashboard.stats.testsInProgress')}
-          value={s ? formatNumber(s.testsInProgress) : ''}
-          icon={<FlaskConical size={18} />}
-          foot={s && t('dashboard.stats.acrossDepartments', { count: s.departments })}
-        />
-        <StatCard
-          loading={isLoading}
-          label={t('dashboard.stats.awaitingApproval')}
-          value={s ? formatNumber(s.awaitingApproval) : ''}
-          icon={<ClipboardCheck size={18} />}
-          tone="danger"
-          foot={s && t('dashboard.stats.oldest', { time: waitLabel(s.oldestWaitingMinutes, t) })}
-        />
-        <StatCard
-          loading={isLoading}
-          label={t('dashboard.stats.completedReports')}
-          value={s ? formatNumber(s.completedReports) : ''}
-          icon={<FileCheck2 size={18} />}
-          tone="success"
-          foot={s && t('dashboard.stats.readyToPrint', { count: s.readyToPrint })}
-        />
-        <StatCard
-          loading={isLoading}
-          label={t('dashboard.stats.corporateOutstanding')}
-          value={s ? formatMoney(s.corporateOutstanding) : ''}
-          icon={<Building2 size={18} />}
-          tone="accent"
-          foot={s && t('dashboard.stats.clients', { count: s.corporateClients })}
-        />
+        {show('samples') && (
+          <StatCard
+            loading={isLoading}
+            label={t('dashboard.stats.pendingSamples')}
+            value={s ? formatNumber(s.pendingSamples) : ''}
+            icon={<TestTube2 size={18} />}
+            tone="warning"
+            foot={s && <span className="text-warning">{t('dashboard.stats.toCollect', { count: s.overdueSamples })}</span>}
+          />
+        )}
+        {show('results') && (
+          <StatCard
+            loading={isLoading}
+            label={t('dashboard.stats.testsInProgress')}
+            value={s ? formatNumber(s.testsInProgress) : ''}
+            icon={<FlaskConical size={18} />}
+            foot={s && t('dashboard.stats.acrossDepartments', { count: s.departments })}
+          />
+        )}
+        {show('results') && (
+          <StatCard
+            loading={isLoading}
+            label={t('dashboard.stats.awaitingApproval')}
+            value={s ? formatNumber(s.awaitingApproval) : ''}
+            icon={<ClipboardCheck size={18} />}
+            tone="danger"
+            foot={s && (s.awaitingApproval > 0 ? t('dashboard.stats.oldest', { time: waitLabel(s.oldestWaitingMinutes, t) }) : t('dashboard.stats.nothingWaiting'))}
+          />
+        )}
+        {show('reports') && (
+          <StatCard
+            loading={isLoading}
+            label={t('dashboard.stats.completedReports')}
+            value={s ? formatNumber(s.completedReports) : ''}
+            icon={<FileCheck2 size={18} />}
+            tone="success"
+            foot={s && t('dashboard.stats.readyToPrint', { count: s.readyToPrint })}
+          />
+        )}
+        {show('corporate') && (
+          <StatCard
+            loading={isLoading}
+            label={t('dashboard.stats.corporateOutstanding')}
+            value={s ? formatMoney(s.corporateOutstanding) : ''}
+            icon={<Building2 size={18} />}
+            tone="accent"
+            foot={s && t('dashboard.stats.clients', { count: s.corporateClients })}
+          />
+        )}
       </div>
 
       <div className="grid-2-1 section-gap">
-        <CollectionsCard data={data} loading={isLoading} />
-        <PipelineCard data={data} loading={isLoading} />
+        {show('money') && <CollectionsCard data={data} loading={isLoading} />}
+        {(show('samples') || show('results')) && <PipelineCard data={data} loading={isLoading} />}
       </div>
 
       <div className="grid-2-1 section-gap">
-        <ApprovalsCard data={data} loading={isLoading} />
+        {show('results') && <ApprovalsCard data={data} loading={isLoading} />}
         <ActivityCard data={data} loading={isLoading} />
       </div>
     </div>
@@ -336,7 +340,8 @@ function PipelineCard({ data, loading }: { data?: DashboardSummary; loading: boo
 
 /* ---------------- Approvals ---------------- */
 function ApprovalsCard({ data, loading }: { data?: DashboardSummary; loading: boolean }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const ur = i18n.language === 'ur'
   const flagBadge = {
     critical: (
       <Badge tone="danger">
@@ -368,6 +373,9 @@ function ApprovalsCard({ data, loading }: { data?: DashboardSummary; loading: bo
         </Link>
       }
     >
+      {!loading && data!.approvals.length === 0 ? (
+        <EmptyState icon={<ClipboardCheck size={22} />} title={t('dashboard.approvals.empty')} text={t('dashboard.approvals.emptyText')} />
+      ) : (
       <div className="table-wrap">
         <table className="table">
           <thead>
@@ -391,18 +399,18 @@ function ApprovalsCard({ data, loading }: { data?: DashboardSummary; loading: bo
                   </tr>
                 ))
               : data!.approvals.map((a) => (
-                  <tr key={a.orderNo}>
+                  <tr key={a.resultId}>
                     <td className="num cell-strong">{a.orderNo}</td>
                     <td>
                       <span className="cell-strong" dir="auto">
-                        {a.patient}
+                        {ur && a.patientUr ? a.patientUr : a.patient}
                       </span>
                       <span className="cell-sub num">{a.patientNo}</span>
                     </td>
                     <td>
-                      <span dir="auto">{a.test}</span>
+                      <span dir="auto">{ur && a.testUr ? a.testUr : a.test}</span>
                       <span className="cell-sub" dir="auto">
-                        {a.department}
+                        {ur && a.departmentUr ? a.departmentUr : a.department}
                       </span>
                     </td>
                     <td>{waitLabel(a.waitingMinutes, t)}</td>
@@ -412,6 +420,7 @@ function ApprovalsCard({ data, loading }: { data?: DashboardSummary; loading: bo
           </tbody>
         </table>
       </div>
+      )}
     </Card>
   )
 }
@@ -421,13 +430,12 @@ const activityIcon: Record<ActivityType, { icon: typeof Users; tone: string }> =
   registration: { icon: UserPlus, tone: 'primary' },
   payment: { icon: Banknote, tone: 'success' },
   approval: { icon: ClipboardCheck, tone: 'accent' },
-  sample: { icon: TestTube2, tone: 'primary' },
   rejection: { icon: XCircle, tone: 'warning' },
   critical: { icon: AlertTriangle, tone: 'danger' },
 }
 
 function ActivityCard({ data, loading }: { data?: DashboardSummary; loading: boolean }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   return (
     <Card title={t('dashboard.activity.title')}>
       {loading ? (
@@ -455,7 +463,7 @@ function ActivityCard({ data, loading }: { data?: DashboardSummary; loading: boo
                 </span>
                 <div>
                   <p className="activity-text">
-                    <Trans i18nKey={`dashboard.activity.${a.type}`} values={a.params} components={{ b: <strong /> }} />
+                    <Trans i18nKey={`dashboard.activity.${a.type}`} values={i18n.language === 'ur' ? { ...a.params, name: a.params.nameUr ?? a.params.name, test: a.params.testUr ?? a.params.test } : a.params} components={{ b: <strong /> }} />
                   </p>
                   <p className="activity-time">{waitLabel(a.minutesAgo, t)}</p>
                 </div>

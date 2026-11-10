@@ -89,7 +89,7 @@ All tables carry `OrganizationId` with composite foreign keys, as in earlier pha
 Other changes:
 - New sequence type `Transfer` (prefix `TRF`, monthly), created on first use like `Refund` was.
 - **Backfill:** a safe, repeatable step plans samples for orders created before this phase (the dev database has a single cancelled order).
-- Default rejection reasons are **operational, editable and not clinical rules**: haemolysed, clotted, insufficient volume, wrong container, unlabelled or mislabelled, leaked or broken, delayed transport, contaminated, wrong patient, collection failed, other. The laboratory should confirm the list.
+- Default rejection reasons are **operational, editable and not clinical rules**: haemolysed, clotted, insufficient volume, wrong container, unlabelled or mislabelled, leaked or broken, delayed transport, contaminated, wrong patient, other (10 reasons). The laboratory should confirm the list.
 - Existing organisations get the default reasons through the migration; new ones through provisioning.
 
 ## 5. API (all under the existing cookie, CSRF and permission rules)

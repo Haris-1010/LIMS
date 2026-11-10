@@ -15,7 +15,7 @@ namespace Lims.Infrastructure.Orders;
 /// Order registration and cancellation. Prices always come from the catalog; totals are computed here.
 /// Order, invoice, lines and the first payment are written in one transaction.
 /// </summary>
-public sealed class OrderService(LimsDbContext db, INumberSequenceService numbers, ILabClock clock, BillingService billing, Samples.SampleService samples)
+public sealed class OrderService(LimsDbContext db, INumberSequenceService numbers, ILabClock clock, BillingService billing, Samples.SampleService samples, Corporate.CorporateService corporate)
 {
     private sealed record PlannedTest(int Id, string Code, string NameEn, string? NameUr);
     private sealed record PlannedLine(InvoiceLineKind Kind, int? TestId, int? PackageId, string Code, string NameEn, string? NameUr, decimal Price, List<PlannedTest> Tests);
@@ -29,8 +29,10 @@ public sealed class OrderService(LimsDbContext db, INumberSequenceService number
     public async Task<Quote> QuoteAsync(QuoteRequest request, CancellationToken ct)
     {
         var lines = await PlanAsync(request.Items, BranchId, ct);
+        Corporate.CorporatePricing? corp = request.CorporateClientId is int cq ? await corporate.PricingAsync(cq, ct) : null;
+        if (corp is not null) lines = ApplyContract(lines, corp);
         var gross = InvoiceCalculator.Round(lines.Sum(l => l.Price));
-        var discount = DiscountOf(request.Discount, gross, enforcePermission: false);
+        var discount = corp is not null ? ContractDiscount(corp, gross) : DiscountOf(request.Discount, gross, enforcePermission: false);
         return new Quote(lines.Select(ToQuote).ToList(), gross, discount.Amount, gross - discount.Amount);
     }
 
@@ -51,8 +53,24 @@ public sealed class OrderService(LimsDbContext db, INumberSequenceService number
             throw new BusinessRuleException("doctor_invalid", "The referring doctor is not active.");
 
         var planned = await PlanAsync(input.Items, branchId, ct);
+        Corporate.CorporatePricing? corp = null;
+        if (input.CorporateClientId is int clientId)
+        {
+            // A credit order: contract prices and discount, due date from the client's terms, nothing taken at the counter.
+            if (!db.Request.Can(Permissions.CorporateInvoice)) throw new BusinessRuleException("corporate_forbidden", "You don't have permission to create credit orders.", 403);
+            if (input.Payment is not null) throw new BusinessRuleException("credit_order_no_payment", "A credit order is paid by the client later; don't take payment now.");
+            if (input.Discount is not null) throw new BusinessRuleException("corporate_no_manual_discount", "Credit orders use the contract discount; manual discounts are not allowed.");
+            corp = await corporate.PricingAsync(clientId, ct);
+            planned = ApplyContract(planned, corp);
+        }
         var gross = InvoiceCalculator.Round(planned.Sum(l => l.Price));
-        var discount = DiscountOf(input.Discount, gross, enforcePermission: true);
+        var discount = corp is not null ? ContractDiscount(corp, gross) : DiscountOf(input.Discount, gross, enforcePermission: true);
+        if (corp is not null)
+        {
+            var balance = await corporate.BalanceAsync(corp.ClientId, ct);
+            if (Domain.Billing.CorporateRules.ExceedsLimit(corp.CreditLimit, balance, gross - discount.Amount))
+                throw new BusinessRuleException("credit_limit_exceeded", "This order would take the client past its credit limit.", 409, new { balance, limit = corp.CreditLimit });
+        }
 
         try
         {
@@ -61,6 +79,7 @@ public sealed class OrderService(LimsDbContext db, INumberSequenceService number
             {
                 OrganizationId = orgId, BranchId = branchId, PatientId = input.PatientId, ReferringDoctorId = input.ReferringDoctorId,
                 Priority = input.Priority, ClinicalNotes = Blank(input.ClinicalNotes), IdempotencyKey = input.IdempotencyKey,
+                CorporateClientId = corp?.ClientId, ContractId = corp?.ContractId,
                 OrderNo = await numbers.NextAsync(SequenceTypes.Order, branchId, ct),
             };
             var invoice = new Invoice
@@ -70,6 +89,8 @@ public sealed class OrderService(LimsDbContext db, INumberSequenceService number
                 DiscountPercent = discount.Percent, DiscountAmount = discount.Amount,
                 DiscountReason = discount.Amount > 0 ? discount.Reason : null,
                 DiscountByUserId = discount.Amount > 0 ? db.Request.UserId : null,
+                CorporateClientId = corp?.ClientId, ContractId = corp?.ContractId,
+                DueDate = corp is null ? null : DateOnly.FromDateTime(clock.LocalNow).AddDays(corp.TermsDays),
             };
             db.Orders.Add(order);
             await db.SaveChangesAsync(ct);
@@ -171,6 +192,9 @@ public sealed class OrderService(LimsDbContext db, INumberSequenceService number
         }
         await samples.OnItemsCancelledAsync(order.Id, cancelledItems, ct);   // samples with no tests left are cancelled too
         InvoiceCalculator.Recalculate(invoice);
+        // A credit invoice that has already been paid by allocation cannot shrink below what was allocated (allocations are never reversed).
+        if (invoice.CorporateClientId is not null && invoice.Balance < 0)
+            throw BusinessRuleException.Conflict("credit_invoice_overallocated", "Corporate payments have already been allocated to this invoice, so tests can't be cancelled that would reduce it below that amount.");
         await db.SaveChangesAsync(ct);
     }
 
@@ -235,7 +259,7 @@ public sealed class OrderService(LimsDbContext db, INumberSequenceService number
             new OrderPatient(p.Id, p.PatientNo, p.FullName, p.FullNameUr, p.Title, p.Sex, p.DateOfBirth, p.Mobile),
             o.ReferringDoctorId, doctor, o.Priority, o.ClinicalNotes, o.Status, o.CancelReason,
             o.Items.OrderBy(i => i.Id).Select(i => new OrderItemDto(i.Id, i.InvoiceLineId, i.TestCode, i.TestNameEn, i.TestNameUr, i.Status)).ToList(),
-            invoice);
+            invoice, o.CorporateClientId, o.CorporateClientId is int cid ? await db.CorporateClients.Where(c => c.Id == cid).Select(c => c.NameEn).FirstOrDefaultAsync(ct) : null);
     }
 
     // ---------- Helpers ----------
@@ -309,6 +333,13 @@ public sealed class OrderService(LimsDbContext db, INumberSequenceService number
         if (amount <= 0 || amount > gross) throw new BusinessRuleException("discount_invalid", "The discount can't be more than the total.");
         return new DiscountResult(null, amount, d.Reason?.Trim());
     }
+
+    /// <summary>Fixed contract prices replace catalogue prices for tests (package prices are not changed).</summary>
+    private static List<PlannedLine> ApplyContract(List<PlannedLine> lines, Corporate.CorporatePricing corp) =>
+        lines.Select(l => l.Kind == InvoiceLineKind.Test && l.TestId is int t && corp.Prices.TryGetValue(t, out var price) ? l with { Price = price } : l).ToList();
+
+    private DiscountResult ContractDiscount(Corporate.CorporatePricing corp, decimal gross) =>
+        corp.DiscountPercent > 0 ? new DiscountResult(corp.DiscountPercent, InvoiceCalculator.Round(gross * corp.DiscountPercent / 100m), $"Contract: {corp.ContractName}") : new DiscountResult(null, 0, null);
 
     private static QuoteLine ToQuote(PlannedLine l) =>
         new(l.Kind, l.TestId, l.PackageId, l.Code, l.NameEn, l.NameUr, l.Price, l.Tests.Select(t => t.Code).ToList());

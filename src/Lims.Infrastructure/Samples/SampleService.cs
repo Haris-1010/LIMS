@@ -20,7 +20,7 @@ namespace Lims.Infrastructure.Samples;
 /// comes from the global query filter. The architecture tests allow `db.Samples` only on lines marked VISIBILITY-GATE
 /// (or when adding a new sample).
 /// </summary>
-public sealed class SampleService(LimsDbContext db, INumberSequenceService numbers, ILabClock clock)
+public sealed class SampleService(LimsDbContext db, INumberSequenceService numbers, ILabClock clock, Results.ResultLookup results)
 {
     private int OrgId => db.Request.OrganizationId ?? throw new TenantViolationException("No organisation in the request context.");
     private int? UserIdOrNull => db.Request.UserId;
@@ -115,6 +115,12 @@ public sealed class SampleService(LimsDbContext db, INumberSequenceService numbe
         if (q.Status is SampleStatus st) query = query.Where(s => s.Status == st);
         if (q.BranchId is int b) query = query.Where(s => s.CurrentBranchId == b || s.OriginBranchId == b || s.DestinationBranchId == b);
         if (q.OrderId is long oid) query = query.Where(s => s.OrderId == oid);
+        if (q.HeldHere) { var at = ActiveBranch; query = query.Where(s => s.CurrentBranchId == at); }
+        if (q.AwaitingReceipt)
+        {
+            var here = ActiveBranch;
+            query = query.Where(s => (s.Status == SampleStatus.Collected && s.CurrentBranchId == here) || (s.Status == SampleStatus.InTransit && s.DestinationBranchId == here));
+        }
         if (q.From is DateOnly from) { var f = clock.LocalDateStartUtc(from); query = query.Where(s => s.CreatedAtUtc >= f); }
         if (q.To is DateOnly to) { var t = clock.LocalDateStartUtc(to.AddDays(1)); query = query.Where(s => s.CreatedAtUtc < t); }
         if (!string.IsNullOrWhiteSpace(q.Search))
@@ -338,6 +344,9 @@ public sealed class SampleService(LimsDbContext db, INumberSequenceService numbe
 
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         var s = await LoadForChangeAsync(id, ct);
+        // Once results exist for its tests the sample is part of the clinical record: discard drafts first, never orphan results.
+        if (await results.AnyForItemsAsync(s.Tests.Select(t => t.OrderItemId).ToList(), ct))
+            throw BusinessRuleException.Conflict("sample_has_results", "Results have been saved for this sample. Discard the draft results first.");
         switch (s.Status)
         {
             case SampleStatus.Collected or SampleStatus.Received when s.CurrentBranchId != branch:

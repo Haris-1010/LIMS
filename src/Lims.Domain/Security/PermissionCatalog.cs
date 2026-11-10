@@ -49,6 +49,8 @@ public static class Permissions
 
     public const string ReportsView = "reports.view";
     public const string ReportsPrint = "reports.print";
+    public const string ReportsIssue = "reports.issue";
+    public const string ReportsTemplates = "reports.templates";
 
     public const string CatalogView = "catalog.view";
     public const string CatalogManage = "catalog.manage";
@@ -127,6 +129,9 @@ public static class Permissions
         new(46, AuditView, "Administration", "View audit logs", "آڈٹ لاگز دیکھیں"),
         new(47, SettingsManage, "Administration", "Change system settings", "سسٹم سیٹنگز تبدیل کریں"),
         new(48, BackupManage, "Administration", "Run and restore backups", "بیک اپ اور بحالی"),
+
+        new(49, ReportsIssue, "Reports", "Issue (finalise) laboratory reports", "لیبارٹری رپورٹس جاری کریں"),
+        new(50, ReportsTemplates, "Reports", "Edit the report template and logo", "رپورٹ ٹیمپلیٹ اور لوگو میں ترمیم"),
     ];
 }
 
@@ -174,7 +179,7 @@ public static class DefaultRoles
             Permissions.DashboardView, Permissions.PatientsView, Permissions.PatientsViewSensitive, Permissions.OrdersView,
             Permissions.SamplesView, Permissions.SamplesReject, Permissions.ResultsView, Permissions.ResultsEnter,
             Permissions.ResultsVerify, Permissions.ResultsApprove, Permissions.ResultsAmend, Permissions.ResultsCritical,
-            Permissions.ReportsView, Permissions.ReportsPrint, Permissions.CatalogView, Permissions.CatalogClinical,
+            Permissions.ReportsView, Permissions.ReportsPrint, Permissions.ReportsIssue, Permissions.CatalogView, Permissions.CatalogClinical,
         ]),
         new("ACCOUNTANT", "Accountant", "اکاؤنٹنٹ", "Financial reporting, refunds and reconciliation",
         [
@@ -189,9 +194,9 @@ public static class DefaultRoles
         ]),
         new("CORPBILLING", "Corporate Billing Officer", "کارپوریٹ بلنگ آفیسر", "Corporate clients, credit invoices and receipts",
         [
-            Permissions.DashboardView, Permissions.PatientsView, Permissions.OrdersView, Permissions.BillingView,
+            Permissions.DashboardView, Permissions.PatientsView, Permissions.OrdersView, Permissions.OrdersCreate, Permissions.BillingView,
             Permissions.CorporateView, Permissions.CorporateManage, Permissions.CorporateInvoice,
-            Permissions.CorporateReceive, Permissions.ReportsView,
+            Permissions.CorporateReceive, Permissions.ReportsView, Permissions.CatalogView,
         ]),
     ];
 }

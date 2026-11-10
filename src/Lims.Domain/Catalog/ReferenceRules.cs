@@ -11,6 +11,8 @@ public enum ResultFlag
     High = 3,
     CriticalLow = 4,
     CriticalHigh = 5,
+    /// <summary>An option-type result the laboratory has marked abnormal (e.g. "Positive").</summary>
+    Abnormal = 6,
 }
 
 /// <summary>

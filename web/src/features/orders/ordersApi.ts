@@ -2,7 +2,7 @@ import type { Sex } from '../patients/patientsApi'
 
 /* Contracts for /api/orders and /api/billing (see Lims.Application.Orders). */
 
-export type PaymentMethod = 1 | 2 | 3 | 4 | 5
+export type PaymentMethod = 1 | 2 | 3 | 4 | 5 | 6
 export type InvoiceStatus = 0 | 1 | 2 | 3 | 4
 export type OrderItemStatus = 0 | 10 | 20 | 30 | 40 | 90
 
@@ -69,6 +69,9 @@ export interface OrderDetail {
   cancelReason: string | null
   items: { id: number; invoiceLineId: number; testCode: string; testNameEn: string; testNameUr: string | null; status: OrderItemStatus }[]
   invoice: InvoiceDto
+  /** Set for a credit order: billed to this corporate client and paid through corporate receipts. */
+  corporateClientId?: number | null
+  corporateClientName?: string | null
 }
 
 export interface OrderListItem {

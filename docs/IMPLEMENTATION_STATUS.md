@@ -1,6 +1,6 @@
 # Implementation status
 
-_Last updated: 2026-11-09_
+_Last updated: 2026-11-10_
 
 | Phase | Scope | Status |
 |---|---|---|
@@ -10,14 +10,145 @@ _Last updated: 2026-11-09_
 | 4 | Patients and doctors | **Done** |
 | 5 | Test catalog, parameters, packages, reference configuration | **Done** |
 | 6 | Orders, invoices, payments, receipts, cash drawer | **Done** |
-| 7 | Sample collection, barcodes, tracking | Not started |
-| 8 | Worklists, result entry, verification, critical alerts | Not started |
-| 9 | Bilingual reports, PDF, printing | Not started |
-| 10 | Corporate billing and reconciliation | Not started |
-| 11 | Inventory and stock ledger | Not started |
-| 12 | Live dashboard, audit viewer, system settings | Not started |
+| 7 | Sample collection, barcodes, tracking | **Done** (see Phase 7 below, with limitations) |
+| 8 | Worklists, result entry, verification, critical alerts | **Done** (see Phase 8 below, with limitations) |
+| 9 | Bilingual reports, PDF, printing | **Done** (see Phase 9 below, with limitations; no server-side PDF) |
+| 10 | Corporate billing and reconciliation | **Done** (see Phase 10 below, with limitations) |
+| 11 | Inventory and stock ledger | **Done** (see Phase 11 below, with limitations) |
+| 12 | Live dashboard, audit viewer, system settings | **Done** (see Phase 12 below, with limitations) |
 | 13 | Security review, performance, IIS deployment, backup/restore | Not started |
 | 14 | Analyzer integration (needs device specs) | Blocked: needs device model, protocol and interface documentation |
+
+## Phase 12: what exists and was verified
+
+Design and scope: `PHASE12_PLAN.md`; decisions 39-45 in `DECISIONS.md`. **No migration.**
+- **Live dashboard** (`GET /api/dashboard/summary`) replaces the prototype's sample data: patients, orders, samples (waiting, overdue after 24 h), results in progress and awaiting approval, reports issued and ready, payments received with a daily trend against corporate credit billed, corporate outstanding, a pipeline, the oldest results awaiting approval and a recent-activity feed. Each part follows the working branch and appears only to people holding its permission; the open page refreshes every minute. The fake "Export" button and the "preview data" banner were removed.
+- **Audit viewer** (`/api/audit`, `/admin/audit`): the organisation's audit log, read-only, with date, kind, record-type and text filters and a detail view showing the before and after value of each field. Sensitive values stay masked.
+- **System settings** (`/api/settings`, `/admin/settings`): the five settings the code really reads (`Samples.RequirePaymentBeforeCollection`, `Results.AllowSelfVerification`, `Results.BlockApprovalUntilCriticalNotified`, `Inventory.AllowNegativeStock`, `Inventory.ExpiryAlertDays`), validated, versioned against overwriting, audited, with reset to default. This closes the "no settings screen" limitation of Phases 7, 8 and 11.
+
+**Tests**: **402 automated tests pass (231 unit, 171 integration)**. New for this phase: 8 integration tests (figures that move with real work: registration, order, payment, pending sample, pipeline, feed and trend; an overdue sample after 30 hours; per-permission visibility of dashboard parts for System Administrator, Receptionist and Inventory Manager; range validation, anonymous refusal and no leakage from another organisation; audit list, detail, masking, named actions, filters and date range; audit permission, read-only and isolation; settings validation, unknown keys, effect on stock alerts, version conflicts and the audit record of a change; boolean setting and permissions) and 18 unit tests (period change percentage, ranges, audit change parsing, settings catalogue). The translation test covers the two new error codes.
+
+**Checked in the browser (dev database, English and Urdu RTL):** the dashboard showing real orders, payments, a rejected sample, critical values and approvals; the empty "nothing waiting for approval" state; the audit list, detail dialogs (before/after, IP, request id) and kind filters; the settings page (Save disabled for an out-of-range number, number saved, switch toggled, reset to default; the stock alert window changed accordingly); Urdu pages without horizontal overflow. The test changes to settings were reset to defaults. A defect found and fixed during this check: with nothing awaiting approval the card still said "Oldest waiting 0 min ago", and the empty approvals table had no message. **Not browser-checked:** the dashboard seen by a limited role such as a receptionist (covered by API tests), the 7- and 30-day ranges and the audit date filters in the UI. The browser pane was hidden, so no screenshots were reviewed.
+
+**Known limitations**
+- No export of the dashboard or the audit log; no saved searches.
+- Audit viewers see the whole organisation's log, not only their branches (decision 43); viewing is not itself logged.
+- "Payments received" is not net of refunds and excludes corporate allocations (decision 41). "Overdue" is a fixed 24 hours (decision 40).
+- `Billing.MaxDiscountPercentWithoutApproval` is stored but not enforced, so it is not shown on the settings screen.
+- Action names of named audit lines (for example `Inventory.PurchaseReceived`) are shown as written, not translated.
+
+## Phase 11: what exists and was verified
+
+Design and scope: `PHASE11_PLAN.md`; decisions 31-38 in `DECISIONS.md`. Stock items, suppliers, purchases ("receive stock") with batches and expiry, an append-only stock ledger, manual issue/adjust/write-off, transfers between branches, automatic consumption of reagents when a result is submitted (earliest expiry first, never blocking the result, shortfalls recorded), and low-stock/expiry/shortfall alerts. Migration `AddInventory` (8 tables in the new `inventory` schema).
+
+**Tests**: with the whole solution in the working tree, **376 automated tests pass (213 unit, 163 integration)**. New for this phase: 13 integration tests (permissions and validation; purchase creating batches and ledger lines; purchase validation and expiry rules; the same purchase sent 5 times at once recorded once; stock never below zero and 8 simultaneous issues of 3 from a batch of 10 allowing exactly 3; adjust/write-off permissions and reasons; transfer between branches with the expiry travelling and branch-limited users unable to touch other branches' batches; result submission charging stock earliest-expiry-first and once only after a return and re-submit; short stock still saving the result and recording a shortfall; profile rules; low/expiring/expired alerts; isolation between organisations, anonymous and token-less refusal; database constraints refusing negative stock and a wrong-direction ledger line) and 20 unit tests for `InventoryRules` (batch order, expired batches, rounding, expiry window, low stock, movement direction). The translation test now covers the 12 new server error codes. The frontend lints and type-checks clean.
+
+**Checked in the browser (dev database, English and Urdu RTL):** creating a supplier and a stock item, receiving stock (blocked with a clear message in the "All branches" view until a branch is chosen, then recorded as `GRN-26-0001`), the items list showing Low and "expiring" badges and the alerts strip, the batch action menu, an over-sized issue blocked and a valid issue (80 → 75 ml) reflected, the purchases and ledger pages and the usage dialog in Urdu without horizontal overflow. **Not browser-checked:** transfer dialog, write-off, shortfall resolution and the automatic charge from a real result in the UI (all covered by API tests). The browser pane was hidden, so no screenshots were reviewed.
+
+**Known limitations**
+- Settings `Inventory.AllowNegativeStock` (default off) and `Inventory.ExpiryAlertDays` (default 30) work in the API but have no settings screen yet.
+- Which moment charges the reagents (result submission) is a default for the laboratory to confirm (decision 32).
+- The transfer screen offers only the signed-in user's own branches; the API accepts any active branch of the organisation. Transfers are immediate (no in-transit state).
+- No purchase orders, supplier payments, stocktake screen, pack barcode scanning or consumption reports.
+- An item's list shows stock for the working branch (all visible branches when none is selected), and the item page lists every visible branch's batches.
+- A development supplier (`MEDICO`), item (`GLU-R1`) and purchase `GRN-26-0001` (80 ml, then 5 ml issued) were created in `LIMS_Dev` during the check.
+
+## Phase 10: what exists and was verified
+
+Design and scope: `PHASE10_PLAN.md`. Clients, contracts with fixed prices and discount, credit orders and invoices with due dates, credit limit, receipts and credit notes, allocation to invoices, account balance with aging, statement, and a books reconciliation check. Migration `AddCorporateBilling`.
+
+**Tests**: with the unfinished Phase 11 inventory code removed (in a scratch copy, so the working tree was not touched), **343 automated tests pass (193 unit, 150 integration)**, including 10 integration tests and 6 unit tests for this phase: contract rules, contract pricing and credit invoices, refusal of counter payment, manual discount and inactive clients, credit limit, allocation that never over-allocates, concurrent allocation of one receipt, receipt permissions and idempotency, aging and statement, cancellation after allocation, isolation, anonymous and token-less refusal, database constraints. The frontend lints and type-checks clean.
+
+**Checked in the browser (dev database):** corporate clients list, creating a client (Save disabled until code and name are filled), the client account page in English and Urdu RTL without horizontal overflow. **Not browser-checked:** contracts, a credit order, receipts, allocation, statement and "Check books" (covered by API tests only). The browser pane was hidden, so no screenshots were reviewed.
+
+**Known limitations**
+- ~~The full test suite did not run in the working tree~~: this was caused by unfinished Phase 11 inventory code (no migration, untranslated error codes). Phase 11 is now finished and the whole suite passes (376 tests).
+- Credit invoices are one per order; there is no monthly grouped invoice. No printable statement or PDF, and no email or SMS.
+- The "Due" and "Balance due" column headings in the Urdu credit-invoices table use the same Urdu word.
+- Clients are organisation-wide; there are no per-branch accounts.
+- A development client `ACME` ("Acme Textiles (demo)") was created in `LIMS_Dev` during the browser check.
+
+## Phase 9: what exists and was verified
+
+**Backend**
+- A patient report **per order**, built only from released (approved) results, in English, Urdu or both. Issuing freezes the report as a snapshot (patient, sample dates, every value with its flag, unit and the approved range used, comments, signatories, letterhead text) with a **SHA-256 fingerprint**; later changes to the patient, catalogue or ranges never alter an issued report. Verifying recomputes the fingerprint.
+- **Preview** shows what would be issued now and stores nothing. **Interim** reports list unreleased tests as pending; **Final** means every non-cancelled test is released.
+- **Versions**: a newly released test, an amendment or a cancelled test makes an issued report *outdated*; issuing again creates the next version (same report number, mandatory reason), and the earlier version stays viewable and is marked superseded. Two people issuing at once produce one report.
+- **Printing** is counted atomically; the first print is the original and every later print is marked *Duplicate copy*.
+- **Secure access**: `reports.view` / `reports.print` / new `reports.issue` / new `reports.templates`; branch visibility (a collection centre sees its own patients' reports); every issue, view, print and integrity check is written to the audit log; the patient-identifying snapshot is never copied into the audit log.
+- **Template**: header, footer and disclaimer text in English and Urdu, and a logo. **Signatories**: registration number and signature image per user. Images are accepted only as real PNG or JPEG (checked by their bytes, not file name), within size limits, and are served with `nosniff`.
+- Database: migration `AddReports` (`LabReports`, `ReportTemplates`, `ReportTemplateTranslations`, new columns on `Users`, two permissions granted to the existing standard roles of every organisation, sequence `Report`), with CHECK constraints (status, hash length, final needs every test released, image size and type) and one live version per order.
+
+**Frontend** (English and Urdu RTL): Reports list (ready to report, issued), the order report page (language, preview, issue, new version, print or save as PDF, integrity check, versions), the A4 report document (letterhead with logo, patient block, results by department with flag codes and words, pending tests, signatories with signatures, disclaimer, report number, version and fingerprint, watermarks for preview, superseded and duplicate), template settings, and registration number and signature on the user form. A Report link appears on the order page.
+
+**API**: `GET /api/reports[?tab=ready|issued]`, `GET /api/reports/{id}`, `POST /api/reports/{id}/printed`, `GET /api/reports/{id}/verify`, `GET /api/reports/signatures/{userId}`, `GET|POST /api/orders/{id}/reports[/preview]`, `GET|PUT /api/report-template`, `GET|PUT|DELETE /api/report-template/logo`, `PUT|DELETE /api/users/{id}/signature`.
+
+**Tests**: 309 automated tests pass (169 unit, 140 integration): all earlier tests plus 14 integration tests for this phase (preview stores nothing, frozen content, ready and issued lists, interim then final versions with supersede, amendment makes a report outdated while the old version keeps the old value, atomic print counting and duplicate marking, issue race, role matrix, isolation between organisations and branches, tampering detected, raw-SQL constraints, template and logo rules including a disguised SVG and an oversized image, signatures and registration numbers, audit records, anonymous and token-less refusal) and 32 unit tests (interim and final rules, outdated detection, fingerprint, image sniffing, snapshot builder: display rounding only, flag codes, approved range text, grouping, pending tests, signatories, bilingual names, round trip; an architecture test guarding access to issued reports).
+
+**Checked in the browser (EN, Urdu RTL and bilingual):** ready list, preview of a two-test order with a 28-parameter panel (about two A4 pages), Urdu and bilingual layouts with the local Nastaliq font and RTL direction, the sheet kept at 210 mm, issue as bilingual, original print then "Duplicate copy" on later views, integrity check, template text saved, a template change after issuing leaving the issued report untouched, user form signature controls, Urdu list and page without horizontal overflow. Defects found and fixed during this check: the report sheet was squeezed below A4 width, the rotated watermark caused horizontal scrolling, and the first Urdu print could have used a fallback font because fonts load on first use.
+
+**Known limitations**
+- **No one-click server-side PDF.** PDF export is the browser's "Save as PDF" from the print dialog (same layout, correct Urdu, works offline). A server-side PDF needs a library such as QuestPDF whose licence has not been accepted (decision 1); `GET /api/reports/{id}/pdf` is not built.
+- The browser reports `afterprint` even if the person cancels the print dialog, so a cancelled print is still counted as a print.
+- Repeating header and footer on each page and the fingerprint line rely on the browser's print engine; they were checked in the page structure, **not on paper or in a physical print preview**. "Page x of y" is not shown (browsers cannot count total pages reliably).
+- The logo and signature images are read when the report is shown or printed, not frozen: replacing a logo or signature changes how old reports look (the clinical content and the letterhead text stay frozen).
+- The "ready to report" list looks at results released in the last 60 days (adjustable up to 365, at most 1000 orders).
+- One template per organisation (no per-branch letterhead yet). Any user who can view reports can fetch a signatory's signature image (it is printed on reports anyway).
+- No screenshots were reviewed (the browser pane was hidden); layout was checked through page structure and measurements.
+
+## Phase 8: what exists and was verified
+
+**Backend**
+- Result entry per ordered test, per parameter (numeric, option, text, narrative). Numbers are read in English or Urdu digits; anything ambiguous (thousands separators, exponents, more than 6 decimals) is refused, never guessed or rounded.
+- Flags (low, high, critical, abnormal option) come **only** from approved reference ranges, chosen by sex and the patient's age on the collection date. A draft or retired range never flags; with no approved range the value is simply not flagged and the screen says so. The range used is copied onto the result so reports can reproduce it later.
+- Workflow: draft, submitted, verified, approved (released). Verify and approve need the matching permission; **the person who entered a result cannot verify or approve it**. A reviewer can return a result with a reason. Verify, approve, return and amend carry the version the reviewer saw, so a result changed in the meantime is refused (409).
+- Critical values raise an alert when the result is submitted; approval is blocked until someone records who was told, how, and that the value was read back.
+- Released results are locked. Changing one means an amendment: reason required, new version, the old version stays released until the new one is approved (then it is superseded and kept). An amendment that was only started can be abandoned.
+- Worklists: batches of received tests for one department at a branch, with a number (`WL-...`), one open worklist per test (enforced by the database), a printable sheet, close.
+- A sample whose tests have saved results cannot be rejected until the drafts are discarded.
+- Database: six new tables (migration `AddResults`), CHECK constraints tying status to who and when, one released and one in-progress version per test, one value kind per parameter.
+
+**Frontend** (English and Urdu): Result entry queue (urgent first, overdue marker, scan or search), the result screen (typed inputs per parameter type, live flag preview, Enter moves to the next field, save draft, submit, verify, return, approve, amend, discard, history, critical alerts), Verification & approval queues, Critical alerts (report with read-back), Worklists (create, print sheet, close), and a Results card on the order page.
+
+**API**: `GET /api/results/pending`, `GET /api/results/queue`, `GET|PUT|DELETE /api/results/items/{orderItemId}[/draft]`, `GET /api/results/{id}`, `GET /api/results/{id}/history`, `POST /api/results/{id}/submit|verify|return|approve|amend`, `GET /api/orders/{id}/results`, `GET|POST /api/worklists[/{id}[/close]]`, `GET /api/critical-alerts[/open-count]`, `POST /api/critical-alerts/{id}/notify`. No new permission keys (`results.view|enter|verify|approve|amend|critical`).
+
+**Tests**: 263 automated tests pass (137 unit, 126 integration): all earlier tests plus 17 integration tests for this phase (full workflow, flags only from approved ranges, option and numeric validation, critical alert blocking approval, separation of duties, return and resubmit, stale-version and parallel-review races, locked results and amendment, abandoned amendment, sample and branch guards, the reject-sample guard, queues and permissions, worklists, isolation between organisations and branches, anonymous and token-less refusal, role matrix, raw-SQL database constraints) and unit tests (state machine, separation of duties, value parser, range selection by collection-date age, an architecture test guarding result visibility). Defects caught by these tests and fixed: the one-version-in-progress index was silently merged with the released-version index by EF; a worklist read samples around the sample visibility gate; an amendment that was started could never be abandoned.
+
+**Checked in the browser (EN and Urdu RTL):** queue ordering, invalid input blocked, live critical preview and row highlight, Enter-key flow, submit, the enterer seeing no Verify button, a second user verifying, approval refused while the critical alert was open, reporting with a required read-back, release, amendment banner and draft, Urdu layout without overflow, worklist create, print and close, the alerts page, and the order page card.
+
+**Known limitations**
+- Settings `Results.AllowSelfVerification` (default off) and `Results.BlockApprovalUntilCriticalNotified` (default on) work in the API but have no settings screen yet.
+- No bulk approval, no auto-verification, no delta checks, no analyzer results (Phase 14); no report layout or PDF (Phase 9).
+- Seeing the Results card on an order needs `results.view`; reception does not have it.
+- Worklist sheets print through the browser print dialog (A4); not tried on a physical printer.
+- Reviewing an amendment shows the new values only; a side-by-side comparison with the released version is not built.
+- No screenshots were reviewed (the browser pane was hidden); layout was checked through page structure and overflow measurements.
+- A second development login (`verifier2`) exists in `LIMS_Dev` for review tests (see the git-ignored `db/dev-accounts.local.md`).
+
+## Phase 7: what exists and was verified
+
+**Backend**
+- Samples are planned when an order is created (one per sample type, barcode `S-yymmdd-nnnn`, unique across the organisation, counter restarts each day). Cancelling a test cancels its sample if nothing was collected yet; a collected sample is never cancelled automatically.
+- States: planned → collected → (in transit) → received, or rejected / cancelled; one function decides which moves are legal.
+- Collect (needs the identity confirmation), receive, reject (reason, plus a note for some reasons; a replacement sample is planned on request), recollect, label-printed counter, editable rejection reasons.
+- Transfers: create a manifest from collected samples, receive each sample at the destination (the manifest closes itself when everything arrived), close with missing samples, cancel before anything arrived. A sample can only be on one open manifest, even under simultaneous requests.
+- Code 128 barcodes are encoded on the server; the browser only draws them. No barcode library and no internet.
+- `db plan-samples` plans samples for orders that existed before this phase.
+
+**Frontend** (English and Urdu)
+- Collection (queue, scan box, identity confirmation, print after collect), Receiving (scan to receive with a visible result for every scan), Tracking (search and history), Rejections & recollection (and the reasons list), Transfers (build, view, print, receive, close, cancel), a Samples card on the order page, label size settings per computer.
+
+**Tests**: 191 automated tests (82 unit, 109 integration); the 189 that existed before the closure additions all passed together, and the 2 closure additions (anonymous and CSRF refusal on every sample endpoint; role permission matrix) pass: the Phase 6 regression suite plus 15 new integration tests (planning and grouping, permissions, double and parallel collection, receive and reject rules, replacement, isolation between organisations, the branch visibility rule, a database constraint, manifests including a race) and unit tests (barcode symbol table, an independent decoder round trip for every printable character, state transitions, an architecture test that guards the sample visibility gate).
+
+**Checked in the browser (EN and Urdu RTL):** order page with the Samples card, collect all with printing, scan-to-receive (lower case and padded scans, repeat scan, unknown code, wrong branch), reject with a required note and an automatic replacement, collection of the replacement, building a manifest, receiving one sample at the other branch, closing with one missing, Urdu layout without horizontal overflow, label size change. Two defects found this way were fixed (a crash after "collect all" and labels not printing after "collect").
+
+**Known limitations**
+- Not tried with a real label printer or a hardware barcode scanner. The print path was verified up to the browser print call (50 × 25 mm page size, one label per page); scanner input is simulated as typed text plus Enter.
+- Branch names in lists and labels are shown in English (the sample screens do not yet use the branch's Urdu name).
+- The label preview shows no bars when there is no sample to take them from.
+- The setting `Samples.RequirePaymentBeforeCollection` is enforced by the API but has no settings screen yet.
+- The Phlebotomist role does not include `samples.transfer` (the Technician does). Add it per organisation in Roles if collection centres should send manifests.
+- No screenshots were reviewed (the browser pane was hidden); layout was checked through the page structure and measurements.
 
 ## Phase 6 audit (orders & billing) — 2026-11-09
 

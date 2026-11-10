@@ -1,0 +1,95 @@
+@import '../patients/patients.css';
+
+/* ---------- The report sheet (screen: a sheet of paper; print: the page itself) ---------- */
+.report { --ink: #111; position: relative; box-sizing: border-box; width: 210mm; min-height: 297mm; margin: 0 auto; padding: 12mm 12mm 10mm; background: #fff; color: var(--ink); font: 9.5pt/1.45 var(--font-body, Inter, system-ui, sans-serif); box-shadow: var(--shadow-md); }
+.report .ur { font-family: 'Noto Nastaliq Urdu', serif; line-height: 2.1; display: block; }
+.report-ur { font-family: 'Noto Nastaliq Urdu', serif; line-height: 1.9; }
+.report-both .ur { font-size: 0.92em; color: #333; }
+.report .num, .report .val { font-variant-numeric: tabular-nums; unicode-bidi: isolate; }
+.report .mono { font-family: ui-monospace, Consolas, monospace; letter-spacing: 0.04em; }
+.report-frame { width: 100%; border-collapse: collapse; }
+.report-frame > thead > tr > td, .report-frame > tfoot > tr > td, .report-frame > tbody > tr > td { padding: 0; }
+
+.rp-head { display: flex; align-items: center; gap: 5mm; padding-bottom: 3mm; margin-bottom: 4mm; border-bottom: 0.4mm solid var(--ink); }
+.rp-logo { max-width: 28mm; max-height: 22mm; object-fit: contain; }
+.rp-org { flex: 1; min-width: 0; }
+.rp-org h1 { margin: 0; font-size: 15pt; line-height: 1.25; }
+.rp-lab { margin: 0; font-size: 10.5pt; font-weight: 600; }
+.rp-contact { margin: 1mm 0 0; display: flex; flex-wrap: wrap; gap: 0 4mm; font-size: 8.5pt; color: #333; }
+.rp-note { margin: 1mm 0 0; font-size: 8.5pt; color: #333; }
+.rp-id { text-align: end; display: flex; flex-direction: column; font-size: 9pt; }
+.rp-id strong { font-size: 10.5pt; }
+
+.rp-title { margin: 0 0 2mm; font-size: 13pt; letter-spacing: 0.06em; text-transform: uppercase; text-align: center; }
+.report-ur .rp-title, .report-both .rp-title { text-transform: none; letter-spacing: 0; }
+.rp-banner { margin: 0 0 2mm; padding: 1.5mm 3mm; border: 0.3mm solid var(--ink); font-weight: 600; text-align: center; }
+.rp-interim { border-style: dashed; }
+.rp-superseded { background: #eee; }
+
+.rp-patient { margin-bottom: 4mm; padding: 2.5mm 3mm; border: 0.3mm solid #999; border-radius: 1mm; }
+.rp-patient dl { margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5mm 5mm; }
+.rp-patient dt { font-size: 7.5pt; color: #555; text-transform: uppercase; letter-spacing: 0.04em; }
+.report-ur .rp-patient dt, .report-both .rp-patient dt { text-transform: none; letter-spacing: 0; }
+.rp-patient dd { margin: 0; font-weight: 500; }
+.rp-patient .strong { font-weight: 700; }
+
+.rp-section { margin-bottom: 4mm; }
+.rp-dept { margin: 0 0 1.5mm; padding-bottom: 0.8mm; font-size: 11pt; border-bottom: 0.3mm solid #888; }
+.rp-test { margin-bottom: 3mm; break-inside: auto; }
+.rp-test h4 { margin: 0 0 1mm; font-size: 10pt; }
+.rp-ver { font-weight: 400; font-size: 8pt; color: #555; }
+.rp-table { width: 100%; border-collapse: collapse; }
+.rp-table th { padding: 1mm 2mm; text-align: start; font-size: 7.5pt; font-weight: 600; color: #444; border-bottom: 0.3mm solid #666; }
+.rp-table td { padding: 1mm 2mm; border-bottom: 0.15mm solid #ccc; vertical-align: top; }
+.rp-table tr { break-inside: avoid; }
+.rp-table .res { width: 24%; }
+.rp-table .flag { width: 13%; }
+.rp-table tr.grp td { padding-top: 2mm; font-weight: 600; font-size: 8.5pt; background: #f4f4f4; }
+.rp-table tr.abn td { background: #f7f7f7; }
+.rp-table tr.crit td { background: #ececec; }
+.rp-table .bold { font-weight: 700; }
+.rp-table .fl { display: inline-flex; flex-direction: column; line-height: 1.15; }
+.rp-table .fl b { font-size: 9.5pt; }
+.rp-table .fl small { font-size: 7pt; color: #444; }
+.rp-comment, .rp-notes { margin: 1mm 0 0; font-size: 8.5pt; }
+.rp-notes { color: #444; font-style: italic; }
+.rp-pending ul { margin: 0; padding-inline-start: 5mm; }
+
+.rp-signs { display: flex; flex-wrap: wrap; gap: 6mm 10mm; margin-top: 8mm; break-inside: avoid; }
+.rp-sign { display: flex; flex-direction: column; min-width: 45mm; font-size: 8.5pt; }
+.rp-sign img { max-height: 14mm; max-width: 40mm; object-fit: contain; align-self: flex-start; }
+.rp-sign-space { height: 10mm; }
+.rp-sign strong { border-top: 0.3mm solid var(--ink); padding-top: 1mm; }
+.rp-sign em { font-size: 7.5pt; color: #555; }
+.rp-disclaimer { margin: 6mm 0 0; font-size: 7.5pt; color: #444; }
+.rp-end { margin: 3mm 0 0; text-align: center; font-size: 7.5pt; color: #666; letter-spacing: 0.08em; }
+.rp-foot { margin-top: 3mm; padding-top: 1.5mm; border-top: 0.2mm solid #999; font-size: 7.5pt; color: #444; }
+.rp-foot p { margin: 0; }
+.rp-fp { display: flex; flex-wrap: wrap; gap: 0 2mm; align-items: baseline; }
+
+/* Watermarks repeat on every printed page (position: fixed). */
+.report-mark { position: fixed; inset: 0; z-index: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; font-size: 64pt; font-weight: 800; letter-spacing: 0.1em; color: rgba(0, 0, 0, 0.09); transform: rotate(-30deg); text-transform: uppercase; }
+.report-mark-duplicate { font-size: 44pt; }
+.report-frame { position: relative; z-index: 1; }
+
+/* ---------- Screen: the sheet inside a grey stage ---------- */
+.report-stage { display: flex; justify-content: center; padding: var(--space-5); overflow: auto; background: var(--surface-hover); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.report-stage .report { flex: none; overflow: hidden; }   /* keep the true A4 width and clip the rotated watermark */
+.report-stage .report-mark { position: absolute; }
+
+/* ---------- Print ---------- */
+.report-print-root { display: none; }
+@media print {
+  body.printing-report #root, body.printing-report .toasts, body.printing-report .overlay { display: none !important; }
+  body.printing-report { background: #fff; margin: 0; }
+  body.printing-report .report-print-root { display: block; }
+  body.printing-report .report { width: auto; min-height: 0; margin: 0; padding: 0; box-shadow: none; }
+  .report-frame > thead { display: table-header-group; }
+  .report-frame > tfoot { display: table-footer-group; }
+}
+
+/* ---------- Report page layout ---------- */
+.report-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: var(--space-4); align-items: start; }
+@media (max-width: 1250px) { .report-layout { grid-template-columns: 1fr; } }
+.report-twocol { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+@media (max-width: 900px) { .report-twocol { grid-template-columns: 1fr; } }

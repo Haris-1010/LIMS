@@ -86,3 +86,32 @@ public sealed class OrderSamplesController(SampleService samples) : ControllerBa
     public async Task<IActionResult> CollectAll(long orderId, CollectRequest request, CancellationToken ct) =>
         Ok(await samples.CollectOrderAsync(orderId, request, ct));
 }
+
+[ApiController]
+[Route("api/sample-transfers")]
+public sealed class SampleTransfersController(TransferService transfers) : ControllerBase
+{
+    [HttpGet]
+    [HasPermission(Permissions.SamplesView)]
+    public async Task<IActionResult> List([FromQuery] TransferQuery query, CancellationToken ct) => Ok(await transfers.ListAsync(query, ct));
+
+    [HttpGet("destinations")]
+    [HasPermission(Permissions.SamplesTransfer)]
+    public async Task<IActionResult> Destinations(CancellationToken ct) => Ok(await transfers.DestinationsAsync(ct));
+
+    [HttpGet("{id:long}")]
+    [HasPermission(Permissions.SamplesView)]
+    public async Task<IActionResult> Get(long id, CancellationToken ct) => Ok(await transfers.GetAsync(id, ct));
+
+    [HttpPost]
+    [HasPermission(Permissions.SamplesTransfer)]
+    public async Task<IActionResult> Create(TransferCreate input, CancellationToken ct) => Ok(await transfers.CreateAsync(input, ct));
+
+    [HttpPost("{id:long}/complete")]
+    [HasPermission(Permissions.SamplesReceive)]
+    public async Task<IActionResult> Complete(long id, CancellationToken ct) => Ok(await transfers.CompleteAsync(id, ct));
+
+    [HttpPost("{id:long}/cancel")]
+    [HasPermission(Permissions.SamplesTransfer)]
+    public async Task<IActionResult> Cancel(long id, CancellationToken ct) => Ok(await transfers.CancelAsync(id, ct));
+}

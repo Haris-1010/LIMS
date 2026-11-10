@@ -129,13 +129,23 @@ erDiagram
 
 ## lab (Phases 6–8)
 
-`LabOrders` → `LabOrderDetails` (one per test) → `Samples` (barcode UK) linked to tests through `SampleTests`, with `SampleTracking` (status history), `SampleRejections` and `SampleCollections`. `Worklists` group details by department.
+`LabOrders` → `LabOrderItems` (one per test). **Phase 7 (built):**
 
-`TestResults` (one per order detail, versioned) → `TestResultValues` (one per parameter, storing the value, the flag and the range used) → `ResultApprovals` (verify/approve steps). `CriticalValueAlerts` record who was notified, when, and the read-back.
+- `Samples`: one per order per sample type; unique `(OrganizationId, Barcode)`; a filtered unique index allows only one *live* (not rejected, not cancelled) sample per order and type; origin, current and destination branch; collection, receipt and rejection facts with CHECK constraints; `ReplacesSampleId` links a recollection to the rejected sample.
+- `SampleTests` links a sample to the order items it carries.
+- `SampleEvents`: append-only history (planned, label printed, collected, dispatched, received, rejected, recollection requested, cancelled, dispatch cancelled, missing at destination).
+- `SampleRejectionReasons`: per-organisation, bilingual, editable.
+- `SampleTransfers` and `SampleTransferItems`: manifests between two branches.
+
+**Phase 8 (built):** `Worklists` and `WorklistItems` (a batch of received tests for one department and branch; a test is on one open worklist at a time).
+
+`TestResults` is one row per **version** of an ordered test's result (draft, submitted, verified, approved, superseded) with who and when for each step, the amendment reason and a link to the version it replaces; one in-progress and one released version per test (filtered unique indexes). `TestResultValues` holds one value per parameter: a number, a chosen option or text, plus a snapshot of the unit, decimal places, the approved range used and the flag. `ResultApprovals` is the append-only list of workflow steps. `CriticalValueAlerts` records the value, the limit crossed, who was told, how, when, and the read-back confirmation.
+
+
 
 ## reporting (Phase 9)
 
-`ReportTemplates` + `ReportTemplateTranslations`, `LaboratoryReports` (per order, current version), `ReportVersions` (immutable snapshot of the values printed, plus the amendment reason), `ReportFiles`.
+**Phase 9 (built, schema `lab`):** `LabReports` is one row per **version** of an order's report: report number (shared by versions), version, status (interim, final, superseded), language, who and when, the amendment reason, the link to the version it replaces, counters of what it contained (released tests, active tests, latest approval time) used to tell when it is outdated, the frozen **snapshot** (JSON) and its SHA-256 hash, and the print count. One live (non-superseded) version per order. `ReportTemplates` (one per organisation, with the logo) and `ReportTemplateTranslations` (header, footer and disclaimer in English and Urdu). `security.Users` gains the registration number and signature image used on signed reports.
 
 ## inventory (Phase 11)
 

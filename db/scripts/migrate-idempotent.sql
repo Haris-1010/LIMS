@@ -1776,6 +1776,1927 @@ BEGIN
     VALUES (N'20261109103202_HardenOrderBilling', N'9.0.10');
 END;
 
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261109110026_AddSamples'
+)
+BEGIN
+    ALTER TABLE [lab].[OrderItems] ADD CONSTRAINT [AK_OrderItems_OrganizationId_Id] UNIQUE ([OrganizationId], [Id]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261109110026_AddSamples'
+)
+BEGIN
+    CREATE TABLE [lab].[SampleRejectionReasons] (
+        [Id] int NOT NULL IDENTITY,
+        [OrganizationId] int NOT NULL,
+        [Code] varchar(30) NOT NULL,
+        [NameEn] nvarchar(200) NOT NULL,
+        [NameUr] nvarchar(200) NULL,
+        [RequiresNote] bit NOT NULL,
+        [IsActive] bit NOT NULL,
+        [SortOrder] int NOT NULL,
+        [CreatedAtUtc] datetime2(3) NOT NULL,
+        [CreatedByUserId] int NULL,
+        [UpdatedAtUtc] datetime2(3) NULL,
+        [UpdatedByUserId] int NULL,
+        [RowVersion] rowversion NOT NULL,
+        CONSTRAINT [PK_SampleRejectionReasons] PRIMARY KEY ([Id]),
+        CONSTRAINT [AK_SampleRejectionReasons_OrganizationId_Id] UNIQUE ([OrganizationId], [Id]),
+        CONSTRAINT [FK_SampleRejectionReasons_Organizations_OrganizationId] FOREIGN KEY ([OrganizationId]) REFERENCES [core].[Organizations] ([Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261109110026_AddSamples'
+)
+BEGIN
+    CREATE TABLE [lab].[SampleTransfers] (
+        [Id] bigint NOT NULL IDENTITY,
+        [OrganizationId] int NOT NULL,
+        [TransferNo] varchar(30) NOT NULL,
+        [FromBranchId] int NOT NULL,
+        [ToBranchId] int NOT NULL,
+        [Status] int NOT NULL,
+        [DispatchedAtUtc] datetime2(3) NOT NULL,
+        [DispatchedByUserId] int NOT NULL,
+        [CompletedAtUtc] datetime2(3) NULL,
+        [CompletedByUserId] int NULL,
+        [Notes] nvarchar(500) NULL,
+        [CreatedAtUtc] datetime2(3) NOT NULL,
+        [CreatedByUserId] int NULL,
+        [UpdatedAtUtc] datetime2(3) NULL,
+        [UpdatedByUserId] int NULL,
+        [RowVersion] rowversion NOT NULL,
+        CONSTRAINT [PK_SampleTransfers] PRIMARY KEY ([Id]),
+        CONSTRAINT [AK_SampleTransfers_OrganizationId_Id] UNIQUE ([OrganizationId], [Id]),
+        CONSTRAINT [CK_SampleTransfers_Branches] CHECK ([FromBranchId] <> [ToBranchId]),
+        CONSTRAINT [CK_SampleTransfers_Status] CHECK ([Status] IN (0,1,2)),
+        CONSTRAINT [FK_SampleTransfers_Branches_OrganizationId_FromBranchId] FOREIGN KEY ([OrganizationId], [FromBranchId]) REFERENCES [core].[Branches] ([OrganizationId], [Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_SampleTransfers_Branches_OrganizationId_ToBranchId] FOREIGN KEY ([OrganizationId], [ToBranchId]) REFERENCES [core].[Branches] ([OrganizationId], [Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261109110026_AddSamples'
+)
+BEGIN
+    CREATE TABLE [lab].[Samples] (
+        [Id] bigint NOT NULL IDENTITY,
+        [OrganizationId] int NOT NULL,
+        [Barcode] varchar(40) NOT NULL,
+        [OrderId] bigint NOT NULL,
+        [PatientId] int NOT NULL,
+        [SampleTypeId] int NOT NULL,
+        [Status] int NOT NULL,
+        [Priority] int NOT NULL,
+        [OriginBranchId] int NOT NULL,
+        [CurrentBranchId] int NOT NULL,
+        [DestinationBranchId] int NULL,
+        [CollectedAtUtc] datetime2(3) NULL,
+        [CollectedByUserId] int NULL,
+        [IdentityConfirmed] bit NOT NULL,
+        [CollectionNotes] nvarchar(500) NULL,
+        [ReceivedAtUtc] datetime2(3) NULL,
+        [ReceivedByUserId] int NULL,
+        [RejectedAtUtc] datetime2(3) NULL,
+        [RejectedByUserId] int NULL,
+        [RejectionReasonId] int NULL,
+        [RejectionNote] nvarchar(500) NULL,
+        [ReplacesSampleId] bigint NULL,
+        [CancelledAtUtc] datetime2(3) NULL,
+        [LabelPrintCount] int NOT NULL,
+        [LastLabelPrintedAtUtc] datetime2(3) NULL,
+        [CreatedAtUtc] datetime2(3) NOT NULL,
+        [CreatedByUserId] int NULL,
+        [UpdatedAtUtc] datetime2(3) NULL,
+        [UpdatedByUserId] int NULL,
+        [RowVersion] rowversion NOT NULL,
+        CONSTRAINT [PK_Samples] PRIMARY KEY ([Id]),
+        CONSTRAINT [AK_Samples_OrganizationId_Id] UNIQUE ([OrganizationId], [Id]),
+        CONSTRAINT [CK_Samples_Collected] CHECK ([Status] IN (0,90) OR ([CollectedAtUtc] IS NOT NULL AND [CollectedByUserId] IS NOT NULL)),
+        CONSTRAINT [CK_Samples_InTransit] CHECK ([Status] <> 15 OR [DestinationBranchId] IS NOT NULL),
+        CONSTRAINT [CK_Samples_Priority] CHECK ([Priority] IN (0,1)),
+        CONSTRAINT [CK_Samples_Received] CHECK ([Status] <> 20 OR ([ReceivedAtUtc] IS NOT NULL AND [ReceivedByUserId] IS NOT NULL)),
+        CONSTRAINT [CK_Samples_Rejected] CHECK ([Status] <> 80 OR ([RejectedAtUtc] IS NOT NULL AND [RejectedByUserId] IS NOT NULL AND [RejectionReasonId] IS NOT NULL)),
+        CONSTRAINT [CK_Samples_Status] CHECK ([Status] IN (0,10,15,20,80,90)),
+        CONSTRAINT [FK_Samples_Branches_OrganizationId_CurrentBranchId] FOREIGN KEY ([OrganizationId], [CurrentBranchId]) REFERENCES [core].[Branches] ([OrganizationId], [Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_Samples_Branches_OrganizationId_DestinationBranchId] FOREIGN KEY ([OrganizationId], [DestinationBranchId]) REFERENCES [core].[Branches] ([OrganizationId], [Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_Samples_Branches_OrganizationId_OriginBranchId] FOREIGN KEY ([OrganizationId], [OriginBranchId]) REFERENCES [core].[Branches] ([OrganizationId], [Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_Samples_Orders_OrganizationId_OrderId] FOREIGN KEY ([OrganizationId], [OrderId]) REFERENCES [lab].[Orders] ([OrganizationId], [Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_Samples_Patients_OrganizationId_PatientId] FOREIGN KEY ([OrganizationId], [PatientId]) REFERENCES [patient].[Patients] ([OrganizationId], [Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_Samples_SampleRejectionReasons_OrganizationId_RejectionReasonId] FOREIGN KEY ([OrganizationId], [RejectionReasonId]) REFERENCES [lab].[SampleRejectionReasons] ([OrganizationId], [Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_Samples_SampleTypes_SampleTypeId] FOREIGN KEY ([SampleTypeId]) REFERENCES [catalog].[SampleTypes] ([Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_Samples_Samples_OrganizationId_ReplacesSampleId] FOREIGN KEY ([OrganizationId], [ReplacesSampleId]) REFERENCES [lab].[Samples] ([OrganizationId], [Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261109110026_AddSamples'
+)
+BEGIN
+    CREATE TABLE [lab].[SampleEvents] (
+        [Id] bigint NOT NULL IDENTITY,
+        [OrganizationId] int NOT NULL,
+        [SampleId] bigint NOT NULL,
+        [Type] varchar(40) NOT NULL,
+        [AtUtc] datetime2(3) NOT NULL,
+        [UserId] int NULL,
+        [BranchId] int NULL,
+        [Notes] nvarchar(500) NULL,
+        CONSTRAINT [PK_SampleEvents] PRIMARY KEY ([Id]),
+        CONSTRAINT [FK_SampleEvents_Samples_OrganizationId_SampleId] FOREIGN KEY ([OrganizationId], [SampleId]) REFERENCES [lab].[Samples] ([OrganizationId], [Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261109110026_AddSamples'
+)
+BEGIN
+    CREATE TABLE [lab].[SampleTests] (
+        [SampleId] bigint NOT NULL,
+        [OrderItemId] bigint NOT NULL,
+        [OrganizationId] int NOT NULL,
+        CONSTRAINT [PK_SampleTests] PRIMARY KEY ([SampleId], [OrderItemId]),
+        CONSTRAINT [FK_SampleTests_OrderItems_OrganizationId_OrderItemId] FOREIGN KEY ([OrganizationId], [OrderItemId]) REFERENCES [lab].[OrderItems] ([OrganizationId], [Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_SampleTests_Samples_OrganizationId_SampleId] FOREIGN KEY ([OrganizationId], [SampleId]) REFERENCES [lab].[Samples] ([OrganizationId], [Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261109110026_AddSamples'
+)
+BEGIN
+    CREATE TABLE [lab].[SampleTransferItems] (
+        [TransferId] bigint NOT NULL,
+        [SampleId] bigint NOT NULL,
+        [OrganizationId] int NOT NULL,
+        [ReceivedAtUtc] datetime2(3) NULL,
+        [ReceivedByUserId] int NULL,
+        [MarkedMissing] bit NOT NULL,
+        CONSTRAINT [PK_SampleTransferItems] PRIMARY KEY ([TransferId], [SampleId]),
+        CONSTRAINT [FK_SampleTransferItems_SampleTransfers_OrganizationId_TransferId] FOREIGN KEY ([OrganizationId], [TransferId]) REFERENCES [lab].[SampleTransfers] ([OrganizationId], [Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_SampleTransferItems_Samples_OrganizationId_SampleId] FOREIGN KEY ([OrganizationId], [SampleId]) REFERENCES [lab].[Samples] ([OrganizationId], [Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261109110026_AddSamples'
+)
+BEGIN
+    CREATE INDEX [IX_SampleEvents_OrganizationId_SampleId] ON [lab].[SampleEvents] ([OrganizationId], [SampleId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261109110026_AddSamples'
+)
+BEGIN
+    CREATE INDEX [IX_SampleEvents_SampleId_Id] ON [lab].[SampleEvents] ([SampleId], [Id]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261109110026_AddSamples'
+)
+BEGIN
+    CREATE UNIQUE INDEX [IX_SampleRejectionReasons_OrganizationId_Code] ON [lab].[SampleRejectionReasons] ([OrganizationId], [Code]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261109110026_AddSamples'
+)
+BEGIN
+    CREATE INDEX [IX_Samples_OrderId] ON [lab].[Samples] ([OrderId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261109110026_AddSamples'
+)
+BEGIN
+    CREATE UNIQUE INDEX [IX_Samples_OrganizationId_Barcode] ON [lab].[Samples] ([OrganizationId], [Barcode]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261109110026_AddSamples'
+)
+BEGIN
+    CREATE INDEX [IX_Samples_OrganizationId_CurrentBranchId] ON [lab].[Samples] ([OrganizationId], [CurrentBranchId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261109110026_AddSamples'
+)
+BEGIN
+    CREATE INDEX [IX_Samples_OrganizationId_DestinationBranchId] ON [lab].[Samples] ([OrganizationId], [DestinationBranchId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261109110026_AddSamples'
+)
+BEGIN
+    CREATE INDEX [IX_Samples_OrganizationId_OrderId] ON [lab].[Samples] ([OrganizationId], [OrderId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261109110026_AddSamples'
+)
+BEGIN
+    CREATE INDEX [IX_Samples_OrganizationId_OriginBranchId] ON [lab].[Samples] ([OrganizationId], [OriginBranchId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261109110026_AddSamples'
+)
+BEGIN
+    CREATE INDEX [IX_Samples_OrganizationId_PatientId] ON [lab].[Samples] ([OrganizationId], [PatientId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261109110026_AddSamples'
+)
+BEGIN
+    CREATE INDEX [IX_Samples_OrganizationId_RejectionReasonId] ON [lab].[Samples] ([OrganizationId], [RejectionReasonId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261109110026_AddSamples'
+)
+BEGIN
+    CREATE INDEX [IX_Samples_OrganizationId_ReplacesSampleId] ON [lab].[Samples] ([OrganizationId], [ReplacesSampleId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261109110026_AddSamples'
+)
+BEGIN
+    CREATE INDEX [IX_Samples_OrganizationId_Status_CurrentBranchId] ON [lab].[Samples] ([OrganizationId], [Status], [CurrentBranchId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261109110026_AddSamples'
+)
+BEGIN
+    CREATE INDEX [IX_Samples_SampleTypeId] ON [lab].[Samples] ([SampleTypeId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261109110026_AddSamples'
+)
+BEGIN
+    EXEC(N'CREATE UNIQUE INDEX [UX_Samples_OneLivePerOrderType] ON [lab].[Samples] ([OrderId], [SampleTypeId]) WHERE [Status] <> 80 AND [Status] <> 90');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261109110026_AddSamples'
+)
+BEGIN
+    CREATE INDEX [IX_SampleTests_OrderItemId] ON [lab].[SampleTests] ([OrderItemId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261109110026_AddSamples'
+)
+BEGIN
+    CREATE INDEX [IX_SampleTests_OrganizationId_OrderItemId] ON [lab].[SampleTests] ([OrganizationId], [OrderItemId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261109110026_AddSamples'
+)
+BEGIN
+    CREATE INDEX [IX_SampleTests_OrganizationId_SampleId] ON [lab].[SampleTests] ([OrganizationId], [SampleId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261109110026_AddSamples'
+)
+BEGIN
+    CREATE INDEX [IX_SampleTransferItems_OrganizationId_SampleId] ON [lab].[SampleTransferItems] ([OrganizationId], [SampleId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261109110026_AddSamples'
+)
+BEGIN
+    CREATE INDEX [IX_SampleTransferItems_OrganizationId_TransferId] ON [lab].[SampleTransferItems] ([OrganizationId], [TransferId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261109110026_AddSamples'
+)
+BEGIN
+    CREATE INDEX [IX_SampleTransferItems_SampleId] ON [lab].[SampleTransferItems] ([SampleId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261109110026_AddSamples'
+)
+BEGIN
+    CREATE INDEX [IX_SampleTransfers_OrganizationId_FromBranchId] ON [lab].[SampleTransfers] ([OrganizationId], [FromBranchId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261109110026_AddSamples'
+)
+BEGIN
+    CREATE INDEX [IX_SampleTransfers_OrganizationId_Status_ToBranchId] ON [lab].[SampleTransfers] ([OrganizationId], [Status], [ToBranchId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261109110026_AddSamples'
+)
+BEGIN
+    CREATE INDEX [IX_SampleTransfers_OrganizationId_ToBranchId] ON [lab].[SampleTransfers] ([OrganizationId], [ToBranchId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261109110026_AddSamples'
+)
+BEGIN
+    CREATE UNIQUE INDEX [IX_SampleTransfers_OrganizationId_TransferNo] ON [lab].[SampleTransfers] ([OrganizationId], [TransferNo]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261109110026_AddSamples'
+)
+BEGIN
+
+    INSERT INTO lab.SampleRejectionReasons (OrganizationId, Code, NameEn, NameUr, RequiresNote, IsActive, SortOrder, CreatedAtUtc)
+    SELECT o.Id, 'HAEMOLYSED', N'Haemolysed sample', N'ہیمولائزڈ نمونہ', 0, 1, 10, SYSUTCDATETIME()
+      FROM core.Organizations o
+     WHERE NOT EXISTS (SELECT 1 FROM lab.SampleRejectionReasons x WHERE x.OrganizationId = o.Id AND x.Code = 'HAEMOLYSED');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261109110026_AddSamples'
+)
+BEGIN
+
+    INSERT INTO lab.SampleRejectionReasons (OrganizationId, Code, NameEn, NameUr, RequiresNote, IsActive, SortOrder, CreatedAtUtc)
+    SELECT o.Id, 'CLOTTED', N'Clotted sample', N'جما ہوا نمونہ', 0, 1, 20, SYSUTCDATETIME()
+      FROM core.Organizations o
+     WHERE NOT EXISTS (SELECT 1 FROM lab.SampleRejectionReasons x WHERE x.OrganizationId = o.Id AND x.Code = 'CLOTTED');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261109110026_AddSamples'
+)
+BEGIN
+
+    INSERT INTO lab.SampleRejectionReasons (OrganizationId, Code, NameEn, NameUr, RequiresNote, IsActive, SortOrder, CreatedAtUtc)
+    SELECT o.Id, 'INSUFFICIENT', N'Insufficient volume', N'مقدار ناکافی', 0, 1, 30, SYSUTCDATETIME()
+      FROM core.Organizations o
+     WHERE NOT EXISTS (SELECT 1 FROM lab.SampleRejectionReasons x WHERE x.OrganizationId = o.Id AND x.Code = 'INSUFFICIENT');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261109110026_AddSamples'
+)
+BEGIN
+
+    INSERT INTO lab.SampleRejectionReasons (OrganizationId, Code, NameEn, NameUr, RequiresNote, IsActive, SortOrder, CreatedAtUtc)
+    SELECT o.Id, 'WRONG_CONTAINER', N'Wrong container or additive', N'غلط کنٹینر یا ایڈیٹو', 0, 1, 40, SYSUTCDATETIME()
+      FROM core.Organizations o
+     WHERE NOT EXISTS (SELECT 1 FROM lab.SampleRejectionReasons x WHERE x.OrganizationId = o.Id AND x.Code = 'WRONG_CONTAINER');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261109110026_AddSamples'
+)
+BEGIN
+
+    INSERT INTO lab.SampleRejectionReasons (OrganizationId, Code, NameEn, NameUr, RequiresNote, IsActive, SortOrder, CreatedAtUtc)
+    SELECT o.Id, 'MISLABELLED', N'Unlabelled or mislabelled', N'لیبل نہیں یا غلط لیبل', 1, 1, 50, SYSUTCDATETIME()
+      FROM core.Organizations o
+     WHERE NOT EXISTS (SELECT 1 FROM lab.SampleRejectionReasons x WHERE x.OrganizationId = o.Id AND x.Code = 'MISLABELLED');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261109110026_AddSamples'
+)
+BEGIN
+
+    INSERT INTO lab.SampleRejectionReasons (OrganizationId, Code, NameEn, NameUr, RequiresNote, IsActive, SortOrder, CreatedAtUtc)
+    SELECT o.Id, 'LEAKED', N'Leaked or broken container', N'رسنے والا یا ٹوٹا ہوا کنٹینر', 0, 1, 60, SYSUTCDATETIME()
+      FROM core.Organizations o
+     WHERE NOT EXISTS (SELECT 1 FROM lab.SampleRejectionReasons x WHERE x.OrganizationId = o.Id AND x.Code = 'LEAKED');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261109110026_AddSamples'
+)
+BEGIN
+
+    INSERT INTO lab.SampleRejectionReasons (OrganizationId, Code, NameEn, NameUr, RequiresNote, IsActive, SortOrder, CreatedAtUtc)
+    SELECT o.Id, 'DELAYED', N'Delayed transport', N'نقل و حمل میں تاخیر', 0, 1, 70, SYSUTCDATETIME()
+      FROM core.Organizations o
+     WHERE NOT EXISTS (SELECT 1 FROM lab.SampleRejectionReasons x WHERE x.OrganizationId = o.Id AND x.Code = 'DELAYED');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261109110026_AddSamples'
+)
+BEGIN
+
+    INSERT INTO lab.SampleRejectionReasons (OrganizationId, Code, NameEn, NameUr, RequiresNote, IsActive, SortOrder, CreatedAtUtc)
+    SELECT o.Id, 'CONTAMINATED', N'Contaminated sample', N'آلودہ نمونہ', 0, 1, 80, SYSUTCDATETIME()
+      FROM core.Organizations o
+     WHERE NOT EXISTS (SELECT 1 FROM lab.SampleRejectionReasons x WHERE x.OrganizationId = o.Id AND x.Code = 'CONTAMINATED');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261109110026_AddSamples'
+)
+BEGIN
+
+    INSERT INTO lab.SampleRejectionReasons (OrganizationId, Code, NameEn, NameUr, RequiresNote, IsActive, SortOrder, CreatedAtUtc)
+    SELECT o.Id, 'WRONG_PATIENT', N'Wrong patient or identity doubt', N'غلط مریض یا شناخت میں شک', 1, 1, 90, SYSUTCDATETIME()
+      FROM core.Organizations o
+     WHERE NOT EXISTS (SELECT 1 FROM lab.SampleRejectionReasons x WHERE x.OrganizationId = o.Id AND x.Code = 'WRONG_PATIENT');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261109110026_AddSamples'
+)
+BEGIN
+
+    INSERT INTO lab.SampleRejectionReasons (OrganizationId, Code, NameEn, NameUr, RequiresNote, IsActive, SortOrder, CreatedAtUtc)
+    SELECT o.Id, 'OTHER', N'Other (explain)', N'دیگر (وضاحت کریں)', 1, 1, 100, SYSUTCDATETIME()
+      FROM core.Organizations o
+     WHERE NOT EXISTS (SELECT 1 FROM lab.SampleRejectionReasons x WHERE x.OrganizationId = o.Id AND x.Code = 'OTHER');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261109110026_AddSamples'
+)
+BEGIN
+    INSERT INTO [core].[__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261109110026_AddSamples', N'9.0.10');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110061320_AddResults'
+)
+BEGIN
+    CREATE TABLE [lab].[TestResults] (
+        [Id] bigint NOT NULL IDENTITY,
+        [OrganizationId] int NOT NULL,
+        [OrderItemId] bigint NOT NULL,
+        [OrderId] bigint NOT NULL,
+        [SampleId] bigint NOT NULL,
+        [PatientId] int NOT NULL,
+        [OrderBranchId] int NOT NULL,
+        [LabBranchId] int NOT NULL,
+        [Version] int NOT NULL,
+        [Status] int NOT NULL,
+        [EnteredByUserId] int NULL,
+        [SubmittedAtUtc] datetime2(3) NULL,
+        [VerifiedByUserId] int NULL,
+        [VerifiedAtUtc] datetime2(3) NULL,
+        [ApprovedByUserId] int NULL,
+        [ApprovedAtUtc] datetime2(3) NULL,
+        [AmendmentReason] nvarchar(500) NULL,
+        [ReplacesResultId] bigint NULL,
+        [Comment] nvarchar(1000) NULL,
+        [CreatedAtUtc] datetime2(3) NOT NULL,
+        [CreatedByUserId] int NULL,
+        [UpdatedAtUtc] datetime2(3) NULL,
+        [UpdatedByUserId] int NULL,
+        [RowVersion] rowversion NOT NULL,
+        CONSTRAINT [PK_TestResults] PRIMARY KEY ([Id]),
+        CONSTRAINT [AK_TestResults_OrganizationId_Id] UNIQUE ([OrganizationId], [Id]),
+        CONSTRAINT [CK_TestResults_Approved] CHECK ([Status] < 30 OR ([ApprovedByUserId] IS NOT NULL AND [ApprovedAtUtc] IS NOT NULL)),
+        CONSTRAINT [CK_TestResults_DraftClean] CHECK ([Status] <> 0 OR ([VerifiedByUserId] IS NULL AND [ApprovedByUserId] IS NULL)),
+        CONSTRAINT [CK_TestResults_Status] CHECK ([Status] IN (0,10,20,30,90)),
+        CONSTRAINT [CK_TestResults_Submitted] CHECK ([Status] = 0 OR ([EnteredByUserId] IS NOT NULL AND [SubmittedAtUtc] IS NOT NULL)),
+        CONSTRAINT [CK_TestResults_Verified] CHECK ([Status] < 20 OR ([VerifiedByUserId] IS NOT NULL AND [VerifiedAtUtc] IS NOT NULL)),
+        CONSTRAINT [CK_TestResults_Version] CHECK ([Version] >= 1 AND ([Version] = 1 OR [AmendmentReason] IS NOT NULL)),
+        CONSTRAINT [FK_TestResults_Branches_OrganizationId_LabBranchId] FOREIGN KEY ([OrganizationId], [LabBranchId]) REFERENCES [core].[Branches] ([OrganizationId], [Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_TestResults_Branches_OrganizationId_OrderBranchId] FOREIGN KEY ([OrganizationId], [OrderBranchId]) REFERENCES [core].[Branches] ([OrganizationId], [Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_TestResults_OrderItems_OrganizationId_OrderItemId] FOREIGN KEY ([OrganizationId], [OrderItemId]) REFERENCES [lab].[OrderItems] ([OrganizationId], [Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_TestResults_Orders_OrganizationId_OrderId] FOREIGN KEY ([OrganizationId], [OrderId]) REFERENCES [lab].[Orders] ([OrganizationId], [Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_TestResults_Patients_OrganizationId_PatientId] FOREIGN KEY ([OrganizationId], [PatientId]) REFERENCES [patient].[Patients] ([OrganizationId], [Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_TestResults_Samples_OrganizationId_SampleId] FOREIGN KEY ([OrganizationId], [SampleId]) REFERENCES [lab].[Samples] ([OrganizationId], [Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_TestResults_TestResults_OrganizationId_ReplacesResultId] FOREIGN KEY ([OrganizationId], [ReplacesResultId]) REFERENCES [lab].[TestResults] ([OrganizationId], [Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110061320_AddResults'
+)
+BEGIN
+    CREATE TABLE [lab].[Worklists] (
+        [Id] bigint NOT NULL IDENTITY,
+        [OrganizationId] int NOT NULL,
+        [BranchId] int NOT NULL,
+        [WorklistNo] varchar(30) NOT NULL,
+        [DepartmentId] int NOT NULL,
+        [Status] int NOT NULL,
+        [Notes] nvarchar(500) NULL,
+        [ClosedAtUtc] datetime2(3) NULL,
+        [ClosedByUserId] int NULL,
+        [CreatedAtUtc] datetime2(3) NOT NULL,
+        [CreatedByUserId] int NULL,
+        [UpdatedAtUtc] datetime2(3) NULL,
+        [UpdatedByUserId] int NULL,
+        [RowVersion] rowversion NOT NULL,
+        CONSTRAINT [PK_Worklists] PRIMARY KEY ([Id]),
+        CONSTRAINT [AK_Worklists_OrganizationId_Id] UNIQUE ([OrganizationId], [Id]),
+        CONSTRAINT [CK_Worklists_Closed] CHECK ([Status] = 0 OR [ClosedAtUtc] IS NOT NULL),
+        CONSTRAINT [CK_Worklists_Status] CHECK ([Status] IN (0,1)),
+        CONSTRAINT [FK_Worklists_Branches_OrganizationId_BranchId] FOREIGN KEY ([OrganizationId], [BranchId]) REFERENCES [core].[Branches] ([OrganizationId], [Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_Worklists_Departments_OrganizationId_DepartmentId] FOREIGN KEY ([OrganizationId], [DepartmentId]) REFERENCES [core].[Departments] ([OrganizationId], [Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110061320_AddResults'
+)
+BEGIN
+    CREATE TABLE [lab].[CriticalValueAlerts] (
+        [Id] bigint NOT NULL IDENTITY,
+        [OrganizationId] int NOT NULL,
+        [ResultId] bigint NOT NULL,
+        [OrderItemId] bigint NOT NULL,
+        [PatientId] int NOT NULL,
+        [LabBranchId] int NOT NULL,
+        [ParameterId] int NOT NULL,
+        [ValueText] nvarchar(200) NOT NULL,
+        [Limit] decimal(18,6) NULL,
+        [IsHigh] bit NOT NULL,
+        [Status] int NOT NULL,
+        [NotifiedTo] nvarchar(200) NULL,
+        [Method] int NULL,
+        [ReadBackConfirmed] bit NOT NULL,
+        [NotifiedByUserId] int NULL,
+        [NotifiedAtUtc] datetime2(3) NULL,
+        [Comment] nvarchar(500) NULL,
+        [CreatedAtUtc] datetime2(3) NOT NULL,
+        [CreatedByUserId] int NULL,
+        [UpdatedAtUtc] datetime2(3) NULL,
+        [UpdatedByUserId] int NULL,
+        [RowVersion] rowversion NOT NULL,
+        CONSTRAINT [PK_CriticalValueAlerts] PRIMARY KEY ([Id]),
+        CONSTRAINT [CK_CriticalValueAlerts_Method] CHECK ([Method] IS NULL OR [Method] IN (1,2,3)),
+        CONSTRAINT [CK_CriticalValueAlerts_Notified] CHECK ([Status] = 0 OR ([NotifiedTo] IS NOT NULL AND [Method] IS NOT NULL AND [NotifiedByUserId] IS NOT NULL AND [NotifiedAtUtc] IS NOT NULL AND [ReadBackConfirmed] = 1)),
+        CONSTRAINT [CK_CriticalValueAlerts_Status] CHECK ([Status] IN (0,1)),
+        CONSTRAINT [FK_CriticalValueAlerts_Branches_OrganizationId_LabBranchId] FOREIGN KEY ([OrganizationId], [LabBranchId]) REFERENCES [core].[Branches] ([OrganizationId], [Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_CriticalValueAlerts_Patients_OrganizationId_PatientId] FOREIGN KEY ([OrganizationId], [PatientId]) REFERENCES [patient].[Patients] ([OrganizationId], [Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_CriticalValueAlerts_TestResults_OrganizationId_ResultId] FOREIGN KEY ([OrganizationId], [ResultId]) REFERENCES [lab].[TestResults] ([OrganizationId], [Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110061320_AddResults'
+)
+BEGIN
+    CREATE TABLE [lab].[ResultApprovals] (
+        [Id] bigint NOT NULL IDENTITY,
+        [OrganizationId] int NOT NULL,
+        [ResultId] bigint NOT NULL,
+        [Step] varchar(20) NOT NULL,
+        [UserId] int NOT NULL,
+        [AtUtc] datetime2(3) NOT NULL,
+        [Comment] nvarchar(500) NULL,
+        CONSTRAINT [PK_ResultApprovals] PRIMARY KEY ([Id]),
+        CONSTRAINT [FK_ResultApprovals_TestResults_OrganizationId_ResultId] FOREIGN KEY ([OrganizationId], [ResultId]) REFERENCES [lab].[TestResults] ([OrganizationId], [Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110061320_AddResults'
+)
+BEGIN
+    CREATE TABLE [lab].[TestResultValues] (
+        [Id] bigint NOT NULL IDENTITY,
+        [OrganizationId] int NOT NULL,
+        [ResultId] bigint NOT NULL,
+        [ParameterId] int NOT NULL,
+        [ValueNumeric] decimal(18,6) NULL,
+        [OptionId] int NULL,
+        [ValueText] nvarchar(4000) NULL,
+        [ValueTextUr] nvarchar(4000) NULL,
+        [UnitText] nvarchar(50) NULL,
+        [DecimalPlaces] int NOT NULL,
+        [Flag] int NOT NULL,
+        [RangeId] int NULL,
+        [RangeLow] decimal(18,6) NULL,
+        [RangeHigh] decimal(18,6) NULL,
+        [RangeCriticalLow] decimal(18,6) NULL,
+        [RangeCriticalHigh] decimal(18,6) NULL,
+        [RangeText] nvarchar(200) NULL,
+        CONSTRAINT [PK_TestResultValues] PRIMARY KEY ([Id]),
+        CONSTRAINT [CK_TestResultValues_Decimals] CHECK ([DecimalPlaces] BETWEEN 0 AND 6),
+        CONSTRAINT [CK_TestResultValues_Flag] CHECK ([Flag] BETWEEN 0 AND 6),
+        CONSTRAINT [CK_TestResultValues_OneKind] CHECK (([ValueNumeric] IS NOT NULL AND [OptionId] IS NULL AND [ValueText] IS NULL) OR ([OptionId] IS NOT NULL AND [ValueNumeric] IS NULL) OR ([ValueNumeric] IS NULL AND [OptionId] IS NULL AND [ValueText] IS NOT NULL)),
+        CONSTRAINT [FK_TestResultValues_ParameterOptions_OptionId] FOREIGN KEY ([OptionId]) REFERENCES [catalog].[ParameterOptions] ([Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_TestResultValues_ReferenceRanges_RangeId] FOREIGN KEY ([RangeId]) REFERENCES [catalog].[ReferenceRanges] ([Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_TestResultValues_TestParameters_OrganizationId_ParameterId] FOREIGN KEY ([OrganizationId], [ParameterId]) REFERENCES [catalog].[TestParameters] ([OrganizationId], [Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_TestResultValues_TestResults_OrganizationId_ResultId] FOREIGN KEY ([OrganizationId], [ResultId]) REFERENCES [lab].[TestResults] ([OrganizationId], [Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110061320_AddResults'
+)
+BEGIN
+    CREATE TABLE [lab].[WorklistItems] (
+        [WorklistId] bigint NOT NULL,
+        [OrderItemId] bigint NOT NULL,
+        [OrganizationId] int NOT NULL,
+        [IsOpen] bit NOT NULL,
+        CONSTRAINT [PK_WorklistItems] PRIMARY KEY ([WorklistId], [OrderItemId]),
+        CONSTRAINT [FK_WorklistItems_OrderItems_OrganizationId_OrderItemId] FOREIGN KEY ([OrganizationId], [OrderItemId]) REFERENCES [lab].[OrderItems] ([OrganizationId], [Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_WorklistItems_Worklists_OrganizationId_WorklistId] FOREIGN KEY ([OrganizationId], [WorklistId]) REFERENCES [lab].[Worklists] ([OrganizationId], [Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110061320_AddResults'
+)
+BEGIN
+    CREATE INDEX [IX_CriticalValueAlerts_OrganizationId_LabBranchId] ON [lab].[CriticalValueAlerts] ([OrganizationId], [LabBranchId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110061320_AddResults'
+)
+BEGIN
+    CREATE INDEX [IX_CriticalValueAlerts_OrganizationId_PatientId] ON [lab].[CriticalValueAlerts] ([OrganizationId], [PatientId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110061320_AddResults'
+)
+BEGIN
+    CREATE INDEX [IX_CriticalValueAlerts_OrganizationId_ResultId] ON [lab].[CriticalValueAlerts] ([OrganizationId], [ResultId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110061320_AddResults'
+)
+BEGIN
+    CREATE INDEX [IX_CriticalValueAlerts_OrganizationId_Status_LabBranchId] ON [lab].[CriticalValueAlerts] ([OrganizationId], [Status], [LabBranchId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110061320_AddResults'
+)
+BEGIN
+    CREATE INDEX [IX_CriticalValueAlerts_ResultId_ParameterId] ON [lab].[CriticalValueAlerts] ([ResultId], [ParameterId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110061320_AddResults'
+)
+BEGIN
+    CREATE INDEX [IX_ResultApprovals_OrganizationId_ResultId] ON [lab].[ResultApprovals] ([OrganizationId], [ResultId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110061320_AddResults'
+)
+BEGIN
+    CREATE INDEX [IX_ResultApprovals_ResultId_Id] ON [lab].[ResultApprovals] ([ResultId], [Id]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110061320_AddResults'
+)
+BEGIN
+    CREATE UNIQUE INDEX [IX_TestResults_OrderItemId_Version] ON [lab].[TestResults] ([OrderItemId], [Version]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110061320_AddResults'
+)
+BEGIN
+    CREATE INDEX [IX_TestResults_OrganizationId_LabBranchId] ON [lab].[TestResults] ([OrganizationId], [LabBranchId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110061320_AddResults'
+)
+BEGIN
+    CREATE INDEX [IX_TestResults_OrganizationId_OrderBranchId] ON [lab].[TestResults] ([OrganizationId], [OrderBranchId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110061320_AddResults'
+)
+BEGIN
+    CREATE INDEX [IX_TestResults_OrganizationId_OrderId] ON [lab].[TestResults] ([OrganizationId], [OrderId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110061320_AddResults'
+)
+BEGIN
+    CREATE INDEX [IX_TestResults_OrganizationId_OrderItemId] ON [lab].[TestResults] ([OrganizationId], [OrderItemId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110061320_AddResults'
+)
+BEGIN
+    CREATE INDEX [IX_TestResults_OrganizationId_PatientId] ON [lab].[TestResults] ([OrganizationId], [PatientId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110061320_AddResults'
+)
+BEGIN
+    CREATE INDEX [IX_TestResults_OrganizationId_ReplacesResultId] ON [lab].[TestResults] ([OrganizationId], [ReplacesResultId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110061320_AddResults'
+)
+BEGIN
+    CREATE INDEX [IX_TestResults_OrganizationId_SampleId] ON [lab].[TestResults] ([OrganizationId], [SampleId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110061320_AddResults'
+)
+BEGIN
+    CREATE INDEX [IX_TestResults_OrganizationId_Status_LabBranchId] ON [lab].[TestResults] ([OrganizationId], [Status], [LabBranchId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110061320_AddResults'
+)
+BEGIN
+    EXEC(N'CREATE UNIQUE INDEX [UX_TestResults_OneInProgress] ON [lab].[TestResults] ([OrderItemId]) WHERE [Status] < 30');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110061320_AddResults'
+)
+BEGIN
+    EXEC(N'CREATE UNIQUE INDEX [UX_TestResults_OneReleased] ON [lab].[TestResults] ([OrderItemId]) WHERE [Status] = 30');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110061320_AddResults'
+)
+BEGIN
+    CREATE INDEX [IX_TestResultValues_OptionId] ON [lab].[TestResultValues] ([OptionId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110061320_AddResults'
+)
+BEGIN
+    CREATE INDEX [IX_TestResultValues_OrganizationId_ParameterId] ON [lab].[TestResultValues] ([OrganizationId], [ParameterId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110061320_AddResults'
+)
+BEGIN
+    CREATE INDEX [IX_TestResultValues_OrganizationId_ResultId] ON [lab].[TestResultValues] ([OrganizationId], [ResultId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110061320_AddResults'
+)
+BEGIN
+    CREATE INDEX [IX_TestResultValues_RangeId] ON [lab].[TestResultValues] ([RangeId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110061320_AddResults'
+)
+BEGIN
+    CREATE UNIQUE INDEX [IX_TestResultValues_ResultId_ParameterId] ON [lab].[TestResultValues] ([ResultId], [ParameterId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110061320_AddResults'
+)
+BEGIN
+    CREATE INDEX [IX_WorklistItems_OrganizationId_OrderItemId] ON [lab].[WorklistItems] ([OrganizationId], [OrderItemId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110061320_AddResults'
+)
+BEGIN
+    CREATE INDEX [IX_WorklistItems_OrganizationId_WorklistId] ON [lab].[WorklistItems] ([OrganizationId], [WorklistId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110061320_AddResults'
+)
+BEGIN
+    EXEC(N'CREATE UNIQUE INDEX [UX_WorklistItems_OneOpen] ON [lab].[WorklistItems] ([OrderItemId]) WHERE [IsOpen] = 1');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110061320_AddResults'
+)
+BEGIN
+    CREATE INDEX [IX_Worklists_OrganizationId_BranchId_Status] ON [lab].[Worklists] ([OrganizationId], [BranchId], [Status]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110061320_AddResults'
+)
+BEGIN
+    CREATE INDEX [IX_Worklists_OrganizationId_DepartmentId] ON [lab].[Worklists] ([OrganizationId], [DepartmentId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110061320_AddResults'
+)
+BEGIN
+    CREATE UNIQUE INDEX [IX_Worklists_OrganizationId_WorklistNo] ON [lab].[Worklists] ([OrganizationId], [WorklistNo]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110061320_AddResults'
+)
+BEGIN
+    INSERT INTO [core].[__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261110061320_AddResults', N'9.0.10');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110063645_AddReports'
+)
+BEGIN
+    ALTER TABLE [security].[Users] ADD [RegistrationNo] nvarchar(50) NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110063645_AddReports'
+)
+BEGIN
+    ALTER TABLE [security].[Users] ADD [SignatureContentType] varchar(50) NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110063645_AddReports'
+)
+BEGIN
+    ALTER TABLE [security].[Users] ADD [SignatureImage] varbinary(max) NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110063645_AddReports'
+)
+BEGIN
+    CREATE TABLE [lab].[LabReports] (
+        [Id] bigint NOT NULL IDENTITY,
+        [OrganizationId] int NOT NULL,
+        [OrderId] bigint NOT NULL,
+        [PatientId] int NOT NULL,
+        [OrderBranchId] int NOT NULL,
+        [LabBranchId] int NOT NULL,
+        [ReportNo] varchar(30) NOT NULL,
+        [Version] int NOT NULL,
+        [Status] int NOT NULL,
+        [Language] int NOT NULL,
+        [IssuedByUserId] int NOT NULL,
+        [IssuedAtUtc] datetime2(3) NOT NULL,
+        [AmendmentReason] nvarchar(500) NULL,
+        [ReplacesReportId] bigint NULL,
+        [ReleasedCount] int NOT NULL,
+        [ActiveTestCount] int NOT NULL,
+        [LatestApprovedAtUtc] datetime2(3) NULL,
+        [SnapshotJson] nvarchar(max) NOT NULL,
+        [SnapshotHash] char(64) NOT NULL,
+        [PrintCount] int NOT NULL,
+        [LastPrintedAtUtc] datetime2(3) NULL,
+        [CreatedAtUtc] datetime2(3) NOT NULL,
+        [CreatedByUserId] int NULL,
+        [UpdatedAtUtc] datetime2(3) NULL,
+        [UpdatedByUserId] int NULL,
+        [RowVersion] rowversion NOT NULL,
+        CONSTRAINT [PK_LabReports] PRIMARY KEY ([Id]),
+        CONSTRAINT [AK_LabReports_OrganizationId_Id] UNIQUE ([OrganizationId], [Id]),
+        CONSTRAINT [CK_LabReports_Counts] CHECK ([ReleasedCount] >= 1 AND [ActiveTestCount] >= [ReleasedCount] AND [PrintCount] >= 0),
+        CONSTRAINT [CK_LabReports_Final] CHECK ([Status] <> 1 OR [ReleasedCount] = [ActiveTestCount]),
+        CONSTRAINT [CK_LabReports_Hash] CHECK (LEN([SnapshotHash]) = 64 AND LEN([SnapshotJson]) > 2),
+        CONSTRAINT [CK_LabReports_Language] CHECK ([Language] BETWEEN 0 AND 2),
+        CONSTRAINT [CK_LabReports_Status] CHECK ([Status] IN (0,1,90)),
+        CONSTRAINT [CK_LabReports_Version] CHECK ([Version] >= 1 AND ([Version] = 1 OR [AmendmentReason] IS NOT NULL)),
+        CONSTRAINT [FK_LabReports_Branches_OrganizationId_LabBranchId] FOREIGN KEY ([OrganizationId], [LabBranchId]) REFERENCES [core].[Branches] ([OrganizationId], [Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_LabReports_Branches_OrganizationId_OrderBranchId] FOREIGN KEY ([OrganizationId], [OrderBranchId]) REFERENCES [core].[Branches] ([OrganizationId], [Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_LabReports_LabReports_OrganizationId_ReplacesReportId] FOREIGN KEY ([OrganizationId], [ReplacesReportId]) REFERENCES [lab].[LabReports] ([OrganizationId], [Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_LabReports_Orders_OrganizationId_OrderId] FOREIGN KEY ([OrganizationId], [OrderId]) REFERENCES [lab].[Orders] ([OrganizationId], [Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_LabReports_Patients_OrganizationId_PatientId] FOREIGN KEY ([OrganizationId], [PatientId]) REFERENCES [patient].[Patients] ([OrganizationId], [Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110063645_AddReports'
+)
+BEGIN
+    CREATE TABLE [lab].[ReportTemplates] (
+        [Id] int NOT NULL IDENTITY,
+        [OrganizationId] int NOT NULL,
+        [LogoImage] varbinary(max) NULL,
+        [LogoContentType] varchar(50) NULL,
+        [CreatedAtUtc] datetime2(3) NOT NULL,
+        [CreatedByUserId] int NULL,
+        [UpdatedAtUtc] datetime2(3) NULL,
+        [UpdatedByUserId] int NULL,
+        [RowVersion] rowversion NOT NULL,
+        CONSTRAINT [PK_ReportTemplates] PRIMARY KEY ([Id]),
+        CONSTRAINT [AK_ReportTemplates_OrganizationId_Id] UNIQUE ([OrganizationId], [Id]),
+        CONSTRAINT [CK_ReportTemplates_Logo] CHECK ([LogoImage] IS NULL OR (DATALENGTH([LogoImage]) <= 307200 AND [LogoContentType] IN ('image/png','image/jpeg'))),
+        CONSTRAINT [FK_ReportTemplates_Organizations_OrganizationId] FOREIGN KEY ([OrganizationId]) REFERENCES [core].[Organizations] ([Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110063645_AddReports'
+)
+BEGIN
+    CREATE TABLE [lab].[ReportTemplateTranslations] (
+        [Id] int NOT NULL IDENTITY,
+        [OrganizationId] int NOT NULL,
+        [TemplateId] int NOT NULL,
+        [Language] varchar(2) NOT NULL,
+        [HeaderNote] nvarchar(500) NULL,
+        [FooterNote] nvarchar(500) NULL,
+        [Disclaimer] nvarchar(1000) NULL,
+        CONSTRAINT [PK_ReportTemplateTranslations] PRIMARY KEY ([Id]),
+        CONSTRAINT [CK_ReportTemplateTranslations_Language] CHECK ([Language] IN ('en','ur')),
+        CONSTRAINT [FK_ReportTemplateTranslations_ReportTemplates_OrganizationId_TemplateId] FOREIGN KEY ([OrganizationId], [TemplateId]) REFERENCES [lab].[ReportTemplates] ([OrganizationId], [Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110063645_AddReports'
+)
+BEGIN
+    IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'Id', N'DescriptionEn', N'DescriptionUr', N'Key', N'Module') AND [object_id] = OBJECT_ID(N'[security].[Permissions]'))
+        SET IDENTITY_INSERT [security].[Permissions] ON;
+    EXEC(N'INSERT INTO [security].[Permissions] ([Id], [DescriptionEn], [DescriptionUr], [Key], [Module])
+    VALUES (49, N''Issue (finalise) laboratory reports'', N''لیبارٹری رپورٹس جاری کریں'', ''reports.issue'', N''Reports''),
+    (50, N''Edit the report template and logo'', N''رپورٹ ٹیمپلیٹ اور لوگو میں ترمیم'', ''reports.templates'', N''Reports'')');
+    IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'Id', N'DescriptionEn', N'DescriptionUr', N'Key', N'Module') AND [object_id] = OBJECT_ID(N'[security].[Permissions]'))
+        SET IDENTITY_INSERT [security].[Permissions] OFF;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110063645_AddReports'
+)
+BEGIN
+    EXEC(N'ALTER TABLE [security].[Users] ADD CONSTRAINT [CK_Users_Signature] CHECK ([SignatureImage] IS NULL OR (DATALENGTH([SignatureImage]) <= 204800 AND [SignatureContentType] IN (''image/png'',''image/jpeg'')))');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110063645_AddReports'
+)
+BEGIN
+    CREATE UNIQUE INDEX [IX_LabReports_OrderId_Version] ON [lab].[LabReports] ([OrderId], [Version]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110063645_AddReports'
+)
+BEGIN
+    CREATE INDEX [IX_LabReports_OrganizationId_LabBranchId] ON [lab].[LabReports] ([OrganizationId], [LabBranchId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110063645_AddReports'
+)
+BEGIN
+    CREATE INDEX [IX_LabReports_OrganizationId_OrderBranchId] ON [lab].[LabReports] ([OrganizationId], [OrderBranchId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110063645_AddReports'
+)
+BEGIN
+    CREATE INDEX [IX_LabReports_OrganizationId_OrderId] ON [lab].[LabReports] ([OrganizationId], [OrderId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110063645_AddReports'
+)
+BEGIN
+    CREATE INDEX [IX_LabReports_OrganizationId_PatientId] ON [lab].[LabReports] ([OrganizationId], [PatientId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110063645_AddReports'
+)
+BEGIN
+    CREATE INDEX [IX_LabReports_OrganizationId_ReplacesReportId] ON [lab].[LabReports] ([OrganizationId], [ReplacesReportId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110063645_AddReports'
+)
+BEGIN
+    CREATE INDEX [IX_LabReports_OrganizationId_ReportNo] ON [lab].[LabReports] ([OrganizationId], [ReportNo]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110063645_AddReports'
+)
+BEGIN
+    CREATE INDEX [IX_LabReports_OrganizationId_Status_LabBranchId] ON [lab].[LabReports] ([OrganizationId], [Status], [LabBranchId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110063645_AddReports'
+)
+BEGIN
+    EXEC(N'CREATE UNIQUE INDEX [UX_LabReports_OneLivePerOrder] ON [lab].[LabReports] ([OrderId]) WHERE [Status] <> 90');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110063645_AddReports'
+)
+BEGIN
+    CREATE UNIQUE INDEX [IX_ReportTemplates_OrganizationId] ON [lab].[ReportTemplates] ([OrganizationId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110063645_AddReports'
+)
+BEGIN
+    CREATE INDEX [IX_ReportTemplateTranslations_OrganizationId_TemplateId] ON [lab].[ReportTemplateTranslations] ([OrganizationId], [TemplateId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110063645_AddReports'
+)
+BEGIN
+    CREATE UNIQUE INDEX [IX_ReportTemplateTranslations_TemplateId_Language] ON [lab].[ReportTemplateTranslations] ([TemplateId], [Language]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110063645_AddReports'
+)
+BEGIN
+
+    INSERT INTO security.RolePermissions (OrganizationId, RoleId, PermissionId)
+    SELECT r.OrganizationId, r.Id, p.Id
+      FROM security.Roles r
+      JOIN security.Permissions p ON (p.[Key] = 'reports.issue' AND r.Code IN ('SYSADMIN','LABMGR','PATHOLOGIST'))
+                                  OR (p.[Key] = 'reports.templates' AND r.Code IN ('SYSADMIN','LABMGR'))
+     WHERE r.IsSystem = 1
+       AND NOT EXISTS (SELECT 1 FROM security.RolePermissions x WHERE x.RoleId = r.Id AND x.PermissionId = p.Id);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110063645_AddReports'
+)
+BEGIN
+    INSERT INTO [core].[__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261110063645_AddReports', N'9.0.10');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110073457_AddCorporateBilling'
+)
+BEGIN
+    ALTER TABLE [billing].[Payments] DROP CONSTRAINT [CK_Payments_Method];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110073457_AddCorporateBilling'
+)
+BEGIN
+    ALTER TABLE [lab].[Orders] ADD [ContractId] int NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110073457_AddCorporateBilling'
+)
+BEGIN
+    ALTER TABLE [lab].[Orders] ADD [CorporateClientId] int NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110073457_AddCorporateBilling'
+)
+BEGIN
+    ALTER TABLE [billing].[Invoices] ADD [ContractId] int NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110073457_AddCorporateBilling'
+)
+BEGIN
+    ALTER TABLE [billing].[Invoices] ADD [CorporateClientId] int NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110073457_AddCorporateBilling'
+)
+BEGIN
+    ALTER TABLE [billing].[Invoices] ADD [DueDate] date NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110073457_AddCorporateBilling'
+)
+BEGIN
+    CREATE TABLE [billing].[CorporateClients] (
+        [Id] int NOT NULL IDENTITY,
+        [OrganizationId] int NOT NULL,
+        [Code] varchar(20) NOT NULL,
+        [NameEn] nvarchar(200) NOT NULL,
+        [NameUr] nvarchar(200) NULL,
+        [ContactName] nvarchar(200) NULL,
+        [Phone] nvarchar(30) NULL,
+        [Email] nvarchar(256) NULL,
+        [AddressEn] nvarchar(300) NULL,
+        [AddressUr] nvarchar(300) NULL,
+        [CreditLimit] decimal(18,2) NULL,
+        [PaymentTermsDays] int NOT NULL,
+        [IsActive] bit NOT NULL,
+        [CreatedAtUtc] datetime2(3) NOT NULL,
+        [CreatedByUserId] int NULL,
+        [UpdatedAtUtc] datetime2(3) NULL,
+        [UpdatedByUserId] int NULL,
+        [RowVersion] rowversion NOT NULL,
+        CONSTRAINT [PK_CorporateClients] PRIMARY KEY ([Id]),
+        CONSTRAINT [AK_CorporateClients_OrganizationId_Id] UNIQUE ([OrganizationId], [Id]),
+        CONSTRAINT [CK_CorporateClients_Credit] CHECK ([CreditLimit] IS NULL OR [CreditLimit] >= 0),
+        CONSTRAINT [CK_CorporateClients_Terms] CHECK ([PaymentTermsDays] BETWEEN 0 AND 365)
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110073457_AddCorporateBilling'
+)
+BEGIN
+    CREATE TABLE [billing].[CorporateContracts] (
+        [Id] int NOT NULL IDENTITY,
+        [OrganizationId] int NOT NULL,
+        [ClientId] int NOT NULL,
+        [Name] nvarchar(200) NOT NULL,
+        [ValidFrom] date NOT NULL,
+        [ValidTo] date NULL,
+        [DiscountPercent] decimal(5,2) NOT NULL,
+        [IsActive] bit NOT NULL,
+        [CreatedAtUtc] datetime2(3) NOT NULL,
+        [CreatedByUserId] int NULL,
+        [UpdatedAtUtc] datetime2(3) NULL,
+        [UpdatedByUserId] int NULL,
+        [RowVersion] rowversion NOT NULL,
+        CONSTRAINT [PK_CorporateContracts] PRIMARY KEY ([Id]),
+        CONSTRAINT [AK_CorporateContracts_OrganizationId_Id] UNIQUE ([OrganizationId], [Id]),
+        CONSTRAINT [CK_CorporateContracts_Dates] CHECK ([ValidTo] IS NULL OR [ValidTo] >= [ValidFrom]),
+        CONSTRAINT [CK_CorporateContracts_Discount] CHECK ([DiscountPercent] >= 0 AND [DiscountPercent] <= 100),
+        CONSTRAINT [FK_CorporateContracts_CorporateClients_OrganizationId_ClientId] FOREIGN KEY ([OrganizationId], [ClientId]) REFERENCES [billing].[CorporateClients] ([OrganizationId], [Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110073457_AddCorporateBilling'
+)
+BEGIN
+    CREATE TABLE [billing].[CorporateReceipts] (
+        [Id] bigint NOT NULL IDENTITY,
+        [OrganizationId] int NOT NULL,
+        [ClientId] int NOT NULL,
+        [ReceiptNo] varchar(30) NOT NULL,
+        [IdempotencyKey] uniqueidentifier NOT NULL,
+        [Kind] int NOT NULL,
+        [Method] int NULL,
+        [Amount] decimal(18,2) NOT NULL,
+        [Allocated] decimal(18,2) NOT NULL,
+        [Reference] nvarchar(100) NULL,
+        [Reason] nvarchar(500) NULL,
+        [ReceivedAtUtc] datetime2(3) NOT NULL,
+        [ReceivedByUserId] int NOT NULL,
+        [CreatedAtUtc] datetime2(3) NOT NULL,
+        [CreatedByUserId] int NULL,
+        [UpdatedAtUtc] datetime2(3) NULL,
+        [UpdatedByUserId] int NULL,
+        [RowVersion] rowversion NOT NULL,
+        CONSTRAINT [PK_CorporateReceipts] PRIMARY KEY ([Id]),
+        CONSTRAINT [AK_CorporateReceipts_OrganizationId_Id] UNIQUE ([OrganizationId], [Id]),
+        CONSTRAINT [CK_CorporateReceipts_Amount] CHECK ([Amount] > 0 AND [Allocated] >= 0 AND [Allocated] <= [Amount]),
+        CONSTRAINT [CK_CorporateReceipts_Kind] CHECK (([Kind] = 1 AND [Method] BETWEEN 1 AND 5) OR ([Kind] = 2 AND [Method] IS NULL AND [Reason] IS NOT NULL)),
+        CONSTRAINT [FK_CorporateReceipts_CorporateClients_OrganizationId_ClientId] FOREIGN KEY ([OrganizationId], [ClientId]) REFERENCES [billing].[CorporateClients] ([OrganizationId], [Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110073457_AddCorporateBilling'
+)
+BEGIN
+    CREATE TABLE [billing].[CorporateContractPrices] (
+        [ContractId] int NOT NULL,
+        [TestId] int NOT NULL,
+        [OrganizationId] int NOT NULL,
+        [Price] decimal(18,2) NOT NULL,
+        CONSTRAINT [PK_CorporateContractPrices] PRIMARY KEY ([ContractId], [TestId]),
+        CONSTRAINT [CK_CorporateContractPrices_Price] CHECK ([Price] >= 0),
+        CONSTRAINT [FK_CorporateContractPrices_CorporateContracts_OrganizationId_ContractId] FOREIGN KEY ([OrganizationId], [ContractId]) REFERENCES [billing].[CorporateContracts] ([OrganizationId], [Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_CorporateContractPrices_Tests_OrganizationId_TestId] FOREIGN KEY ([OrganizationId], [TestId]) REFERENCES [catalog].[Tests] ([OrganizationId], [Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110073457_AddCorporateBilling'
+)
+BEGIN
+    CREATE TABLE [billing].[CorporateAllocations] (
+        [Id] bigint NOT NULL IDENTITY,
+        [OrganizationId] int NOT NULL,
+        [ReceiptId] bigint NOT NULL,
+        [InvoiceId] bigint NOT NULL,
+        [PaymentId] bigint NOT NULL,
+        [Amount] decimal(18,2) NOT NULL,
+        [AllocatedAtUtc] datetime2(3) NOT NULL,
+        [AllocatedByUserId] int NOT NULL,
+        CONSTRAINT [PK_CorporateAllocations] PRIMARY KEY ([Id]),
+        CONSTRAINT [CK_CorporateAllocations_Amount] CHECK ([Amount] > 0),
+        CONSTRAINT [FK_CorporateAllocations_CorporateReceipts_OrganizationId_ReceiptId] FOREIGN KEY ([OrganizationId], [ReceiptId]) REFERENCES [billing].[CorporateReceipts] ([OrganizationId], [Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_CorporateAllocations_Invoices_OrganizationId_InvoiceId] FOREIGN KEY ([OrganizationId], [InvoiceId]) REFERENCES [billing].[Invoices] ([OrganizationId], [Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_CorporateAllocations_Payments_PaymentId] FOREIGN KEY ([PaymentId]) REFERENCES [billing].[Payments] ([Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110073457_AddCorporateBilling'
+)
+BEGIN
+    EXEC(N'ALTER TABLE [billing].[Payments] ADD CONSTRAINT [CK_Payments_Method] CHECK ([Method] BETWEEN 1 AND 6)');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110073457_AddCorporateBilling'
+)
+BEGIN
+    EXEC(N'CREATE INDEX [IX_Invoices_OrganizationId_CorporateClientId] ON [billing].[Invoices] ([OrganizationId], [CorporateClientId]) WHERE [CorporateClientId] IS NOT NULL');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110073457_AddCorporateBilling'
+)
+BEGIN
+    CREATE INDEX [IX_CorporateAllocations_InvoiceId] ON [billing].[CorporateAllocations] ([InvoiceId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110073457_AddCorporateBilling'
+)
+BEGIN
+    CREATE INDEX [IX_CorporateAllocations_OrganizationId_InvoiceId] ON [billing].[CorporateAllocations] ([OrganizationId], [InvoiceId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110073457_AddCorporateBilling'
+)
+BEGIN
+    CREATE INDEX [IX_CorporateAllocations_OrganizationId_ReceiptId] ON [billing].[CorporateAllocations] ([OrganizationId], [ReceiptId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110073457_AddCorporateBilling'
+)
+BEGIN
+    CREATE UNIQUE INDEX [IX_CorporateAllocations_PaymentId] ON [billing].[CorporateAllocations] ([PaymentId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110073457_AddCorporateBilling'
+)
+BEGIN
+    CREATE INDEX [IX_CorporateAllocations_ReceiptId] ON [billing].[CorporateAllocations] ([ReceiptId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110073457_AddCorporateBilling'
+)
+BEGIN
+    CREATE UNIQUE INDEX [IX_CorporateClients_OrganizationId_Code] ON [billing].[CorporateClients] ([OrganizationId], [Code]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110073457_AddCorporateBilling'
+)
+BEGIN
+    CREATE INDEX [IX_CorporateContractPrices_OrganizationId_ContractId] ON [billing].[CorporateContractPrices] ([OrganizationId], [ContractId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110073457_AddCorporateBilling'
+)
+BEGIN
+    CREATE INDEX [IX_CorporateContractPrices_OrganizationId_TestId] ON [billing].[CorporateContractPrices] ([OrganizationId], [TestId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110073457_AddCorporateBilling'
+)
+BEGIN
+    CREATE INDEX [IX_CorporateContracts_ClientId_IsActive] ON [billing].[CorporateContracts] ([ClientId], [IsActive]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110073457_AddCorporateBilling'
+)
+BEGIN
+    CREATE INDEX [IX_CorporateContracts_OrganizationId_ClientId] ON [billing].[CorporateContracts] ([OrganizationId], [ClientId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110073457_AddCorporateBilling'
+)
+BEGIN
+    CREATE INDEX [IX_CorporateReceipts_ClientId_ReceivedAtUtc] ON [billing].[CorporateReceipts] ([ClientId], [ReceivedAtUtc]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110073457_AddCorporateBilling'
+)
+BEGIN
+    CREATE INDEX [IX_CorporateReceipts_OrganizationId_ClientId] ON [billing].[CorporateReceipts] ([OrganizationId], [ClientId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110073457_AddCorporateBilling'
+)
+BEGIN
+    CREATE UNIQUE INDEX [IX_CorporateReceipts_OrganizationId_IdempotencyKey] ON [billing].[CorporateReceipts] ([OrganizationId], [IdempotencyKey]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110073457_AddCorporateBilling'
+)
+BEGIN
+    CREATE UNIQUE INDEX [IX_CorporateReceipts_OrganizationId_ReceiptNo] ON [billing].[CorporateReceipts] ([OrganizationId], [ReceiptNo]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110073457_AddCorporateBilling'
+)
+BEGIN
+    ALTER TABLE [billing].[Invoices] ADD CONSTRAINT [FK_Invoices_CorporateClients_OrganizationId_CorporateClientId] FOREIGN KEY ([OrganizationId], [CorporateClientId]) REFERENCES [billing].[CorporateClients] ([OrganizationId], [Id]) ON DELETE NO ACTION;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110073457_AddCorporateBilling'
+)
+BEGIN
+
+    INSERT INTO security.RolePermissions (OrganizationId, RoleId, PermissionId)
+    SELECT r.OrganizationId, r.Id, p.Id
+      FROM security.Roles r
+      JOIN security.Permissions p ON p.[Key] IN ('orders.create','catalog.view')
+     WHERE r.Code = 'CORPBILLING' AND r.IsSystem = 1
+       AND NOT EXISTS (SELECT 1 FROM security.RolePermissions x WHERE x.RoleId = r.Id AND x.PermissionId = p.Id);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110073457_AddCorporateBilling'
+)
+BEGIN
+    INSERT INTO [core].[__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261110073457_AddCorporateBilling', N'9.0.10');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110081027_AddInventory'
+)
+BEGIN
+    IF SCHEMA_ID(N'inventory') IS NULL EXEC(N'CREATE SCHEMA [inventory];');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110081027_AddInventory'
+)
+BEGIN
+    CREATE TABLE [inventory].[Suppliers] (
+        [Id] int NOT NULL IDENTITY,
+        [OrganizationId] int NOT NULL,
+        [Code] varchar(20) NOT NULL,
+        [NameEn] nvarchar(200) NOT NULL,
+        [NameUr] nvarchar(200) NULL,
+        [ContactName] nvarchar(200) NULL,
+        [Phone] nvarchar(30) NULL,
+        [Email] nvarchar(256) NULL,
+        [Address] nvarchar(300) NULL,
+        [IsActive] bit NOT NULL,
+        [CreatedAtUtc] datetime2(3) NOT NULL,
+        [CreatedByUserId] int NULL,
+        [UpdatedAtUtc] datetime2(3) NULL,
+        [UpdatedByUserId] int NULL,
+        [RowVersion] rowversion NOT NULL,
+        CONSTRAINT [PK_Suppliers] PRIMARY KEY ([Id]),
+        CONSTRAINT [AK_Suppliers_OrganizationId_Id] UNIQUE ([OrganizationId], [Id])
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110081027_AddInventory'
+)
+BEGIN
+    CREATE TABLE [inventory].[PurchaseReceipts] (
+        [Id] bigint NOT NULL IDENTITY,
+        [OrganizationId] int NOT NULL,
+        [BranchId] int NOT NULL,
+        [ReceiptNo] varchar(30) NOT NULL,
+        [SupplierId] int NOT NULL,
+        [SupplierInvoiceNo] nvarchar(60) NULL,
+        [ReceivedAtUtc] datetime2(3) NOT NULL,
+        [Notes] nvarchar(500) NULL,
+        [IdempotencyKey] uniqueidentifier NOT NULL,
+        [CreatedAtUtc] datetime2(3) NOT NULL,
+        [CreatedByUserId] int NULL,
+        [UpdatedAtUtc] datetime2(3) NULL,
+        [UpdatedByUserId] int NULL,
+        [RowVersion] rowversion NOT NULL,
+        CONSTRAINT [PK_PurchaseReceipts] PRIMARY KEY ([Id]),
+        CONSTRAINT [AK_PurchaseReceipts_OrganizationId_Id] UNIQUE ([OrganizationId], [Id]),
+        CONSTRAINT [FK_PurchaseReceipts_Branches_OrganizationId_BranchId] FOREIGN KEY ([OrganizationId], [BranchId]) REFERENCES [core].[Branches] ([OrganizationId], [Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_PurchaseReceipts_Suppliers_OrganizationId_SupplierId] FOREIGN KEY ([OrganizationId], [SupplierId]) REFERENCES [inventory].[Suppliers] ([OrganizationId], [Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110081027_AddInventory'
+)
+BEGIN
+    CREATE TABLE [inventory].[StockItems] (
+        [Id] int NOT NULL IDENTITY,
+        [OrganizationId] int NOT NULL,
+        [Code] varchar(30) NOT NULL,
+        [NameEn] nvarchar(200) NOT NULL,
+        [NameUr] nvarchar(200) NULL,
+        [Kind] int NOT NULL,
+        [UnitName] nvarchar(30) NOT NULL,
+        [ReorderLevel] decimal(18,3) NOT NULL,
+        [TracksExpiry] bit NOT NULL,
+        [DefaultSupplierId] int NULL,
+        [IsActive] bit NOT NULL,
+        [CreatedAtUtc] datetime2(3) NOT NULL,
+        [CreatedByUserId] int NULL,
+        [UpdatedAtUtc] datetime2(3) NULL,
+        [UpdatedByUserId] int NULL,
+        [RowVersion] rowversion NOT NULL,
+        CONSTRAINT [PK_StockItems] PRIMARY KEY ([Id]),
+        CONSTRAINT [AK_StockItems_OrganizationId_Id] UNIQUE ([OrganizationId], [Id]),
+        CONSTRAINT [CK_StockItems_Kind] CHECK ([Kind] IN (1,2)),
+        CONSTRAINT [CK_StockItems_Reorder] CHECK ([ReorderLevel] >= 0),
+        CONSTRAINT [FK_StockItems_Suppliers_OrganizationId_DefaultSupplierId] FOREIGN KEY ([OrganizationId], [DefaultSupplierId]) REFERENCES [inventory].[Suppliers] ([OrganizationId], [Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110081027_AddInventory'
+)
+BEGIN
+    CREATE TABLE [inventory].[ConsumptionProfileLines] (
+        [TestId] int NOT NULL,
+        [ItemId] int NOT NULL,
+        [OrganizationId] int NOT NULL,
+        [QuantityPerTest] decimal(18,3) NOT NULL,
+        CONSTRAINT [PK_ConsumptionProfileLines] PRIMARY KEY ([TestId], [ItemId]),
+        CONSTRAINT [CK_ConsumptionProfileLines_Quantity] CHECK ([QuantityPerTest] > 0),
+        CONSTRAINT [FK_ConsumptionProfileLines_StockItems_OrganizationId_ItemId] FOREIGN KEY ([OrganizationId], [ItemId]) REFERENCES [inventory].[StockItems] ([OrganizationId], [Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_ConsumptionProfileLines_Tests_OrganizationId_TestId] FOREIGN KEY ([OrganizationId], [TestId]) REFERENCES [catalog].[Tests] ([OrganizationId], [Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110081027_AddInventory'
+)
+BEGIN
+    CREATE TABLE [inventory].[StockBatches] (
+        [Id] bigint NOT NULL IDENTITY,
+        [OrganizationId] int NOT NULL,
+        [BranchId] int NOT NULL,
+        [ItemId] int NOT NULL,
+        [BatchNo] nvarchar(60) NOT NULL,
+        [ExpiryDate] date NULL,
+        [QuantityOnHand] decimal(18,3) NOT NULL,
+        [UnitCost] decimal(18,4) NULL,
+        [SupplierId] int NULL,
+        [CreatedAtUtc] datetime2(3) NOT NULL,
+        [CreatedByUserId] int NULL,
+        [UpdatedAtUtc] datetime2(3) NULL,
+        [UpdatedByUserId] int NULL,
+        [RowVersion] rowversion NOT NULL,
+        CONSTRAINT [PK_StockBatches] PRIMARY KEY ([Id]),
+        CONSTRAINT [AK_StockBatches_OrganizationId_Id] UNIQUE ([OrganizationId], [Id]),
+        CONSTRAINT [CK_StockBatches_NotNegative] CHECK ([QuantityOnHand] >= 0 OR [BatchNo] = 'UNBATCHED'),
+        CONSTRAINT [FK_StockBatches_Branches_OrganizationId_BranchId] FOREIGN KEY ([OrganizationId], [BranchId]) REFERENCES [core].[Branches] ([OrganizationId], [Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_StockBatches_StockItems_OrganizationId_ItemId] FOREIGN KEY ([OrganizationId], [ItemId]) REFERENCES [inventory].[StockItems] ([OrganizationId], [Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_StockBatches_Suppliers_OrganizationId_SupplierId] FOREIGN KEY ([OrganizationId], [SupplierId]) REFERENCES [inventory].[Suppliers] ([OrganizationId], [Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110081027_AddInventory'
+)
+BEGIN
+    CREATE TABLE [inventory].[StockShortfalls] (
+        [Id] bigint NOT NULL IDENTITY,
+        [OrganizationId] int NOT NULL,
+        [BranchId] int NOT NULL,
+        [ItemId] int NOT NULL,
+        [Quantity] decimal(18,3) NOT NULL,
+        [Reference] nvarchar(60) NULL,
+        [AtUtc] datetime2(3) NOT NULL,
+        [ResolvedAtUtc] datetime2(3) NULL,
+        [ResolvedByUserId] int NULL,
+        [ResolutionNote] nvarchar(300) NULL,
+        CONSTRAINT [PK_StockShortfalls] PRIMARY KEY ([Id]),
+        CONSTRAINT [CK_StockShortfalls_Quantity] CHECK ([Quantity] > 0),
+        CONSTRAINT [FK_StockShortfalls_Branches_OrganizationId_BranchId] FOREIGN KEY ([OrganizationId], [BranchId]) REFERENCES [core].[Branches] ([OrganizationId], [Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_StockShortfalls_StockItems_OrganizationId_ItemId] FOREIGN KEY ([OrganizationId], [ItemId]) REFERENCES [inventory].[StockItems] ([OrganizationId], [Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110081027_AddInventory'
+)
+BEGIN
+    CREATE TABLE [inventory].[PurchaseLines] (
+        [Id] bigint NOT NULL IDENTITY,
+        [OrganizationId] int NOT NULL,
+        [ReceiptId] bigint NOT NULL,
+        [ItemId] int NOT NULL,
+        [BatchNo] nvarchar(60) NOT NULL,
+        [ExpiryDate] date NULL,
+        [Quantity] decimal(18,3) NOT NULL,
+        [UnitCost] decimal(18,4) NULL,
+        [BatchId] bigint NOT NULL,
+        CONSTRAINT [PK_PurchaseLines] PRIMARY KEY ([Id]),
+        CONSTRAINT [CK_PurchaseLines_Quantity] CHECK ([Quantity] > 0 AND ([UnitCost] IS NULL OR [UnitCost] >= 0)),
+        CONSTRAINT [FK_PurchaseLines_PurchaseReceipts_OrganizationId_ReceiptId] FOREIGN KEY ([OrganizationId], [ReceiptId]) REFERENCES [inventory].[PurchaseReceipts] ([OrganizationId], [Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_PurchaseLines_StockBatches_OrganizationId_BatchId] FOREIGN KEY ([OrganizationId], [BatchId]) REFERENCES [inventory].[StockBatches] ([OrganizationId], [Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_PurchaseLines_StockItems_OrganizationId_ItemId] FOREIGN KEY ([OrganizationId], [ItemId]) REFERENCES [inventory].[StockItems] ([OrganizationId], [Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110081027_AddInventory'
+)
+BEGIN
+    CREATE TABLE [inventory].[StockMovements] (
+        [Id] bigint NOT NULL IDENTITY,
+        [OrganizationId] int NOT NULL,
+        [BranchId] int NOT NULL,
+        [ItemId] int NOT NULL,
+        [BatchId] bigint NOT NULL,
+        [Type] int NOT NULL,
+        [Quantity] decimal(18,3) NOT NULL,
+        [BalanceAfter] decimal(18,3) NOT NULL,
+        [Reason] nvarchar(300) NULL,
+        [Reference] nvarchar(60) NULL,
+        [ConsumptionKey] varchar(60) NULL,
+        [PairedMovementId] bigint NULL,
+        [UserId] int NOT NULL,
+        [AtUtc] datetime2(3) NOT NULL,
+        CONSTRAINT [PK_StockMovements] PRIMARY KEY ([Id]),
+        CONSTRAINT [CK_StockMovements_Direction] CHECK (([Type] IN (1,4,8) AND [Quantity] > 0) OR ([Type] IN (2,3,5,6,7) AND [Quantity] < 0)),
+        CONSTRAINT [CK_StockMovements_Quantity] CHECK ([Quantity] <> 0),
+        CONSTRAINT [CK_StockMovements_Type] CHECK ([Type] BETWEEN 1 AND 8),
+        CONSTRAINT [FK_StockMovements_Branches_OrganizationId_BranchId] FOREIGN KEY ([OrganizationId], [BranchId]) REFERENCES [core].[Branches] ([OrganizationId], [Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_StockMovements_StockBatches_OrganizationId_BatchId] FOREIGN KEY ([OrganizationId], [BatchId]) REFERENCES [inventory].[StockBatches] ([OrganizationId], [Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_StockMovements_StockItems_OrganizationId_ItemId] FOREIGN KEY ([OrganizationId], [ItemId]) REFERENCES [inventory].[StockItems] ([OrganizationId], [Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110081027_AddInventory'
+)
+BEGIN
+    CREATE INDEX [IX_ConsumptionProfileLines_OrganizationId_ItemId] ON [inventory].[ConsumptionProfileLines] ([OrganizationId], [ItemId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110081027_AddInventory'
+)
+BEGIN
+    CREATE INDEX [IX_ConsumptionProfileLines_OrganizationId_TestId] ON [inventory].[ConsumptionProfileLines] ([OrganizationId], [TestId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110081027_AddInventory'
+)
+BEGIN
+    CREATE INDEX [IX_PurchaseLines_OrganizationId_BatchId] ON [inventory].[PurchaseLines] ([OrganizationId], [BatchId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110081027_AddInventory'
+)
+BEGIN
+    CREATE INDEX [IX_PurchaseLines_OrganizationId_ItemId] ON [inventory].[PurchaseLines] ([OrganizationId], [ItemId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110081027_AddInventory'
+)
+BEGIN
+    CREATE INDEX [IX_PurchaseLines_OrganizationId_ReceiptId] ON [inventory].[PurchaseLines] ([OrganizationId], [ReceiptId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110081027_AddInventory'
+)
+BEGIN
+    CREATE INDEX [IX_PurchaseReceipts_OrganizationId_BranchId] ON [inventory].[PurchaseReceipts] ([OrganizationId], [BranchId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110081027_AddInventory'
+)
+BEGIN
+    CREATE UNIQUE INDEX [IX_PurchaseReceipts_OrganizationId_IdempotencyKey] ON [inventory].[PurchaseReceipts] ([OrganizationId], [IdempotencyKey]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110081027_AddInventory'
+)
+BEGIN
+    CREATE UNIQUE INDEX [IX_PurchaseReceipts_OrganizationId_ReceiptNo] ON [inventory].[PurchaseReceipts] ([OrganizationId], [ReceiptNo]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110081027_AddInventory'
+)
+BEGIN
+    CREATE INDEX [IX_PurchaseReceipts_OrganizationId_SupplierId] ON [inventory].[PurchaseReceipts] ([OrganizationId], [SupplierId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110081027_AddInventory'
+)
+BEGIN
+    CREATE UNIQUE INDEX [IX_StockBatches_ItemId_BranchId_BatchNo] ON [inventory].[StockBatches] ([ItemId], [BranchId], [BatchNo]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110081027_AddInventory'
+)
+BEGIN
+    CREATE INDEX [IX_StockBatches_OrganizationId_BranchId_ExpiryDate] ON [inventory].[StockBatches] ([OrganizationId], [BranchId], [ExpiryDate]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110081027_AddInventory'
+)
+BEGIN
+    CREATE INDEX [IX_StockBatches_OrganizationId_ItemId] ON [inventory].[StockBatches] ([OrganizationId], [ItemId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110081027_AddInventory'
+)
+BEGIN
+    CREATE INDEX [IX_StockBatches_OrganizationId_SupplierId] ON [inventory].[StockBatches] ([OrganizationId], [SupplierId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110081027_AddInventory'
+)
+BEGIN
+    CREATE UNIQUE INDEX [IX_StockItems_OrganizationId_Code] ON [inventory].[StockItems] ([OrganizationId], [Code]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110081027_AddInventory'
+)
+BEGIN
+    CREATE INDEX [IX_StockItems_OrganizationId_DefaultSupplierId] ON [inventory].[StockItems] ([OrganizationId], [DefaultSupplierId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110081027_AddInventory'
+)
+BEGIN
+    CREATE INDEX [IX_StockMovements_ItemId_AtUtc] ON [inventory].[StockMovements] ([ItemId], [AtUtc]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110081027_AddInventory'
+)
+BEGIN
+    CREATE INDEX [IX_StockMovements_OrganizationId_BatchId] ON [inventory].[StockMovements] ([OrganizationId], [BatchId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110081027_AddInventory'
+)
+BEGIN
+    CREATE INDEX [IX_StockMovements_OrganizationId_BranchId_AtUtc] ON [inventory].[StockMovements] ([OrganizationId], [BranchId], [AtUtc]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110081027_AddInventory'
+)
+BEGIN
+    EXEC(N'CREATE UNIQUE INDEX [IX_StockMovements_OrganizationId_ConsumptionKey] ON [inventory].[StockMovements] ([OrganizationId], [ConsumptionKey]) WHERE [ConsumptionKey] IS NOT NULL');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110081027_AddInventory'
+)
+BEGIN
+    CREATE INDEX [IX_StockMovements_OrganizationId_ItemId] ON [inventory].[StockMovements] ([OrganizationId], [ItemId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110081027_AddInventory'
+)
+BEGIN
+    CREATE INDEX [IX_StockShortfalls_OrganizationId_BranchId_ResolvedAtUtc] ON [inventory].[StockShortfalls] ([OrganizationId], [BranchId], [ResolvedAtUtc]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110081027_AddInventory'
+)
+BEGIN
+    CREATE INDEX [IX_StockShortfalls_OrganizationId_ItemId] ON [inventory].[StockShortfalls] ([OrganizationId], [ItemId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110081027_AddInventory'
+)
+BEGIN
+    CREATE UNIQUE INDEX [IX_Suppliers_OrganizationId_Code] ON [inventory].[Suppliers] ([OrganizationId], [Code]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110081027_AddInventory'
+)
+BEGIN
+    INSERT INTO [core].[__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261110081027_AddInventory', N'9.0.10');
+END;
+
 COMMIT;
 GO
 

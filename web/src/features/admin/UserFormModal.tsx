@@ -16,6 +16,7 @@ import { PasswordField } from '../../components/ui/PasswordField'
 import { generatePassword, passwordProblem } from '../../lib/password'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { useToast } from '../../components/ui/Toast'
+import { SignatureBox } from './SignatureBox'
 import { keys, localName, nullIfBlank, useBranches, useRoleOptions, type LoginHistoryItem, type UserDetail } from './adminApi'
 
 interface FormState {
@@ -24,6 +25,7 @@ interface FormState {
   displayNameEn: string
   displayNameUr: string
   designation: string
+  registrationNo: string
   email: string
   phone: string
   preferredLanguage: 'en' | 'ur'
@@ -40,6 +42,7 @@ const empty: FormState = {
   displayNameEn: '',
   displayNameUr: '',
   designation: '',
+  registrationNo: '',
   email: '',
   phone: '',
   preferredLanguage: 'en',
@@ -57,6 +60,7 @@ function fromDetail(u: UserDetail): FormState {
     displayNameEn: u.displayNameEn,
     displayNameUr: u.displayNameUr ?? '',
     designation: u.designation ?? '',
+    registrationNo: u.registrationNo ?? '',
     email: u.email ?? '',
     phone: u.phone ?? '',
     preferredLanguage: u.preferredLanguage,
@@ -119,6 +123,7 @@ export function UserFormModal({ userId, onClose }: { userId: number | null; onCl
       displayNameEn: form.displayNameEn.trim(),
       displayNameUr: nullIfBlank(form.displayNameUr),
       designation: nullIfBlank(form.designation),
+      registrationNo: nullIfBlank(form.registrationNo),
       email: nullIfBlank(form.email),
       phone: nullIfBlank(form.phone),
       preferredLanguage: form.preferredLanguage,
@@ -209,6 +214,7 @@ export function UserFormModal({ userId, onClose }: { userId: number | null; onCl
                 <Field label={t('users.displayNameEn')} required value={form.displayNameEn} error={errors.displayNameEn} onChange={(e) => set('displayNameEn', e.target.value)} maxLength={200} />
                 <Field label={t('users.displayNameUr')} value={form.displayNameUr} dir="rtl" lang="ur" className="urdu-input" onChange={(e) => set('displayNameUr', e.target.value)} maxLength={200} />
                 <Field label={t('users.designation')} hint={t('users.designationHint')} value={form.designation} onChange={(e) => set('designation', e.target.value)} maxLength={200} />
+                <Field label={t('users.registrationNo')} hint={t('users.registrationNoHint')} dir="ltr" value={form.registrationNo} onChange={(e) => set('registrationNo', e.target.value)} maxLength={50} />
                 <SelectField label={t('users.language')} value={form.preferredLanguage} onChange={(e) => set('preferredLanguage', e.target.value as 'en' | 'ur')}>
                   <option value="en">English</option>
                   <option value="ur">اردو</option>
@@ -217,6 +223,12 @@ export function UserFormModal({ userId, onClose }: { userId: number | null; onCl
                 <Field label={t('common.phone')} type="tel" dir="ltr" icon={<Phone size={16} />} value={form.phone} onChange={(e) => set('phone', e.target.value)} maxLength={30} />
               </div>
             </FormSection>
+            {!isNew && userId !== null && (
+              <FormSection title={t('users.signature')}>
+                <p className="field-hint" style={{ marginBottom: 8 }}>{t('users.signatureHint')}</p>
+                <SignatureBox userId={userId} has={detail.data?.hasSignature ?? false} />
+              </FormSection>
+            )}
 
             {isNew && (
               <FormSection title={t('users.sectionAccount')}>

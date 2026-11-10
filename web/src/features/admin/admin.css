@@ -103,3 +103,15 @@
   .roles-layout { grid-template-columns: 1fr; }
   .roles-list { position: static; max-height: none; }
 }
+
+/* ---- audit detail and settings (Phase 12) ---- */
+.kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px 20px; margin: 0; }
+.kv > div { min-width: 0; }
+.kv dt { font-size: 12px; color: var(--muted); margin-bottom: 2px; }
+.kv dd { margin: 0; overflow-wrap: anywhere; }
+
+.settings-list { list-style: none; margin: 0; padding: 0; }
+.settings-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 16px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+.settings-row:first-child { border-top: 0; }
+.settings-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 320px; max-width: 640px; }
+.settings-control { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }

@@ -36,7 +36,21 @@ public static class DependencyInjection
         services.AddScoped<Catalog.CatalogService>();
         services.AddScoped<Catalog.ReferenceRangeService>();
         services.AddScoped<Samples.SampleService>();
+        services.AddScoped<Samples.TransferService>();
+        services.AddScoped<Inventory.InventoryService>();
+        services.AddScoped<Dashboard.DashboardService>();
+        services.AddScoped<Audit.AuditService>();
+        services.AddScoped<Settings.SettingsService>();
+        services.AddScoped<Results.ResultLookup>();
+        services.AddScoped<Results.ResultService>();
+        services.AddScoped<Results.WorklistService>();
+        services.AddScoped<Results.CriticalAlertService>();
+        services.AddScoped<Results.ResultReportSource>();
+        services.AddScoped<Reports.ReportTemplateService>();
+        services.AddScoped<Reports.ReportService>();
+        services.AddScoped<Reports.SignatureService>();
         services.AddScoped<Orders.BillingService>();
+        services.AddScoped<Corporate.CorporateService>();
         services.AddScoped<Orders.OrderService>();
         return services;
     }

@@ -46,12 +46,15 @@ export interface UserDetail {
   branchIds: number[]
   createdAtUtc: string
   rowVersion: string
+  registrationNo: string | null
+  hasSignature: boolean
 }
 
 export interface UserEdit {
   displayNameEn: string
   displayNameUr: string | null
   designation: string | null
+  registrationNo: string | null
   email: string | null
   phone: string | null
   preferredLanguage: 'en' | 'ur'

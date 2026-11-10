@@ -23,6 +23,8 @@ public sealed class BillingService(LimsDbContext db, INumberSequenceService numb
     {
         if (await ExistingPaymentAsync(input.IdempotencyKey, invoiceId, ct) is long done) return done;
         var invoice = await LoadAsync(invoiceId, ct);
+        // Credit invoices are paid by the client through receipts and allocation, never at the counter.
+        if (invoice.CorporateClientId is not null) throw BusinessRuleException.Conflict("invoice_is_credit", "This invoice is billed to a corporate client and is paid through corporate receipts.");
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         var id = await ReceiveAsync(invoice, input, ct);
         await tx.CommitAsync(ct);
@@ -30,7 +32,7 @@ public sealed class BillingService(LimsDbContext db, INumberSequenceService numb
     }
 
     /// <summary>Records a payment on a loaded invoice (caller owns the transaction).</summary>
-    internal async Task<long> ReceiveAsync(Invoice invoice, PaymentCreate input, CancellationToken ct)
+    internal async Task<long> ReceiveAsync(Invoice invoice, PaymentCreate input, CancellationToken ct, int? branchOverride = null)
     {
         if (input.IdempotencyKey == Guid.Empty)
             throw new BusinessRuleException("idempotency_key_required", "The payment form is missing its submission key. Reload the page.");
@@ -41,7 +43,7 @@ public sealed class BillingService(LimsDbContext db, INumberSequenceService numb
         if (amount > invoice.Balance)
             throw new BusinessRuleException("payment_exceeds_balance", $"The amount is more than the balance due ({invoice.Balance:N2}).", details: new { invoice.Balance });
 
-        var branchId = BranchId;
+        var branchId = branchOverride ?? BranchId;
         long? drawer = input.Method == PaymentMethod.Cash ? await OpenDrawerIdAsync(branchId, ct) : null;
         var payment = new Payment
         {
