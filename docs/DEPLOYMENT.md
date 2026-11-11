@@ -37,10 +37,10 @@ Names used below (change them): site `LIMS`, pool `LimsPool`, host name `lims.la
    ```
    After the first migration (section 5, step 3) and after any update that adds tables, run:
    ```powershell
-   sqlcmd -S localhost -E -C -d LIMS -v AppLogin="IIS APPPOOL\LimsPool"    -i db\scripts\Grant-LimsAppPermissions.sql
+   sqlcmd -S localhost -E -C -d LIMS -v 'AppLogin="IIS APPPOOL\LimsPool"' -i db\scripts\Grant-LimsAppPermissions.sql
    sqlcmd -S localhost -E -C -d LIMS -v DeployLogin="LABSERVER\lims-deploy" -i db\scripts\Grant-LimsDeployPermissions.sql
    ```
-   The application login can read and write data but cannot change structure, back up or restore. **`audit.AuditLogs` and `inventory.StockMovements` are append-only by database permission**, and the migration history is read-only to it. (The Phase 13 test suite runs the whole application as such a login. A stock transfer used to update a ledger line after inserting it; that was changed so the ledger needs no updates.)
+   The application login can read and write data and back up the database (`db_backupoperator`, for the automatic backups) but cannot change structure or restore. `Deploy-Lims.ps1` creates this login and runs the script itself when SQL Server is on the same machine. **`audit.AuditLogs` and `inventory.StockMovements` are append-only by database permission**, and the migration history is read-only to it. (The Phase 13 test suite runs the whole application as such a login. A stock transfer used to update a ledger line after inserting it; that was changed so the ledger needs no updates.)
 7. **Time zone**: the laboratory's clock is Asia/Karachi. Set the Windows time zone to *(UTC+05:00) Islamabad, Karachi* and keep time synchronised. Check `/api/health` `serverTimeUtc` against a reliable clock after installation. _(Not yet checked on Windows Server.)_
 
 ## 3. Build the release package (on a development PC)
@@ -63,9 +63,11 @@ Copy `deploy\appsettings.Production.example.json` to `C:\inetpub\lims\appsetting
 | `DataProtection:ProtectWithDpapi` | `true` encrypts the key files with the machine (Windows). Recommended; it is on in the example file. |
 | `Logging:Path` | Daily application log files, kept 30 days. They hold request method, path (record numbers), status and timing, and errors; no request bodies, query strings, passwords or patient fields (tested; see section 6b). |
 | `RateLimit:RequestsPerMinute` | Per-user safety limit (default 600). A busy user makes well under 100 requests a minute; the load test (`PERFORMANCE.md`) used up to 30 a minute per user. |
-| `Backup:Folder` | The folder the backup jobs write to. Turns on the read-only **Backup status** page (Administration, System Administrator only). The application pool needs **Read** on this folder. Leave empty to show "not set up". |
-| `Backup:Database` | Database name used in the backup file names (default `LIMS`). |
-| `Backup:MaxFullAgeHours`, `Backup:MaxLogAgeMinutes`, `Backup:MaxOffsiteAgeHours`, `Backup:ExpectLogBackups`, `Backup:ExpectOffsite` | When the page calls a backup late (defaults 26 h, 45 min, 26 h, true, true; the same limits as `Test-LimsBackupHealth.ps1`). |
+| `Backup:Folder` | Optional. Starting backup folder (default `<data folder>\backups`, i.e. `D:\LimsData\backups`). After that the folder and schedule are changed on the Backup page and kept in `backup-settings.json` in the data folder. |
+| `Backup:Automatic` | Default `true`: the application makes the backups itself (`BACKUP_RESTORE.md` section 1). `false` only if IT runs the scheduled-task scripts instead. |
+| `Backup:DataFolder` | Optional. Where `backup-settings.json` is kept (default: the parent of `DataProtection:KeysPath`). |
+| `Backup:Database` | Optional. Database to back up (default: the one in `ConnectionStrings:Lims`). |
+| `Backup:MaxFullAgeHours`, `Backup:MaxLogAgeMinutes`, `Backup:MaxOffsiteAgeHours`, `Backup:ExpectLogBackups`, `Backup:ExpectOffsite` | Optional overrides of when the page calls a backup late (by default derived from the schedule: 26 h for daily, 170 h for weekly fulls; three log intervals, at least 45 min; second copy only expected when a folder is set). |
 
 ## 5. First installation
 1. Publish (section 3) and copy the package folder to the server.
@@ -73,9 +75,9 @@ Copy `deploy\appsettings.Production.example.json` to `C:\inetpub\lims\appsetting
 3. Run as the deployment account, from an elevated PowerShell:
    ```powershell
    .\Deploy-Lims.ps1 -PackagePath C:\Release\lims-2026.11.10 -SiteFolder C:\inetpub\lims `
-       -Database LIMS -SkipBackup -HealthUrl https://lims.lab.local/api/health
+       -HealthUrl https://lims.lab.local/api/health
    ```
-   It copies the files, applies all migrations, and checks `/api/health` (`database` and `schemaUpToDate` must both be true). Then run the two `Grant-…` scripts from section 2 step 6 **and re-run the health check**.
+   It copies the files, applies all migrations, sets the permissions (application pool on the site and data folders, its database login with `Grant-LimsAppPermissions.sql`, SQL Server service on the backup folder, FULL recovery model, pool always running) and checks `/api/health` (`database` and `schemaUpToDate` must both be true). Anything it could not do is listed at the end with the command to run. Automatic backups start by themselves a minute after the site starts. _(Permission steps written and syntax-checked; not yet run on a clean server.)_
 4. **Organisation and first administrator** (no demo data is ever created):
    ```powershell
    cd C:\inetpub\lims
@@ -90,10 +92,10 @@ Copy `deploy\appsettings.Production.example.json` to `C:\inetpub\lims\appsetting
 _The first update that includes migration `AddPerformanceIndexes` builds 21 indexes; at 550,000 orders that takes about half a minute and locks the tables while each is built. Do it outside opening hours._
 
 ```powershell
-.\Deploy-Lims.ps1 -PackagePath C:\Release\lims-NEW -SiteFolder C:\inetpub\lims -Database LIMS `
-    -BackupFolder E:\LimsBackups -HealthUrl https://lims.lab.local/api/health
+.\Deploy-Lims.ps1 -PackagePath C:\Release\lims-NEW -SiteFolder C:\inetpub\lims `
+    -HealthUrl https://lims.lab.local/api/health
 ```
-Order inside the script: checks → full backup → site offline (`app_offline.htm`) → previous files kept in `C:\inetpub\lims.previous` → new files copied → `db migrate` → site online → health check → **PASS** or **FAIL** with the next step. If a migration adds tables, re-run `Grant-LimsAppPermissions.sql` (schema-level grants already cover new tables in existing schemas; it is only needed for a brand-new schema, but running it is harmless).
+Order inside the script: checks → full backup (with the new build's engine, into the folder set on the Backup page) → site offline (`app_offline.htm`) → previous files kept in `C:\inetpub\lims.previous` → new files copied → `db migrate` → permissions (re-runs `Grant-LimsAppPermissions.sql`, so new schemas are covered) → site online → health check → **PASS** or **FAIL** with the next step.
 
 **Rollback**: `.\Deploy-Lims.ps1 -SiteFolder C:\inetpub\lims -Rollback -HealthUrl …` restores the previous files. It cannot undo migrations. If the update changed the database, restore the pre-update backup into a new database name and point `ConnectionStrings:Lims` at it; do not restore over the live database.
 

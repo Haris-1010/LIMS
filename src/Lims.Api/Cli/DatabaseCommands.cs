@@ -7,7 +7,8 @@ namespace Lims.Api.Cli;
 
 /// <summary>
 /// Administrative commands run on the server, not over HTTP:
-///   dotnet Lims.Api.dll db migrate      apply pending migrations
+///   dotnet Lims.Api.dll db migrate      take a full backup (when there is something to migrate), then apply pending migrations
+///   dotnet Lims.Api.dll db backup [--folder X] [--log]   take a full (or log) backup now, as the automatic backups do
 ///   dotnet Lims.Api.dll db seed-demo    create a demo organisation (development/training only)
 /// </summary>
 public static class DatabaseCommands
@@ -69,6 +70,27 @@ public static class DatabaseCommands
         return 0;
     }
 
+    /// <summary>Takes a backup with the same engine and settings as the automatic backups. Waits if one is already running.</summary>
+    private static async Task<int> BackupAsync(WebApplication app, string[] args, ILogger log)
+    {
+        var store = app.Services.GetRequiredService<Lims.Infrastructure.Backup.BackupSettingsStore>();
+        var engine = app.Services.GetRequiredService<Lims.Infrastructure.Backup.BackupEngine>();
+        var i = Array.IndexOf(args, "--folder");
+        var folder = i >= 0 && i + 1 < args.Length ? Path.GetFullPath(args[i + 1]) : null;
+        var job = args.Contains("--log") ? Application.Backup.BackupJob.Log : Application.Backup.BackupJob.Full;
+        try
+        {
+            var result = await engine.RunAsync(job, store.Load(), CancellationToken.None, waitIfBusy: true, folderOverride: folder);
+            log.LogInformation("Backup done: {Detail} in {Folder}", result.Message, folder ?? store.Load().Folder);
+            return 0;
+        }
+        catch (Application.Common.BusinessRuleException ex)
+        {
+            log.LogError("Backup failed: {Reason}", ex.Message);
+            return 1;
+        }
+    }
+
     public static async Task<int> RunAsync(WebApplication app, string[] args)
     {
         using var scope = app.Services.CreateScope();
@@ -80,6 +102,18 @@ public static class DatabaseCommands
         {
             case "migrate":
                 var pending = (await db.Database.GetPendingMigrationsAsync()).ToList();
+                // Before changing an existing database, back it up (skipped for a new database, or with --no-backup
+                // when the caller has just taken one, as Deploy-Lims.ps1 does).
+                if (pending.Count > 0 && !args.Contains("--no-backup") && await db.Database.CanConnectAsync()
+                    && (await db.Database.GetAppliedMigrationsAsync()).Any())
+                {
+                    log.LogInformation("Backing up the database before migrating");
+                    if (await BackupAsync(app, args, log) != 0)
+                    {
+                        log.LogError("Migration stopped because the backup failed. Fix the backup, or run again with --no-backup to migrate without one");
+                        return 1;
+                    }
+                }
                 log.LogInformation("Applying {Count} migration(s): {Names}", pending.Count, string.Join(", ", pending));
                 await db.Database.MigrateAsync();
                 log.LogInformation("Database is up to date");
@@ -126,6 +160,9 @@ public static class DatabaseCommands
                 log.LogInformation("Organisation {Code} created with id {OrgId}. Next: db create-admin {Code} <username>", newCode, newOrgId, newCode);
                 return 0;
 
+            case "backup":
+                return await BackupAsync(app, args, log);
+
             case "seed-load":
                 // Load-test data (Phase 13). Only on a database named LIMS_Load*; see LoadDataSeeder.
                 return await LoadDataSeeder.RunAsync(app, db, args, log);
@@ -147,7 +184,7 @@ public static class DatabaseCommands
                 return 0;
 
             default:
-                log.LogError("Unknown command 'db {Command}'. Use: db migrate | db seed-demo | db create-org <CODE> <name> [urdu name] | db create-admin <ORG> <username> [display name]", args[1]);
+                log.LogError("Unknown command 'db {Command}'. Use: db migrate [--no-backup] | db backup [--folder X] [--log] | db seed-demo | db create-org <CODE> <name> [urdu name] | db create-admin <ORG> <username> [display name]", args[1]);
                 return 1;
         }
     }

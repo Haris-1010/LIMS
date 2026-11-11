@@ -288,6 +288,14 @@
     "locked_out": "This account is temporarily locked after repeated failed sign-ins.",
     "account_inactive": "This account has been deactivated. Contact your administrator.",
     "branch_forbidden": "You don't have access to that branch.",
+    "backup_folder_invalid": "Enter a full backup folder path, for example D:\\LimsBackups.",
+    "backup_folder_missing": "The backup folder does not exist on the server.",
+    "backup_offsite_invalid": "Enter a full offsite folder path, different from the backup folder.",
+    "backup_time_invalid": "Enter a time in HH:mm format.",
+    "backup_log_interval_invalid": "Log interval must be off or between 5 and 60 minutes.",
+    "backup_frequency_invalid": "Choose daily or weekly full backups.",
+    "backup_retention_invalid": "Retention must be between 1 and 365 days.",
+    "backup_failed": "The backup failed.",
     "current_password_incorrect": "The current password is incorrect.",
     "password_unchanged": "The new password must be different from the current one.",
     "password_too_short": "Password must be at least 8 characters.",
@@ -466,7 +474,15 @@
     "profile_test_invalid": "A test in the list was not found.",
     "shortfall_resolved": "This shortfall is already resolved.",
     "range_invalid": "Choose today, the last 7 days or the last 30 days.",
-    "setting_value_invalid": "This value is not allowed for this setting."
+    "setting_value_invalid": "This value is not allowed for this setting.",
+    "backup_folder_create_failed": "The server could not create the backup folder.",
+    "backup_folder_denied": "SQL Server is not allowed to write to this backup folder.",
+    "backup_folder_browse_failed": "The server could not open that folder.",
+    "backup_offsite_unreachable": "The offsite folder could not be reached.",
+    "backup_settings_unwritable": "The server could not save the backup settings.",
+    "backup_busy": "A backup is already running. Try again in a few minutes.",
+    "backup_db_permission": "The application's database login is not allowed to make backups.",
+    "backup_log_needs_full_recovery": "Log backups need the database in FULL recovery mode."
   },
   "table": {
     "showing": "{{from}}–{{to}} of {{total}}",
@@ -1697,14 +1713,34 @@
     "maskedNote": "Sensitive values such as identity numbers, email and addresses are masked when the entry is written, so they never appear here."
   },
   "backup": {
-    "title": "Backup status",
-    "subtitle": "How the database backups are doing. This page only shows status: backups are made by scheduled jobs on the server and restores are done by an administrator with the scripts.",
+    "title": "Backup & restore",
+    "subtitle": "The server backs up the database by itself on the schedule below. Restores are done by an administrator with the scripts.",
     "refresh": "Refresh",
-    "loadFailed": "Could not load the backup status",
-    "notConfigured": {
-      "title": "Backup monitoring is not set up",
-      "text": "Set Backup:Folder in the server's appsettings.Production.json to the folder where the backup jobs write their files, then reload this page. See docs/BACKUP_RESTORE.md."
+    "setupTitle": "Automatic backups",
+    "setupSubtitle": "Database {{database}}. Saving creates the folder and gives SQL Server permission to write to it.",
+    "folder": "Backup folder on the server",
+    "offsite": "Second copy folder (optional)",
+    "browse": "Browse",
+    "folderPicker": {
+      "title": "Select server folder",
+      "subtitle": "Choose a folder on the LIMS server.",
+      "drives": "Server drives",
+      "up": "Up",
+      "choose": "Choose this folder",
+      "empty": "No subfolders",
+      "failed": "Could not read server folders"
     },
+    "frequency": "Full backup frequency",
+    "daily": "Every day",
+    "weekly": "Every week",
+    "fullTime": "Full backup time",
+    "logMinutes": "Log backups",
+    "retentionDays": "Days to keep",
+    "retentionHint": "Older backups are removed automatically.",
+    "runNow": "Back up now",
+    "runDone": "Full backup completed",
+    "runFailed": "Full backup failed",
+    "loadFailed": "Could not load the backup status",
     "healthy": "Backups are healthy",
     "attention": "Backups need attention",
     "checkedAt": "Checked {{time}}",
@@ -1714,7 +1750,7 @@
       "fullOld": "The last full backup is older than {{hours}} hours (made {{when}}).",
       "noLog": "No transaction-log backup was found, so the database cannot be restored to a chosen moment.",
       "logOld": "The last log backup is older than {{minutes}} minutes (made {{when}}).",
-      "noStatusFile": "The backup jobs have not reported yet (no backup-status.json in the folder).",
+      "noStatusFile": "No backup has been made yet. The first one starts automatically within a minute or two, or press Back up now.",
       "jobFailed": "{{job}} failed at {{when}}.",
       "offsiteNever": "No copy of the backups outside this machine has been reported.",
       "offsiteOld": "The last verified off-machine copy is too old."
@@ -1732,7 +1768,7 @@
     },
     "jobs": {
       "title": "Backup jobs",
-      "subtitle": "What each scheduled job last reported"
+      "subtitle": "What each automatic job last reported"
     },
     "job": {
       "ok": "Working",
@@ -1743,7 +1779,7 @@
       "lastFailure": "Failed {{when}}",
       "Full": {
         "name": "Full backup",
-        "about": "The whole database, every night"
+        "about": "The whole database, on the schedule above"
       },
       "Differential": {
         "name": "Differential backup",
@@ -1755,7 +1791,7 @@
       },
       "Offsite": {
         "name": "Off-machine copy",
-        "about": "Copies each backup elsewhere and checks it"
+        "about": "Copies each backup to the second folder and checks it"
       },
       "Retention": {
         "name": "Clean-up",
@@ -1776,7 +1812,24 @@
       "size": "Size",
       "empty": "No backup files"
     },
-    "note": "To take a backup or restore the database, use the scripts described in docs/BACKUP_RESTORE.md on the database server."
+    "note": "Restoring the database is done on the database server with the scripts described in docs/BACKUP_RESTORE.md.",
+    "enabled": "Back up automatically",
+    "schedule": {
+      "on": "On. Next full backup: {{time}}.",
+      "onNoTime": "On.",
+      "off": "Off: no automatic backups are being made.",
+      "serverOff": "Automatic backups are turned off on this server (Backup:Automatic = false)."
+    },
+    "folderHint": "Best on a different disk from the database.",
+    "offsiteHint": "Another disk or a network share. Each backup is copied there and checked.",
+    "logHint": "Limits how much work can be lost between full backups.",
+    "logOff": "Off",
+    "everyMinutes_one": "Every {{count}} minute",
+    "everyMinutes_other": "Every {{count}} minutes",
+    "save": "Save",
+    "saved": "Backup settings saved",
+    "savedWithNote": "Saved, but one step needs an administrator",
+    "saveFailed": "Could not save the backup settings"
   },
   "settings": {
     "title": "System settings",

@@ -19,4 +19,11 @@
     <ProjectReference Include="..\Lims.Infrastructure\Lims.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Server data (keys, backup settings, backups) never goes into a release package. -->
+    <Content Remove="App_Data\**" />
+    <None Remove="App_Data\**" />
+    <Content Include="..\..\db\scripts\**\*" Link="backup-scripts\%(RecursiveDir)%(Filename)%(Extension)" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

@@ -4,7 +4,7 @@ Scripts are in `db/scripts`. They run on the database server in **Windows PowerS
 
 **Status: written and exercised on the development PC against throw-away databases** (full, differential and log backups, encrypted with a certificate; restores to three different moments; a deleted log file detected; tampered off-machine copy detected; retention on 434 synthetic files). **Not yet exercised:** the Task Scheduler registration itself (only `-WhatIf` ran; the session was not elevated), the Windows event-log entries (the source "LIMS Backup" is created on the first elevated run), SQL Server Express (no compression), a network share as destination, the production SQL Server, and the timed restore drill at production data volume (needs the second machine; see `PHASE13_PLAN.md`).
 
-## 1. What runs and when (after `Register-LimsBackupTasks.ps1`)
+## 1. What runs and when (scheduled-task alternative, after `Register-LimsBackupTasks.ps1`)
 | Job | When | Script | What it does |
 |---|---|---|---|
 | Full | every night, 22:00 | `Backup-LimsDatabase.ps1 -Type Full` | whole database, `CHECKSUM`, `RESTORE VERIFYONLY` |
@@ -18,9 +18,26 @@ File names: `<db>_<yyyyMMdd_HHmmss>_FULL.bak`, `_DIFF.bak`, `_LOG.trn`; a daily 
 
 Every script records its last success and failure in `<BackupFolder>\backup-status.json`, writes to the Windows Application event log, and can run `-OnFailure <script>` with the failure text, which is where an e-mail or SMS to the lab manager and the IT person goes. **Who is told and how is still an open decision (50)**: until it is made, failures are visible in the event log and in `backup-status.json` only. Point whatever monitoring the lab has at event source "LIMS Backup", level Error.
 
-**Backup status page.** With `Backup:Folder` set in `appsettings.Production.json` (see `DEPLOYMENT.md`), the web application shows these same checks at *Administration > Backup & restore* (System Administrator only). It is **read-only**: it reads the folder and `backup-status.json`, cannot start, change or restore a backup (the application's database login has no such rights by design), and flags a late or failed backup with the same limits as the scheduled health check. The application pool identity needs Read access to the backup folder.
+**Automatic backups by the application (default since 2026-11-11).** The application makes the backups itself; nothing has to be registered in Windows and no administrator rights are needed at run time. *Administration > Backup & restore* (System Administrator only) shows and changes the schedule:
 
-## 2. Setting up (once, elevated PowerShell on the database server)
+| Setting | Default | Notes |
+|---|---|---|
+| Back up automatically | on | Also on for a new installation that has never been set up. `Backup:Automatic=false` in the settings file turns the scheduler off for the whole server (the tests do this). |
+| Backup folder | `Backup:Folder`, else `<data folder>\backups` | Data folder = parent of `DataProtection:KeysPath` (`D:\LimsData`), else `App_Data` in the site. |
+| Full backup | every day at 22:00 (or weekly, Monday) | A missed slot (site stopped, server off) is caught up as soon as the application runs again; a new installation gets its first full backup within about a minute of starting. |
+| Log backups | every 15 minutes (off, 5, 10, 15, 30, 60) | Need the FULL recovery model; `Deploy-Lims.ps1` sets it. After a broken log chain the application takes a full backup first by itself. |
+| Second copy folder | none | Each new file is copied and proved by SHA-256. |
+| Days to keep | 14 | Keeps everything from the newest full backup that is at least that old, so every moment in the window can still be restored; never deletes the newest full backup. Applied to the second copy too. |
+
+The schedule is saved in `<data folder>\backup-settings.json`. Saving it creates the folder and gives the SQL Server service (`NT SERVICE\MSSQLSERVER`, or `NT SERVICE\MSSQL$<instance>`) Modify on it; Windows allows this because the application created the folder. If Windows refuses (for example a folder an administrator made), the page shows the exact `icacls` command to run once. **Back up now** takes a full backup immediately. A failed job is retried after 10 minutes and shown on the page with its reason. Results are written to `backup-status.json` in the same format as the scripts, so the page and `Test-LimsBackupHealth.ps1` agree.
+
+What the application needs (all set by `Deploy-Lims.ps1`): its database login in `db_backupoperator` (in `Grant-LimsAppPermissions.sql`; it can back up but not restore), Modify on the data folder, and an IIS application pool that is always running (*Start mode* AlwaysRunning, *Idle time-out* 0, *Preload* on), so backups run at night when no one uses the site. The application does not restore and does not run `RESTORE VERIFYONLY` when its login lacks the right for it (the `CHECKSUM` taken during the backup is then the check). Before every update `Deploy-Lims.ps1` takes a full backup with the same engine (`dotnet Lims.Api.dll db backup`), and `db migrate` takes one itself when there are migrations to apply (unless `--no-backup`).
+
+The scheduled-task scripts below still work and use the same file names; use them only if IT prefers Task Scheduler, and then set `Backup:Automatic=false` so the two do not both run.
+
+_Tested on the development PC (integration tests, least-privileged login): full and log backup, second copy, retention, status; schedule rules by unit tests. Not yet run under IIS on the production server._
+
+## 2. Setting up the scheduled-task alternative (once, elevated PowerShell on the database server)
 1. Create the backup folder on a different disk from the database (for example `D:\LimsBackups`) and give the SQL Server service account (`NT SERVICE\MSSQLSERVER`) **Modify**.
 2. **Backup encryption (recommended; decision 50).** In `master`: `CREATE MASTER KEY ENCRYPTION BY PASSWORD = '...'; CREATE CERTIFICATE LimsBackupCert WITH SUBJECT = 'LIMS backups';` then **back up the certificate and its private key to a safe place that is not the server** (`BACKUP CERTIFICATE ... TO FILE ... WITH PRIVATE KEY (...)`). Without them, encrypted backups cannot be restored on a new server. Pass `-EncryptionCertificate LimsBackupCert` to the scripts.
 3. If the jobs run as SYSTEM or a service account, give that account a SQL login with backup rights on the database: `CREATE LOGIN [NT AUTHORITY\SYSTEM] FROM WINDOWS; USE LIMS; CREATE USER [NT AUTHORITY\SYSTEM] FOR LOGIN [NT AUTHORITY\SYSTEM]; ALTER ROLE db_backupoperator ADD MEMBER [NT AUTHORITY\SYSTEM];` The backup script also reads `msdb.dbo.backupset` (to check that a full backup exists), so add the same user to `msdb` with `db_datareader`. Test with a manual run first.

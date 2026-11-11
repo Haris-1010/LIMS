@@ -41,7 +41,10 @@ public static class DependencyInjection
         services.AddScoped<Dashboard.DashboardService>();
         services.AddScoped<Audit.AuditService>();
         services.AddScoped<Settings.SettingsService>();
+        services.AddSingleton<Backup.BackupSettingsStore>();
+        services.AddSingleton<Backup.BackupEngine>();
         services.AddSingleton<Backup.BackupStatusService>();
+        services.AddSingleton<Backup.BackupSetupService>();
         services.AddScoped<Results.ResultLookup>();
         services.AddScoped<Results.ResultService>();
         services.AddScoped<Results.WorklistService>();

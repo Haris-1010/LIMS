@@ -43,6 +43,8 @@ try
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen(o => o.SwaggerDoc("v1", new() { Title = "LIMS API", Version = "v1" }));
     builder.Services.AddInfrastructure(config);
+    // Automatic database backups run inside the application (no Windows scheduled tasks needed). Backup:Automatic=false turns them off.
+    builder.Services.AddHostedService<BackupScheduler>();
 
     // Cookie keys must survive restarts and be shared if the site ever runs on more than one worker.
     var dataProtection = builder.Services.AddDataProtection()

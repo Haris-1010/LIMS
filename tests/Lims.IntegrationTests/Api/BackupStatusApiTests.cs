@@ -1,5 +1,8 @@
 using System.Net;
+using Lims.Application.Backup;
+using Lims.Infrastructure.Backup;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Lims.IntegrationTests.Api;
 
@@ -29,13 +32,95 @@ public sealed class BackupStatusApiTests(DatabaseFixture fx)
     }
 
     [Fact]
-    public async Task Without_a_configured_folder_the_page_says_so()
+    public async Task Without_saved_settings_backups_are_on_by_default_in_the_data_folder()
     {
-        var admin = await SignedIn(fx.Api, "SYSADMIN");
+        var data = Path.Combine(Path.GetTempPath(), "lims-test-data-" + Guid.NewGuid().ToString("N"));
+        using var f = fx.Api.WithWebHostBuilder(b => b.UseSetting("Backup:DataFolder", data));
+        var admin = await SignedIn(f, "SYSADMIN");
+        var settings = await ApiClient.Body(await admin.GetAsync("/api/backup/settings"));
+        Assert.True(settings.GetProperty("enabled").GetBoolean());
+        Assert.Equal(Path.Combine(data, "backups"), settings.GetProperty("folder").GetString());
+        Assert.Equal("Daily", settings.GetProperty("fullFrequency").GetString());
+        Assert.Equal(15, settings.GetProperty("logMinutes").GetInt32());
+        Assert.False(settings.GetProperty("schedulerRunning").GetBoolean());   // Backup:Automatic=false in tests
+
         var body = await ApiClient.Body(await admin.GetAsync("/api/backup/status"));
-        Assert.False(body.GetProperty("configured").GetBoolean());
+        Assert.True(body.GetProperty("configured").GetBoolean());
         Assert.False(body.GetProperty("healthy").GetBoolean());
         Assert.Equal(0, body.GetProperty("files").GetArrayLength());
+    }
+
+    [Fact]
+    public async Task Settings_are_validated_and_only_the_administrator_may_change_them()
+    {
+        var data = Path.Combine(Path.GetTempPath(), "lims-test-data-" + Guid.NewGuid().ToString("N"));
+        using var f = fx.Api.WithWebHostBuilder(b => b.UseSetting("Backup:DataFolder", data));
+        try
+        {
+            var folder = Path.Combine(data, "my-backups");
+            object Body(string time = "21:30", int log = 30, string? offsite = null, string? dir = null) =>
+                new { enabled = true, folder = dir ?? folder, offsiteFolder = offsite, fullFrequency = "Weekly", fullTime = time, logMinutes = log, retentionDays = 7 };
+
+            var reception = await SignedIn(f, "RECEPTION");
+            Assert.Equal(HttpStatusCode.Forbidden, (await reception.PutAsync("/api/backup/settings", Body())).StatusCode);
+
+            var admin = await SignedIn(f, "SYSADMIN");
+            Assert.Equal("backup_time_invalid", await ApiClient.Code(await admin.PutAsync("/api/backup/settings", Body(time: "25:00"))));
+            Assert.Equal("backup_log_interval_invalid", await ApiClient.Code(await admin.PutAsync("/api/backup/settings", Body(log: 3))));
+            Assert.Equal("backup_folder_invalid", await ApiClient.Code(await admin.PutAsync("/api/backup/settings", Body(dir: @"relative\path"))));
+            Assert.Equal("backup_offsite_invalid", await ApiClient.Code(await admin.PutAsync("/api/backup/settings", Body(offsite: folder))));
+
+            ApiClient.Ok(await admin.PutAsync("/api/backup/settings", Body()));
+            Assert.True(Directory.Exists(folder));   // the server creates the folder itself
+            var saved = await ApiClient.Body(await admin.GetAsync("/api/backup/settings"));
+            Assert.Equal(folder, saved.GetProperty("folder").GetString());
+            Assert.Equal("Weekly", saved.GetProperty("fullFrequency").GetString());
+            Assert.Equal("21:30", saved.GetProperty("fullTime").GetString());
+            Assert.Equal(30, saved.GetProperty("logMinutes").GetInt32());
+
+            var status = await ApiClient.Body(await admin.GetAsync("/api/backup/status"));
+            Assert.Equal(folder, status.GetProperty("folder").GetString());
+            Assert.Equal(7 * 24 + 2, status.GetProperty("summary").GetProperty("fullMaxAgeHours").GetInt32());
+        }
+        finally { if (Directory.Exists(data)) Directory.Delete(data, true); }
+    }
+
+    [Fact]
+    public async Task Back_up_now_works_with_the_least_privileged_application_login()
+    {
+        var data = Path.Combine(Path.GetTempPath(), "lims-test-data-" + Guid.NewGuid().ToString("N"));
+        using var f = fx.Api.WithWebHostBuilder(b => b.UseSetting("Backup:DataFolder", data));
+        try
+        {
+            var admin = await SignedIn(f, "SYSADMIN");
+            var folder = Path.Combine(data, "backups");
+            ApiClient.Ok(await admin.PutAsync("/api/backup/settings",
+                new { enabled = true, folder, offsiteFolder = Path.Combine(data, "offsite"), fullFrequency = "Daily", fullTime = "22:00", logMinutes = 15, retentionDays = 14 }));
+
+            ApiClient.Ok(await admin.PostAsync("/api/backup/run"));
+            Assert.Single(Directory.GetFiles(folder, "*_FULL.bak"));
+
+            // The scheduler's other jobs, run the way it runs them.
+            var engine = f.Services.GetRequiredService<BackupEngine>();
+            var settings = f.Services.GetRequiredService<BackupSettingsStore>().Load();
+            await engine.RunAsync(BackupJob.Log, settings, CancellationToken.None);
+            Assert.Single(Directory.GetFiles(folder, "*_LOG.trn"));
+            await engine.RunAsync(BackupJob.Offsite, settings, CancellationToken.None);
+            Assert.Equal(2, Directory.GetFiles(Path.Combine(data, "offsite")).Length);
+            await engine.RunAsync(BackupJob.Retention, settings, CancellationToken.None);
+            Assert.Equal(2, Directory.GetFiles(folder).Count(n => n.EndsWith(".bak") || n.EndsWith(".trn")));   // nothing is old enough
+
+            var state = engine.ReadState(folder);
+            Assert.NotNull(state.LastFull);
+            Assert.NotNull(state.LastLog);
+            Assert.DoesNotContain(BackupSchedule.DueJobs(DateTime.Now, settings, state), j => j is BackupJob.Full or BackupJob.Log);
+
+            var status = await ApiClient.Body(await admin.GetAsync("/api/backup/status"));
+            Assert.True(status.GetProperty("folderReadable").GetBoolean());
+            Assert.Equal(2, status.GetProperty("files").GetArrayLength());
+            Assert.True(status.GetProperty("healthy").GetBoolean(), status.GetProperty("problems").ToString());
+        }
+        finally { if (Directory.Exists(data)) Directory.Delete(data, true); }
     }
 
     [Fact]
@@ -55,7 +140,7 @@ public sealed class BackupStatusApiTests(DatabaseFixture fx)
                 "{\"Full\":{\"lastSuccess\":\"" + Stamp(now.AddHours(-3)) + "\",\"lastDetail\":\"full ok\"}," +
                 "\"Offsite\":{\"lastSuccess\":\"" + Stamp(now.AddHours(-40)) + "\",\"lastFailure\":\"" + Stamp(now.AddMinutes(-3)) + "\",\"lastFailureDetail\":\"share unreachable\"}}");
 
-            using var f = fx.Api.WithWebHostBuilder(b => { b.UseSetting("Backup:Folder", dir); b.UseSetting("Backup:Database", "LIMS"); });
+            using var f = fx.Api.WithWebHostBuilder(b => { b.UseSetting("Backup:Folder", dir); b.UseSetting("Backup:Database", "LIMS"); b.UseSetting("Backup:ExpectOffsite", "true"); });
             var admin = await SignedIn(f, "SYSADMIN");
             var body = await ApiClient.Body(await admin.GetAsync("/api/backup/status"));
 
@@ -72,10 +157,7 @@ public sealed class BackupStatusApiTests(DatabaseFixture fx)
             Assert.DoesNotContain("logOld", codes);
             Assert.False(body.GetProperty("healthy").GetBoolean());
             Assert.Equal("share unreachable", body.GetProperty("problems").EnumerateArray().First(p => p.GetProperty("code").GetString() == "jobFailed:Offsite").GetProperty("detail").GetString());
-
-            // The page only reads: it offers no way to change anything.
             Assert.Equal(HttpStatusCode.MethodNotAllowed, (await admin.PostAsync("/api/backup/status", new { })).StatusCode);
-            Assert.Contains((await admin.PostAsync("/api/backup/run", new { })).StatusCode, new[] { HttpStatusCode.NotFound, HttpStatusCode.MethodNotAllowed }); // no such endpoint
         }
         finally { Directory.Delete(dir, true); }
     }

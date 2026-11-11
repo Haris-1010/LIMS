@@ -4,14 +4,16 @@
   Run in SQLCMD mode (sqlcmd, or SSMS with Query > SQLCMD Mode) as a SQL administrator,
   AFTER the database exists and migrations were applied:
 
-    sqlcmd -S localhost -E -C -d LIMS -v AppLogin="IIS APPPOOL\LimsPool" -i Grant-LimsAppPermissions.sql
+    sqlcmd -S localhost -E -C -d LIMS -v 'AppLogin="IIS APPPOOL\LimsPool"' -i Grant-LimsAppPermissions.sql
+  (In PowerShell keep the single quotes: a value with a space needs the double quotes to reach sqlcmd.)
 
   The login must already exist at server level. For an IIS application pool identity:
     CREATE LOGIN [IIS APPPOOL\LimsPool] FROM WINDOWS;
   The script is safe to run again (it is run after every migration that adds a schema or table).
 
-  What the application login can do:  read and write data in the LIMS schemas.
-  What it cannot do:                  change the database structure, back up, restore, or touch other databases.
+  What the application login can do:  read and write data in the LIMS schemas, and back up this database
+                                      (db_backupoperator: the application makes the automatic backups itself).
+  What it cannot do:                  change the database structure, restore, or touch other databases.
   Append-only by database permission: audit.AuditLogs and inventory.StockMovements can be read and added to
                                       but never updated or deleted, whatever a bug or attacker tries.
                                       core.__EFMigrationsHistory is read-only.
@@ -47,6 +49,11 @@ IF OBJECT_ID(N'[inventory].[StockMovements]') IS NOT NULL
     DENY UPDATE, DELETE ON OBJECT::[inventory].[StockMovements] TO [lims_app];
 IF OBJECT_ID(N'[core].[__EFMigrationsHistory]') IS NOT NULL
     DENY INSERT, UPDATE, DELETE ON OBJECT::[core].[__EFMigrationsHistory] TO [lims_app];
+GO
+
+-- Automatic backups made by the application (BackupScheduler). db_backupoperator may BACKUP DATABASE / BACKUP LOG
+-- (and CHECKPOINT) only: it cannot restore, read other databases or change anything.
+ALTER ROLE [db_backupoperator] ADD MEMBER [$(AppLogin)];
 GO
 
 PRINT N'Application permissions granted to $(AppLogin).';

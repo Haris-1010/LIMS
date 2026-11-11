@@ -4,11 +4,10 @@ using Microsoft.Extensions.Configuration;
 namespace Lims.Infrastructure.Backup;
 
 /// <summary>
-/// Read-only view of the backups made by the scripts in db/scripts. It reads the backup folder named in configuration
-/// (<c>Backup:Folder</c>) and the backup-status.json the scripts keep there; it never writes, runs, or restores anything.
-/// The application pool's identity needs Read access to that folder (docs/BACKUP_RESTORE.md).
+/// Status of the backups: reads the backup folder from the saved schedule (<see cref="BackupSettingsStore"/>) and the
+/// backup-status.json kept there by the application's own backups (and by the scripts in db/scripts, same format).
 /// </summary>
-public sealed class BackupStatusService(IConfiguration config)
+public sealed class BackupStatusService(IConfiguration config, BackupSettingsStore store)
 {
     private const int MaxFilesScanned = 20_000;
     private const int FilesShown = 60;
@@ -18,17 +17,20 @@ public sealed class BackupStatusService(IConfiguration config)
 
     public Task<BackupStatusDto> GetAsync(CancellationToken ct) => Task.Run(() => Build(DateTime.Now), ct);
 
-    // Backup scripts write the server's local time; compare in local time, send UTC.
+    // Backups write the server's local time; compare in local time, send UTC.
     private static DateTime Utc(DateTime local) => DateTime.SpecifyKind(local, DateTimeKind.Local).ToUniversalTime();
     private static DateTime? Utc(DateTime? local) => local is null ? null : Utc(local.Value);
 
     internal BackupStatusDto Build(DateTime nowLocal)
     {
-        var folder = config["Backup:Folder"];
-        var database = config["Backup:Database"] is { Length: > 0 } d ? d : "LIMS";
+        var settings = store.Load();
+        var folder = settings.Folder;
+        var database = store.Database;
+        // Limits follow the saved schedule; configuration may still override them.
         var thresholds = new BackupThresholds(
-            Int("Backup:MaxFullAgeHours", 26), Int("Backup:MaxLogAgeMinutes", 45), Int("Backup:MaxOffsiteAgeHours", 26),
-            Bool("Backup:ExpectLogBackups", true), Bool("Backup:ExpectOffsite", true));
+            Int("Backup:MaxFullAgeHours", BackupSchedule.MaxFullAgeHours(settings)), Int("Backup:MaxLogAgeMinutes", BackupSchedule.MaxLogAgeMinutes(settings)),
+            Int("Backup:MaxOffsiteAgeHours", 26),
+            Bool("Backup:ExpectLogBackups", settings.LogMinutes > 0), Bool("Backup:ExpectOffsite", !string.IsNullOrWhiteSpace(settings.OffsiteFolder)));
         var emptySummary = new BackupSummaryDto(0, 0, null, null, null, null, thresholds.MaxFullAgeHours, thresholds.MaxLogAgeMinutes, thresholds.ExpectLogBackups, thresholds.ExpectOffsite);
         var checkedAt = Utc(nowLocal);
 

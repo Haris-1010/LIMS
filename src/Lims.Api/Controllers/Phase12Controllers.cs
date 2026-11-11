@@ -1,5 +1,6 @@
 using Lims.Api.Security;
 using Lims.Application.Audit;
+using Lims.Application.Backup;
 using Lims.Application.Dashboard;
 using Lims.Application.Settings;
 using Lims.Domain.Security;
@@ -50,12 +51,34 @@ public sealed class SettingsController(SettingsService settings) : ControllerBas
     public async Task<IActionResult> Update(string key, SettingUpdate input, CancellationToken ct) => Ok(await settings.UpdateAsync(key, input, ct));
 }
 
-/// <summary>Read-only backup status (Phase 13). Backups are made by the scheduled scripts; this page only shows how they are doing.</summary>
+/// <summary>
+/// Backups (Phase 13): status, the automatic schedule, and a manual full backup. The backups themselves are made by the
+/// application (BackupScheduler / BackupEngine). Restores are deliberately not offered here (docs/BACKUP_RESTORE.md).
+/// </summary>
 [ApiController]
 [Route("api/backup")]
-public sealed class BackupController(Lims.Infrastructure.Backup.BackupStatusService backups) : ControllerBase
+public sealed class BackupController(
+    Lims.Infrastructure.Backup.BackupStatusService backups,
+    Lims.Infrastructure.Backup.BackupSetupService setup) : ControllerBase
 {
     [HttpGet("status")]
     [HasPermission(Permissions.BackupManage)]
     public async Task<IActionResult> Status(CancellationToken ct) => Ok(await backups.GetAsync(ct));
+
+    [HttpGet("settings")]
+    [HasPermission(Permissions.BackupManage)]
+    public IActionResult Settings() => Ok(setup.Get());
+
+    [HttpPut("settings")]
+    [HasPermission(Permissions.BackupManage)]
+    public async Task<IActionResult> SaveSettings(BackupSettingsRequest request, CancellationToken ct) =>
+        Ok(await setup.SaveAsync(request, ct));
+
+    [HttpGet("folders")]
+    [HasPermission(Permissions.BackupManage)]
+    public IActionResult Folders([FromQuery] string? path) => Ok(setup.BrowseFolders(path));
+
+    [HttpPost("run")]
+    [HasPermission(Permissions.BackupManage)]
+    public async Task<IActionResult> Run(CancellationToken ct) => Ok(await setup.RunFullAsync(ct));
 }

@@ -24,7 +24,12 @@ public sealed class ApiFactory(DatabaseFixture fx) : WebApplicationFactory<Progr
         // Re-check sessions against the database on every request so deactivation/password tests are immediate.
         builder.UseSetting("Auth:RevalidateSeconds", "0");
         builder.UseSetting("Auth:LoginAttemptsPerMinute", "10000"); // all test clients share one address
+        // No automatic backups of test databases; backup settings go to a folder of this factory's own.
+        builder.UseSetting("Backup:Automatic", "false");
+        builder.UseSetting("Backup:DataFolder", BackupDataFolder);
     }
+
+    public string BackupDataFolder { get; } = Path.Combine(Path.GetTempPath(), "lims-test-data-" + Guid.NewGuid().ToString("N"));
 
     /// <summary>A browser-like client: keeps cookies, does not follow redirects.</summary>
     public async Task<ApiClient> ClientAsync() =>

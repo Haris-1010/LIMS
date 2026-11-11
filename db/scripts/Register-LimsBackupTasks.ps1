@@ -7,7 +7,7 @@
   1. Sets the database to the FULL recovery model and takes a first full backup (needed before log backups work).
      Skipped with -SkipPrepare. Asks for confirmation unless -Confirm:$false.
   2. Registers these tasks (all named "LIMS Backup - ..."):
-       Full          every night at -FullTime (default 22:00)
+       Full          every day or week at -FullTime (default 22:00)
        Differential  every day at -DifferentialTime (default 13:00); use -NoDifferential to skip
        Log           every -LogMinutes minutes (default 15)
        Offsite       every 15 minutes, copies new files to -OffsiteDestination and checks them by hash (if given)
@@ -31,16 +31,20 @@ param(
     [string[]]$ConfigFiles = @(),
     [string]$EncryptionCertificate,
     [string]$OnFailure,
+    [ValidateSet("Daily", "Weekly")][string]$FullFrequency = "Daily",
     [string]$FullTime = "22:00",
     [string]$DifferentialTime = "13:00",
     [int]$LogMinutes = 15,
+    [int]$RetentionDays = 14,
     [switch]$NoDifferential,
     [switch]$SkipPrepare,
+    [switch]$NoPrompt,
     [string]$RunAs = "SYSTEM",
     [string]$TaskPrefix = "LIMS Backup",
     [switch]$Unregister
 )
 $ErrorActionPreference = "Stop"
+if ($NoPrompt) { $ConfirmPreference = "None" }
 . "$PSScriptRoot\LimsBackup.Common.ps1"
 Assert-DbName $Database
 
@@ -56,6 +60,7 @@ if ($Unregister) {
 }
 
 if ($LogMinutes -lt 5 -or $LogMinutes -gt 60) { throw "-LogMinutes must be between 5 and 60." }
+if ($RetentionDays -lt 1 -or $RetentionDays -gt 365) { throw "-RetentionDays must be between 1 and 365." }
 if (-not $WhatIfPreference -and -not (Test-Path -LiteralPath $BackupFolder)) { throw "Backup folder '$BackupFolder' does not exist. Create it and give the SQL Server service account Modify rights first." }
 
 # ---- 1. recovery model and first full backup
@@ -69,6 +74,7 @@ if (-not $SkipPrepare) {
     $fullArgs = @{ Server = $Server; Database = $Database; BackupFolder = $BackupFolder; Type = "Full" }
     if ($EncryptionCertificate) { $fullArgs.EncryptionCertificate = $EncryptionCertificate }
     if ($PSCmdlet.ShouldProcess("[$Database]", "Take a first full backup (starts the log chain)")) {
+        $LASTEXITCODE = 0
         & "$PSScriptRoot\Backup-LimsDatabase.ps1" @fullArgs | Out-Null
         if ($LASTEXITCODE -ne 0) { throw "The first full backup failed; tasks were not created." }
     }
@@ -91,7 +97,12 @@ function Add-Task([string]$Name, [string]$Arguments, $Trigger, [string]$Descript
     $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument $Arguments
     $settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Hours 4) -MultipleInstances IgnoreNew -StartWhenAvailable
     $principal = New-ScheduledTaskPrincipal -UserId $RunAs -LogonType $(if ($RunAs -eq "SYSTEM") { "ServiceAccount" } else { "S4U" }) -RunLevel Highest
-    Register-ScheduledTask -TaskName $Name -Action $action -Trigger $Trigger -Settings $settings -Principal $principal -Description $Description -Force | Out-Null
+    try {
+        Register-ScheduledTask -TaskName $Name -Action $action -Trigger $Trigger -Settings $settings -Principal $principal -Description $Description -Force -ErrorAction Stop | Out-Null
+    }
+    catch {
+        throw "Could not register scheduled task '$Name': $($_.Exception.Message)"
+    }
     Write-Host "Registered: $Name"
 }
 function Repeating([int]$Minutes) {
@@ -104,7 +115,12 @@ $withFail = if ($OnFailure) { @{ OnFailure = $OnFailure } } else { @{} }
 $backupBase = $common + @{ Server = $Server } + $withFail
 if ($EncryptionCertificate) { $backupBase.EncryptionCertificate = $EncryptionCertificate }
 
-Add-Task "$TaskPrefix - Full" (ScriptCall "Backup-LimsDatabase.ps1" ($backupBase + @{ Type = "Full" })) (New-ScheduledTaskTrigger -Daily -At $FullTime) "Nightly full backup of [$Database]"
+$fullTrigger = if ($FullFrequency -eq "Weekly") {
+    New-ScheduledTaskTrigger -Weekly -DaysOfWeek Monday -At $FullTime
+} else {
+    New-ScheduledTaskTrigger -Daily -At $FullTime
+}
+Add-Task "$TaskPrefix - Full" (ScriptCall "Backup-LimsDatabase.ps1" ($backupBase + @{ Type = "Full" })) $fullTrigger "$FullFrequency full backup of [$Database]"
 if (-not $NoDifferential) {
     Add-Task "$TaskPrefix - Differential" (ScriptCall "Backup-LimsDatabase.ps1" ($backupBase + @{ Type = "Differential" })) (New-ScheduledTaskTrigger -Daily -At $DifferentialTime) "Midday differential backup of [$Database]"
 }
@@ -115,7 +131,7 @@ if ($OffsiteDestination.Count -gt 0) {
     Add-Task "$TaskPrefix - Offsite" (ScriptCall "Copy-LimsBackupOffsite.ps1" $off) (Repeating 15) "Copy new backups of [$Database] off the machine and verify them"
 }
 else { Write-Warning "No -OffsiteDestination given: backups stay on this machine, which does not protect against losing the machine or its disk." }
-Add-Task "$TaskPrefix - Retention" (ScriptCall "Remove-OldBackups.ps1" ($common + @{ Delete = $true } + $withFail)) (New-ScheduledTaskTrigger -Daily -At "03:00") "Delete backups older than the retention rule"
+Add-Task "$TaskPrefix - Retention" (ScriptCall "Remove-OldBackups.ps1" ($common + @{ Delete = $true; Daily = $RetentionDays } + $withFail)) (New-ScheduledTaskTrigger -Daily -At "03:00") "Delete backups older than the retention rule"
 Add-Task "$TaskPrefix - Health" (ScriptCall "Test-LimsBackupHealth.ps1" ($common + @{ MaxOffsiteAgeHours = $(if ($OffsiteDestination.Count -gt 0) { 26 } else { 0 }) } + $withFail)) (Repeating 30) "Report late or failed backups in the event log"
 
 Write-Host "`nDone. Check with:  Get-ScheduledTask -TaskName '$TaskPrefix*' | Get-ScheduledTaskInfo"
