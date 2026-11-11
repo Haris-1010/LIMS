@@ -119,6 +119,7 @@ public sealed class AuthService(LimsDbContext db, IPasswordHasher<User> hasher, 
         if (preferredBranchId == AllBranchesSelection && user.AllBranches) active = null;
         else if (preferredBranchId is > 0 && branches.Any(b => b.Id == preferredBranchId)) active = preferredBranchId;
         else if (user.DefaultBranchId is int d && branches.Any(b => b.Id == d)) active = d;
+        else if (branches.FirstOrDefault(b => b.IsMain) is { } main) active = main.Id;
         else if (user.AllBranches) active = null;
         else active = branches.Count > 0 ? branches[0].Id : null;
 

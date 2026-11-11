@@ -55,7 +55,7 @@ export function StockItemPage() {
       </div>
 
       <section className="card">
-        <div className="card-head"><h3>{t('inventory.batches')}</h3></div>
+        <div className="card-header"><h3 className="card-title">{t('inventory.batches')}</h3></div>
         {d.batches.length === 0 ? <EmptyState icon={<FlaskConical size={22} />} title={t('inventory.noBatchesTitle')} text={t('inventory.noBatchesText')} /> : (
           <div className="table-wrap">
             <table className="table">
@@ -78,12 +78,12 @@ export function StockItemPage() {
       </section>
 
       <section className="card">
-        <div className="card-head">
-          <h3>{t('inventory.profileTitle')}</h3>
+        <div className="card-header">
+          <h3 className="card-title">{t('inventory.profileTitle')}</h3>
           {can('inventory.manage') && <Button size="sm" onClick={() => setProfile(true)}>{t('inventory.editProfile')}</Button>}
         </div>
-        <p className="field-hint" style={{ padding: '0 16px' }}>{t('inventory.profileCardHint')}</p>
-        {d.profile.length === 0 ? <p className="field-hint" style={{ padding: 16 }}>{t('inventory.noProfile')}</p> : (
+        <p className="card-note">{t('inventory.profileCardHint')}</p>
+        {d.profile.length === 0 ? <p className="card-note">{t('inventory.noProfile')}</p> : (
           <div className="table-wrap">
             <table className="table">
               <thead><tr><th>{t('inventory.test')}</th><th style={{ textAlign: 'end' }}>{t('inventory.perTest', { unit: d.unitName })}</th></tr></thead>

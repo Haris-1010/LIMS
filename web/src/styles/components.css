@@ -241,6 +241,12 @@
 .card-body {
   padding: var(--space-5);
 }
+.card-note {
+  margin: 0;
+  padding: var(--space-3) var(--space-5);
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
 .card-footer {
   padding: var(--space-3) var(--space-5);
   border-top: 1px solid var(--border);
