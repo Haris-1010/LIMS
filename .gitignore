@@ -57,3 +57,6 @@ desktop.ini
 
 # ---- Local AI-assistant state ----
 .claude/settings.local.json
+
+# Offline installation kit made by deploy/New-LimsKit.ps1
+/kit/

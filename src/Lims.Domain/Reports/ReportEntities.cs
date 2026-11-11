@@ -60,7 +60,33 @@ public class ReportTemplate : AuditableEntity<int>, ITenantEntity, IAudited
     public int OrganizationId { get; set; }
     [Sensitive] public byte[]? LogoImage { get; set; }
     public string? LogoContentType { get; set; }
+    /// <summary>Full-width image printed at the top of a report instead of the logo and name (designs that choose it).</summary>
+    [Sensitive] public byte[]? HeaderImage { get; set; }
+    public string? HeaderImageContentType { get; set; }
+    /// <summary>Full-width image printed at the bottom of a report (designs that choose it).</summary>
+    [Sensitive] public byte[]? FooterImage { get; set; }
+    public string? FooterImageContentType { get; set; }
     public ICollection<ReportTemplateTranslation> Translations { get; } = [];
+}
+
+/// <summary>
+/// A person printed in the signature block of every new report (for example the consultant pathologist), set on the report
+/// template. Copied into each report when it is issued, so a later change never alters an issued report. Never printed as
+/// "approved by": only people who approved a result in the system are named that way. Removing one only hides it from new
+/// reports; the row (and its signature image, which issued reports still show) is kept.
+/// </summary>
+public class ReportSignatory : AuditableEntity<int>, ITenantEntity, IAudited
+{
+    public int OrganizationId { get; set; }
+    public string NameEn { get; set; } = "";
+    public string? NameUr { get; set; }
+    /// <summary>Degrees, e.g. "MBBS, FCPS (Haematology)".</summary>
+    public string? Qualification { get; set; }
+    public string? Designation { get; set; }
+    public string? RegistrationNo { get; set; }
+    [Sensitive] public byte[]? SignatureImage { get; set; }
+    public string? SignatureContentType { get; set; }
+    public bool IsActive { get; set; } = true;
 }
 
 public class ReportTemplateTranslation : ITenantEntity
@@ -73,6 +99,20 @@ public class ReportTemplateTranslation : ITenantEntity
     public string? HeaderNote { get; set; }
     public string? FooterNote { get; set; }
     public string? Disclaimer { get; set; }
+}
+
+/// <summary>
+/// A named report design (look and arrangement: style, colours, margins, section order). It only changes how a report is drawn,
+/// never what it contains, so it is chosen when a report is viewed or printed and is not part of the frozen snapshot.
+/// </summary>
+public class ReportLayout : AuditableEntity<int>, ITenantEntity, IAudited
+{
+    public int OrganizationId { get; set; }
+    public string Name { get; set; } = "";
+    /// <summary>Used when nobody chooses another design. At most one per organisation.</summary>
+    public bool IsDefault { get; set; }
+    /// <summary>The design settings as JSON (see ReportDesign in the application layer); validated before it is stored.</summary>
+    public string DesignJson { get; set; } = "{}";
 }
 
 /// <summary>What is released for an order right now, compared with what an issued report contained.</summary>
@@ -110,6 +150,8 @@ public static class ImageSniffer
 {
     public const int MaxLogoBytes = 300 * 1024;
     public const int MaxSignatureBytes = 200 * 1024;
+    /// <summary>Header and footer images are page-wide, so they may be larger than a logo.</summary>
+    public const int MaxBannerBytes = 600 * 1024;
 
     /// <summary>"image/png", "image/jpeg", or null when the bytes are anything else (SVG, GIF, HTML, executables…).</summary>
     public static string? Detect(ReadOnlySpan<byte> b)

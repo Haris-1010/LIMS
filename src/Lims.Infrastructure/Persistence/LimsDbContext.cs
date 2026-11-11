@@ -57,6 +57,8 @@ public sealed partial class LimsDbContext(DbContextOptions<LimsDbContext> option
     // ---- reports (LabReports are not branch-filtered; ReportService applies the visibility rule explicitly)
     public DbSet<Domain.Reports.LabReport> LabReports => Set<Domain.Reports.LabReport>();
     public DbSet<Domain.Reports.ReportTemplate> ReportTemplates => Set<Domain.Reports.ReportTemplate>();
+    public DbSet<Domain.Reports.ReportLayout> ReportLayouts => Set<Domain.Reports.ReportLayout>();
+    public DbSet<Domain.Reports.ReportSignatory> ReportSignatories => Set<Domain.Reports.ReportSignatory>();
     public DbSet<Domain.Reports.ReportTemplateTranslation> ReportTemplateTranslations => Set<Domain.Reports.ReportTemplateTranslation>();
 
     // ---- corporate billing

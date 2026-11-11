@@ -3,6 +3,7 @@ using Lims.Api.Cli;
 using Lims.Api.Infrastructure;
 using Lims.Api.Security;
 using Lims.Infrastructure;
+using Lims.Api.Licensing;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
@@ -43,6 +44,14 @@ try
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen(o => o.SwaggerDoc("v1", new() { Title = "LIMS API", Version = "v1" }));
     builder.Services.AddInfrastructure(config);
+    // Offline licence: enforced everywhere except Development and Testing; there is no setting that turns it off.
+    builder.Services.AddSingleton(new LicenseSettings
+    {
+        Enforce = !(builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing")),
+        LicenseDirectory = config["License:LicenseDirectory"],
+        ContentRoot = builder.Environment.ContentRootPath,
+    });
+    builder.Services.AddSingleton<LicenseService>();
     // Automatic database backups run inside the application (no Windows scheduled tasks needed). Backup:Automatic=false turns them off.
     builder.Services.AddHostedService<BackupScheduler>();
 
@@ -121,6 +130,9 @@ try
     }
     app.UseSerilogRequestLogging();
 
+    // Offline licence gate: API calls are refused until a valid signed licence is installed (the web app still loads).
+    app.UseMiddleware<LicenseEnforcementMiddleware>();
+
     if (app.Environment.IsDevelopment())
     {
         app.UseSwagger();
@@ -175,3 +187,4 @@ finally
 }
 
 public partial class Program;
+

@@ -16,7 +16,8 @@ public sealed record ReportSnapshot(
     int SchemaVersion, string ReportNo, int Version, ReportLanguage Language, ReportStatus Status, DateTime IssuedAtUtc,
     string IssuedByName, string? IssuedByNameUr, string? AmendmentReason, string? ReplacesReportNo,
     SnapLetterhead Letterhead, SnapPatient Patient, SnapOrder Order,
-    IReadOnlyList<SnapSection> Sections, IReadOnlyList<SnapPendingTest> Pending, IReadOnlyList<SnapSignatory> Signatories);
+    IReadOnlyList<SnapSection> Sections, IReadOnlyList<SnapPendingTest> Pending, IReadOnlyList<SnapSignatory> Signatories,
+    IReadOnlyList<SnapFixedSignatory>? FixedSignatories = null);   // schema 3; null in reports issued before
 
 public sealed record SnapLetterhead(
     string OrganizationNameEn, string? OrganizationNameUr, string LabNameEn, string? LabNameUr, string? AddressEn, string? AddressUr, string? Phone, string? Email,
@@ -36,9 +37,16 @@ public sealed record SnapTest(
     long OrderItemId, string Code, string NameEn, string? NameUr, string? ReportNotes, int ResultVersion, DateTime ApprovedAtUtc, string? Comment,
     IReadOnlyList<SnapParameter> Parameters);
 
+/// <summary>
+/// One result line. Value, Low and High (schema 2) are the number and the approved limits as released, used only to draw the
+/// range bar; reports issued before schema 2 do not have them and show no bar.
+/// </summary>
 public sealed record SnapParameter(
     string Code, string NameEn, string? NameUr, string? GroupName, ResultType ResultType, string Display, string? DisplayUr, string? Unit,
-    ResultFlag Flag, string FlagCode, string? ReferenceText);
+    ResultFlag Flag, string FlagCode, string? ReferenceText, decimal? Value = null, decimal? Low = null, decimal? High = null);
+
+/// <summary>A signatory from the report template (not someone who verified or approved a result), frozen at issue.</summary>
+public sealed record SnapFixedSignatory(int Id, string NameEn, string? NameUr, string? Qualification, string? Designation, string? RegistrationNo, bool HasSignature);
 
 public sealed record SnapPendingTest(string Code, string NameEn, string? NameUr);
 
@@ -76,11 +84,13 @@ public sealed record ReleasedOrderData(
 }
 
 public sealed record ReportTemplateText(
-    string? HeaderNoteEn, string? HeaderNoteUr, string? FooterNoteEn, string? FooterNoteUr, string? DisclaimerEn, string? DisclaimerUr);
+    string? HeaderNoteEn, string? HeaderNoteUr, string? FooterNoteEn, string? FooterNoteUr, string? DisclaimerEn, string? DisclaimerUr,
+    IReadOnlyList<SnapFixedSignatory>? Signatories = null);
 
 public static class ReportSnapshotBuilder
 {
-    public const int SchemaVersion = 1;
+    /// <summary>2: result lines carry the number and limits for the range bar. 3: signatories from the report template.</summary>
+    public const int SchemaVersion = 3;
 
     /// <summary>
     /// Builds the report content. Only released results are included; each number is shown rounded to the parameter's decimal
@@ -111,7 +121,8 @@ public static class ReportSnapshotBuilder
             new SnapOrder(d.OrderId, d.OrderNo, d.Priority, d.OrderBranchNameEn, d.OrderBranchNameUr, d.ReferringDoctor, d.RegisteredAtUtc, d.CollectedAtUtc, d.ReceivedAtUtc),
             sections,
             d.Pending.OrderBy(p => p.OrderItemId).Select(p => new SnapPendingTest(p.Code, p.NameEn, p.NameUr)).ToList(),
-            signatories);
+            signatories,
+            t.Signatories?.ToList() ?? []);
     }
 
     private static SnapTest ToTest(ReleasedTest x) => new(
@@ -122,7 +133,10 @@ public static class ReportSnapshotBuilder
         v.Code, v.NameEn, v.NameUr, v.GroupName, v.Type,
         v.Number is decimal n ? ResultValueParser.Format(n, v.DecimalPlaces) : v.Text ?? "",
         v.Number is null ? v.TextUr ?? v.Text : null,
-        v.Unit, v.Flag, FlagCode(v.Flag), ReferenceText(v));
+        v.Unit, v.Flag, FlagCode(v.Flag), ReferenceText(v),
+        v.Type == ResultType.Numeric ? v.Number : null,
+        v.Type == ResultType.Numeric ? v.RangeLow : null,
+        v.Type == ResultType.Numeric ? v.RangeHigh : null);
 
     /// <summary>Short mark printed beside the value (words are printed too, so black-and-white copies stay clear).</summary>
     public static string FlagCode(ResultFlag f) => f switch

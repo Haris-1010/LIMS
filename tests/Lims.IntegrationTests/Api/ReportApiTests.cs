@@ -244,6 +244,141 @@ public sealed class ReportApiTests(DatabaseFixture fx)
         Assert.Equal(6, (await ApiClient.Body(await reception.GetAsync($"/api/reports/{id}"))).GetProperty("meta").GetProperty("printCount").GetInt32());
     }
 
+    private static object Design(string style = "modern", string accent = "#0f766e", string[]? blocks = null, int marginTop = 12) => new
+    {
+        style, accentColor = accent, fontSizePt = 10, marginTopMm = marginTop, marginBottomMm = 14, marginSideMm = 12, showLetterhead = true,
+        logoPosition = "start", showRangeBars = true, showFlagWords = true, colourFlags = true, tableStyle = "zebra",
+        blocks = blocks ?? ["patient", "results", "pending", "signatures", "disclaimer"],
+    };
+
+    [Fact]
+    public async Task Report_designs_are_managed_with_the_template_permission_and_there_is_one_default()
+    {
+        var admin = await A("LABMGR");
+        var name1 = "Design " + Code("");
+        var first = (await ApiClient.Body(await admin.PostAsync("/api/report-layouts", new { name = name1, isDefault = true, design = Design() }))).GetProperty("id").GetInt32();
+        var second = (await ApiClient.Body(await admin.PostAsync("/api/report-layouts", new { name = "Design " + Code(""), isDefault = true, design = Design("compact", blocks: ["results", "patient", "signatures", "pending", "disclaimer"]) }))).GetProperty("id").GetInt32();
+
+        // Making a second design the default takes the mark off the first.
+        var list = (await ApiClient.Body(await admin.GetAsync("/api/report-layouts"))).EnumerateArray().ToList();
+        Assert.True(list.Single(x => x.GetProperty("id").GetInt32() == second).GetProperty("isDefault").GetBoolean());
+        Assert.False(list.Single(x => x.GetProperty("id").GetInt32() == first).GetProperty("isDefault").GetBoolean());
+        Assert.Equal("results", list.Single(x => x.GetProperty("id").GetInt32() == second).GetProperty("design").GetProperty("blocks")[0].GetString());
+
+        // Names are unique; settings are checked; a block cannot be left out (results, signatories... must always print).
+        Assert.Equal("report_layout_name_taken", await ApiClient.Code(await admin.PostAsync("/api/report-layouts", new { name = name1, isDefault = false, design = Design() })));
+        Assert.Equal("report_layout_invalid", await ApiClient.Code(await admin.PostAsync("/api/report-layouts", new { name = Code("D"), isDefault = false, design = Design(accent: "red") })));
+        Assert.Equal("report_layout_invalid", await ApiClient.Code(await admin.PostAsync("/api/report-layouts", new { name = Code("D"), isDefault = false, design = Design(blocks: ["patient", "results", "signatures", "disclaimer"]) })));
+        Assert.Equal("report_layout_invalid", await ApiClient.Code(await admin.PostAsync("/api/report-layouts", new { name = Code("D"), isDefault = false, design = Design(marginTop: 200) })));
+
+        // Update needs the version the editor saw.
+        var rv = list.Single(x => x.GetProperty("id").GetInt32() == first).GetProperty("rowVersion").GetString();
+        ApiClient.Ok(await admin.PutAsync($"/api/report-layouts/{first}", new { name = name1 + " v2", isDefault = true, design = Design("colourful"), rowVersion = rv }), HttpStatusCode.NoContent);
+        Assert.Equal(HttpStatusCode.Conflict, (await admin.PutAsync($"/api/report-layouts/{first}", new { name = name1 + " v3", isDefault = true, design = Design(), rowVersion = rv })).StatusCode);
+        list = (await ApiClient.Body(await admin.GetAsync("/api/report-layouts"))).EnumerateArray().ToList();
+        Assert.Equal(1, list.Count(x => x.GetProperty("isDefault").GetBoolean()));
+        Assert.Equal(first, list.Single(x => x.GetProperty("isDefault").GetBoolean()).GetProperty("id").GetInt32());
+
+        // Reception can read designs (to print with one) but not change them.
+        var reception = await A("RECEPTION");
+        Assert.Equal(HttpStatusCode.OK, (await reception.GetAsync("/api/report-layouts")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await reception.PostAsync("/api/report-layouts", new { name = Code("D"), isDefault = false, design = Design() })).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await Delete(reception, $"/api/report-layouts/{second}")).StatusCode);
+
+        // Another organisation neither sees nor changes them.
+        var other = await At(fx.OrgBMainBranch, fx.OrgB, "SYSADMIN");
+        Assert.DoesNotContain((await ApiClient.Body(await other.GetAsync("/api/report-layouts"))).EnumerateArray(), x => x.GetProperty("id").GetInt32() == first);
+        Assert.Equal(HttpStatusCode.NotFound, (await Delete(other, $"/api/report-layouts/{first}")).StatusCode);
+
+        ApiClient.Ok(await Delete(admin, $"/api/report-layouts/{second}"), HttpStatusCode.NoContent);
+        Assert.DoesNotContain((await ApiClient.Body(await admin.GetAsync("/api/report-layouts"))).EnumerateArray(), x => x.GetProperty("id").GetInt32() == second);
+        // Remove the default again so other tests see the built-in design.
+        ApiClient.Ok(await Delete(admin, $"/api/report-layouts/{first}"), HttpStatusCode.NoContent);
+    }
+
+    [Fact]
+    public async Task A_print_records_the_design_and_which_tests_were_printed()
+    {
+        var f = await Setup();
+        var o = await ReceivedOrder(f, f.Hb, f.Mix);
+        await Release(o.ItemIds[0], f.HbParam, "15");
+        await Release(o.ItemIds[1], f.MixParam, "25");
+        var patho = await A("PATHOLOGIST");
+        var issued = await IssueOk(patho, o.OrderId);
+        var id = issued.GetProperty("meta").GetProperty("id").GetInt64();
+        var key = $"{issued.GetProperty("meta").GetProperty("reportNo").GetString()}/v1";
+
+        // The snapshot carries the number and limits for the range bar.
+        var hb = issued.GetProperty("snapshot").GetProperty("sections")[0].GetProperty("tests").EnumerateArray()
+            .Single(t => t.GetProperty("orderItemId").GetInt64() == o.ItemIds[0]).GetProperty("parameters")[0];
+        Assert.Equal(15m, hb.GetProperty("value").GetDecimal());
+        Assert.Equal(10m, hb.GetProperty("low").GetDecimal());
+        Assert.Equal(20m, hb.GetProperty("high").GetDecimal());
+        Assert.Equal(3, issued.GetProperty("snapshot").GetProperty("schemaVersion").GetInt32());
+
+        var admin = await A("LABMGR");
+        var layout = (await ApiClient.Body(await admin.PostAsync("/api/report-layouts", new { name = "Print " + Code(""), isDefault = false, design = Design() }))).GetProperty("id").GetInt32();
+        var reception = await A("RECEPTION");
+        ApiClient.Ok(await reception.PostAsync($"/api/reports/{id}/printed", new { layoutId = layout, orderItemIds = new[] { o.ItemIds[1] } }));
+        ApiClient.Ok(await reception.PostAsync($"/api/reports/{id}/printed", new { orderItemIds = o.ItemIds, language = 1 }));   // all chosen = full print, an Urdu copy
+        Assert.Equal("report_language_invalid", await ApiClient.Code(await reception.PostAsync($"/api/reports/{id}/printed", new { language = 7 })));
+
+        // Tests that are not on the report, and designs of another organisation, are refused (and not counted).
+        Assert.Equal("report_tests_invalid", await ApiClient.Code(await reception.PostAsync($"/api/reports/{id}/printed", new { orderItemIds = new[] { o.ItemIds[0] + 999_999 } })));
+        var other = await At(fx.OrgBMainBranch, fx.OrgB, "SYSADMIN");
+        var foreignLayout = (await ApiClient.Body(await other.PostAsync("/api/report-layouts", new { name = "Foreign " + Code(""), isDefault = false, design = Design() }))).GetProperty("id").GetInt32();
+        Assert.Equal(HttpStatusCode.NotFound, (await reception.PostAsync($"/api/reports/{id}/printed", new { layoutId = foreignLayout })).StatusCode);
+        Assert.Equal(2, (await ApiClient.Body(await reception.GetAsync($"/api/reports/{id}"))).GetProperty("meta").GetProperty("printCount").GetInt32());
+
+        await using var db = fx.System();
+        var prints = await db.AuditLogs.Where(a => a.EntityId == key && a.Action == "Report.Print").OrderBy(a => a.Id).Select(a => a.Changes!).ToListAsync();
+        Assert.Equal(2, prints.Count);
+        using (var partial = JsonDocument.Parse(prints[0]))
+        {
+            var text = partial.RootElement.GetRawText();
+            Assert.Contains("\"partial\":true", text.Replace(" ", ""));
+            Assert.Contains(o.ItemIds[1].ToString(), text);
+            Assert.Contains(layout.ToString(), text);
+            Assert.Contains("\"language\":\"English\"", text.Replace(" ", ""));   // no language chosen = as issued
+        }
+        Assert.Contains("\"partial\":false", prints[1].Replace(" ", ""));
+        // The report was issued in English; this copy was printed in Urdu, and the audit line says both.
+        Assert.Contains("\"language\":\"Urdu\"", prints[1].Replace(" ", ""));
+        Assert.Contains("\"issuedIn\":\"English\"", prints[1].Replace(" ", ""));
+        await Delete(admin, $"/api/report-layouts/{layout}");
+    }
+
+    [Fact]
+    public async Task Sharing_on_whatsapp_checks_the_number_needs_the_print_permission_and_keeps_the_number_out_of_the_audit()
+    {
+        var f = await Setup();
+        var o = await ReceivedOrder(f, f.Hb, f.Mix);
+        await Release(o.ItemIds[0], f.HbParam, "15");
+        var patho = await A("PATHOLOGIST");
+        var issued = await IssueOk(patho, o.OrderId);
+        var id = issued.GetProperty("meta").GetProperty("id").GetInt64();
+        var reception = await A("RECEPTION");
+
+        var ok = await ApiClient.Body(await reception.PostAsync($"/api/reports/{id}/share", new { channel = "whatsapp", phone = "0300-1234567" }));
+        Assert.Equal("923001234567", ok.GetProperty("phone").GetString());
+        Assert.Equal("phone_invalid", await ApiClient.Code(await reception.PostAsync($"/api/reports/{id}/share", new { channel = "whatsapp", phone = "12ab" })));
+        Assert.Equal("share_channel_invalid", await ApiClient.Code(await reception.PostAsync($"/api/reports/{id}/share", new { channel = "email", phone = "03001234567" })));
+        Assert.Equal(HttpStatusCode.Forbidden, (await (await A("TECHNICIAN")).PostAsync($"/api/reports/{id}/share", new { channel = "whatsapp", phone = "03001234567" })).StatusCode);
+        var other = await At(fx.OrgBMainBranch, fx.OrgB, "SYSADMIN");
+        Assert.Equal(HttpStatusCode.NotFound, (await other.PostAsync($"/api/reports/{id}/share", new { channel = "whatsapp", phone = "03001234567" })).StatusCode);
+
+        // A superseded version is never sent to the patient.
+        await Release(o.ItemIds[1], f.MixParam, "12");
+        await IssueOk(patho, o.OrderId, reason: "Second test released");
+        Assert.Equal("report_superseded_share", await ApiClient.Code(await reception.PostAsync($"/api/reports/{id}/share", new { channel = "whatsapp", phone = "03001234567" })));
+
+        await using var db = fx.System();
+        var key = $"{issued.GetProperty("meta").GetProperty("reportNo").GetString()}/v1";
+        var shares = await db.AuditLogs.Where(a => a.EntityId == key && a.Action == "Report.Share").Select(a => a.Changes ?? "").ToListAsync();
+        Assert.Single(shares);
+        Assert.DoesNotContain("1234567", shares[0]);
+    }
+
     [Fact]
     public async Task Two_people_issuing_at_the_same_moment_produce_one_report()
     {
@@ -373,6 +508,112 @@ public sealed class ReportApiTests(DatabaseFixture fx)
         Assert.True((await ApiClient.Body(await mgr.GetAsync("/api/report-template"))).GetProperty("hasLogo").GetBoolean());
         ApiClient.Ok(await Delete(mgr, "/api/report-template/logo"), HttpStatusCode.NoContent);
         Assert.Equal(HttpStatusCode.NotFound, (await reception.GetAsync("/api/report-template/logo")).StatusCode);
+    }
+
+    [Fact]
+    public async Task Header_and_footer_images_are_checked_stored_separately_and_chosen_by_the_design()
+    {
+        // The second laboratory, so the first one's template stays untouched for the template-text test.
+        var mgr = await At(fx.OrgBMainBranch, fx.OrgB, "LABMGR");
+        var reception = await At(fx.OrgBMainBranch, fx.OrgB, "RECEPTION");
+        byte[] png = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 9, 9, 9];
+        byte[] jpeg = [0xFF, 0xD8, 0xFF, 0xE0, 1, 2, 3];
+
+        foreach (var kind in new[] { "header", "footer" })
+        {
+            var url = $"/api/report-template/images/{kind}";
+            Assert.Equal(HttpStatusCode.Forbidden, (await UploadTo(reception, url, png, kind + ".png")).StatusCode);
+            Assert.Equal("image_type_invalid", await ApiClient.Code(await UploadTo(mgr, url, System.Text.Encoding.UTF8.GetBytes("<svg/>"), kind + ".png")));
+            // Page-wide images may be larger than a logo (600 KB), but no larger.
+            ApiClient.Ok(await UploadTo(mgr, url, png.Concat(new byte[500 * 1024]).ToArray(), kind + ".png"), HttpStatusCode.NoContent);
+            Assert.Equal("image_too_large", await ApiClient.Code(await UploadTo(mgr, url, png.Concat(new byte[610 * 1024]).ToArray(), kind + ".png")));
+        }
+        ApiClient.Ok(await UploadTo(mgr, "/api/report-template/images/footer", jpeg, "footer.jpg"), HttpStatusCode.NoContent);
+        // Only "header" and "footer" exist; any other name is not an image route.
+        Assert.NotEqual("image/png", (await reception.GetAsync("/api/report-template/images/side")).Content.Headers.ContentType?.MediaType);
+
+        var header = await reception.GetAsync("/api/report-template/images/header");
+        Assert.Equal("image/png", header.Content.Headers.ContentType?.MediaType);
+        Assert.Equal("nosniff", header.Headers.GetValues("X-Content-Type-Options").Single());
+        Assert.Equal("image/jpeg", (await reception.GetAsync("/api/report-template/images/footer")).Content.Headers.ContentType?.MediaType);
+        var t = await ApiClient.Body(await mgr.GetAsync("/api/report-template"));
+        Assert.True(t.GetProperty("hasHeaderImage").GetBoolean());
+        Assert.True(t.GetProperty("hasFooterImage").GetBoolean());
+
+        // Removing one leaves the other (and the logo) alone.
+        ApiClient.Ok(await Delete(mgr, "/api/report-template/images/header"), HttpStatusCode.NoContent);
+        Assert.Equal(HttpStatusCode.NotFound, (await reception.GetAsync("/api/report-template/images/header")).StatusCode);
+        t = await ApiClient.Body(await mgr.GetAsync("/api/report-template"));
+        Assert.False(t.GetProperty("hasHeaderImage").GetBoolean());
+        Assert.True(t.GetProperty("hasFooterImage").GetBoolean());
+
+        // A design remembers whether it prints the header image and the footer image.
+        var name = "Banner " + Code("");
+        var created = await mgr.PostAsync("/api/report-layouts", new { name, isDefault = false, design = new { style = "modern", accentColor = "#0f766e", fontSizePt = 9.5, marginTopMm = 12, marginBottomMm = 14, marginSideMm = 12, showLetterhead = true, logoPosition = "start", useHeaderImage = true, showFooterImage = true, showRangeBars = true, showFlagWords = true, colourFlags = false, tableStyle = "lines", blocks = new[] { "patient", "results", "pending", "signatures", "disclaimer" } } });
+        ApiClient.Ok(created);
+        var saved = (await ApiClient.Body(await mgr.GetAsync("/api/report-layouts"))).EnumerateArray().Single(l => l.GetProperty("name").GetString() == name).GetProperty("design");
+        Assert.True(saved.GetProperty("useHeaderImage").GetBoolean());
+        Assert.True(saved.GetProperty("showFooterImage").GetBoolean());
+    }
+
+    [Fact]
+    public async Task Template_signatories_print_on_new_reports_and_issued_reports_keep_them()
+    {
+        var f = await Setup();
+        var mgr = await A("LABMGR");
+        var reception = await A("RECEPTION");
+        var patho = await A("PATHOLOGIST");
+        var name = "Dr. Consultant " + Code("");
+
+        // Managed with the template permission; anyone who can see reports can list them.
+        Assert.Equal(HttpStatusCode.Forbidden, (await reception.PostAsync("/api/report-template/signatories", new { nameEn = name })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await mgr.PostAsync("/api/report-template/signatories", new { nameEn = "  " })).StatusCode);   // a name is required
+        var id = (await ApiClient.Body(await mgr.PostAsync("/api/report-template/signatories", new { nameEn = name, nameUr = "ڈاکٹر", qualification = "MBBS, FCPS", designation = "Consultant Pathologist", registrationNo = "PMDC 1-P" }))).GetProperty("id").GetInt32();
+        var listed = (await ApiClient.Body(await reception.GetAsync("/api/report-template/signatories"))).EnumerateArray().Single(x => x.GetProperty("id").GetInt32() == id);
+        Assert.Equal("MBBS, FCPS", listed.GetProperty("qualification").GetString());
+        Assert.False(listed.GetProperty("hasSignature").GetBoolean());
+
+        // Signature image: real PNG/JPEG only, within 200 KB.
+        byte[] png = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 5, 5];
+        var sigUrl = $"/api/report-template/signatories/{id}/signature";
+        Assert.Equal(HttpStatusCode.Forbidden, (await UploadTo(reception, sigUrl, png, "sig.png")).StatusCode);
+        Assert.Equal("image_type_invalid", await ApiClient.Code(await UploadTo(mgr, sigUrl, System.Text.Encoding.UTF8.GetBytes("<svg/>"), "sig.png")));
+        Assert.Equal("image_too_large", await ApiClient.Code(await UploadTo(mgr, sigUrl, png.Concat(new byte[210 * 1024]).ToArray(), "sig.png")));
+        ApiClient.Ok(await UploadTo(mgr, sigUrl, png, "sig.png"), HttpStatusCode.NoContent);
+        Assert.Equal("image/png", (await reception.GetAsync(sigUrl)).Content.Headers.ContentType?.MediaType);
+
+        // Editing needs the version that was read.
+        var rv = (await ApiClient.Body(await mgr.GetAsync("/api/report-template/signatories"))).EnumerateArray().Single(x => x.GetProperty("id").GetInt32() == id).GetProperty("rowVersion").GetString();
+        ApiClient.Ok(await mgr.PutAsync($"/api/report-template/signatories/{id}", new { nameEn = name, designation = "Head of Pathology", rowVersion = rv }), HttpStatusCode.NoContent);
+        Assert.Equal(HttpStatusCode.Conflict, (await mgr.PutAsync($"/api/report-template/signatories/{id}", new { nameEn = name, rowVersion = rv })).StatusCode);
+
+        // Issued: copied into the snapshot, separately from who approved.
+        var o = await ReceivedOrder(f, f.Hb);
+        await Release(o.ItemIds[0], f.HbParam, "15");
+        var issued = await IssueOk(patho, o.OrderId);
+        var snap = issued.GetProperty("snapshot");
+        var printed = snap.GetProperty("fixedSignatories").EnumerateArray().Single(x => x.GetProperty("id").GetInt32() == id);
+        Assert.Equal("Head of Pathology", printed.GetProperty("designation").GetString());
+        Assert.True(printed.GetProperty("hasSignature").GetBoolean());
+        Assert.DoesNotContain(snap.GetProperty("signatories").EnumerateArray(), x => x.GetProperty("nameEn").GetString() == name);
+
+        // Removing: gone from the list and from new reports; the issued report is unchanged and its signature still loads.
+        ApiClient.Ok(await Delete(mgr, $"/api/report-template/signatories/{id}"), HttpStatusCode.NoContent);
+        Assert.DoesNotContain((await ApiClient.Body(await mgr.GetAsync("/api/report-template/signatories"))).EnumerateArray(), x => x.GetProperty("id").GetInt32() == id);
+        var reportId = issued.GetProperty("meta").GetProperty("id").GetInt64();
+        var again = (await ApiClient.Body(await reception.GetAsync($"/api/reports/{reportId}"))).GetProperty("snapshot").GetProperty("fixedSignatories");
+        Assert.Contains(again.EnumerateArray(), x => x.GetProperty("id").GetInt32() == id);
+        Assert.Equal(HttpStatusCode.OK, (await reception.GetAsync(sigUrl)).StatusCode);
+        Assert.True((await ApiClient.Body(await patho.GetAsync($"/api/reports/{reportId}/verify"))).GetProperty("intact").GetBoolean());
+
+        // At most four at a time.
+        var created = new List<int>();
+        HttpResponseMessage res;
+        while ((res = await mgr.PostAsync("/api/report-template/signatories", new { nameEn = "Extra " + Code("") })).IsSuccessStatusCode)
+            created.Add((await ApiClient.Body(res)).GetProperty("id").GetInt32());
+        Assert.Equal("report_signatories_full", await ApiClient.Code(res));
+        Assert.Equal(4, (await ApiClient.Body(await mgr.GetAsync("/api/report-template/signatories"))).GetArrayLength());
+        foreach (var x in created) await Delete(mgr, $"/api/report-template/signatories/{x}");
     }
 
     [Fact]

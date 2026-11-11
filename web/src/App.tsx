@@ -9,6 +9,7 @@ import { ApiError } from './lib/api'
 import { LoginPage } from './features/auth/LoginPage'
 import { ChangePasswordPage } from './features/auth/ChangePasswordPage'
 import { PlaceholderPage } from './features/common/PlaceholderPage'
+import { LicenseGate } from './features/license/LicenseGate'
 
 // Each module is its own chunk, loaded when first opened.
 const DashboardPage = lazy(() => import('./features/dashboard/DashboardPage').then((m) => ({ default: m.DashboardPage })))
@@ -129,7 +130,9 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <SessionProvider>
         <ToastProvider>
-          <RouterProvider router={router} />
+          <LicenseGate>
+            <RouterProvider router={router} />
+          </LicenseGate>
         </ToastProvider>
       </SessionProvider>
     </QueryClientProvider>

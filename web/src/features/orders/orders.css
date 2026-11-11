@@ -83,3 +83,27 @@
   .receipt footer { display: flex; flex-direction: column; gap: 1mm; margin-top: 4mm; font-size: 8pt; color: #333; text-align: center; }
   @page { size: 80mm auto; margin: 3mm; }
 }
+
+/* ---------- Order workflow (collect → receive → results → report) ---------- */
+.workflow { padding: var(--space-4) var(--space-5) var(--space-5); }
+.workflow-head { display: flex; align-items: center; gap: var(--space-4); margin-bottom: var(--space-4); }
+.workflow-head > div { flex: 1; min-width: 0; }
+.workflow-progress { flex: none; width: 160px; height: 6px; border-radius: var(--radius-full); background: var(--surface-hover); overflow: hidden; }
+.workflow-progress > span { display: block; height: 100%; border-radius: inherit; background: var(--success); transition: width 300ms ease; }
+.workflow-steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: var(--space-2); }
+@media (max-width: 1250px) { .workflow-steps { grid-template-columns: repeat(4, minmax(0, 1fr)); row-gap: var(--space-4); } }
+@media (max-width: 700px) { .workflow-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.workflow-step { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); min-width: 0; }
+/* Connector line to the next step. */
+.workflow-step:not(:last-child)::after { content: ''; position: absolute; top: 15px; inset-inline-start: 38px; inset-inline-end: -4px; height: 2px; background: var(--border); }
+.workflow-step.is-done:not(:last-child)::after { background: var(--success); }
+.workflow-dot { position: relative; z-index: 1; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--border); background: var(--surface); color: var(--muted); }
+.workflow-step.is-done .workflow-dot { border-color: var(--success); background: var(--success); color: #fff; }
+.workflow-step.is-current .workflow-dot { border-color: var(--primary-600); color: var(--primary-700); box-shadow: 0 0 0 4px var(--primary-100, rgba(37, 99, 235, 0.15)); }
+.workflow-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding-inline-end: var(--space-2); }
+.workflow-label { font-size: var(--text-sm); font-weight: 600; color: var(--text); }
+.workflow-step.is-todo .workflow-label { color: var(--text-2); font-weight: 500; }
+.workflow-n { display: none; }
+.workflow-detail { font-size: var(--text-xs); color: var(--muted); overflow-wrap: anywhere; }
+.workflow-action { margin-top: 6px; }
+.workflow-action .btn { white-space: nowrap; }

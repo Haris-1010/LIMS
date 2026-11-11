@@ -109,6 +109,16 @@ export interface PendingRange {
   replaces: RangeDto | null
 }
 
+export interface BulkApproveFailure {
+  id: number
+  code: string
+}
+
+export interface BulkApproveResult {
+  approved: number
+  failed: BulkApproveFailure[]
+}
+
 export interface PackageDto {
   id: number
   code: string

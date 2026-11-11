@@ -2,7 +2,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { AlertTriangle, ArrowLeft, CheckCircle2, FlaskConical, Pencil, Phone, RotateCcw, Save, Send, ShieldCheck, Trash2 } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, ArrowRight, CheckCircle2, FlaskConical, Pencil, Phone, RotateCcw, Save, Send, ShieldCheck, Trash2 } from 'lucide-react'
 import { api, ApiError } from '../../lib/api'
 import { errorMessage } from '../../lib/errors'
 import { formatDateTime } from '../../lib/format'
@@ -18,6 +18,8 @@ import { useToast } from '../../components/ui/Toast'
 import { formatAge, patientName } from '../patients/patientsApi'
 import { FlagBadge, NotifyDialog, ReasonDialog, ResultStatusBadge } from './ResultParts'
 import { useRefreshResults } from './resultHooks'
+import { OrderTestsBar } from './OrderTestsBar'
+import { nextTest, useOrderTests } from './orderTests'
 import { parseNumber, previewFlag, rangeText, resultKeys, type AlertDto, type EntryModel, type ParameterEntry, type ResultFlag } from './resultsApi'
 import './results.css'
 
@@ -54,6 +56,9 @@ export function ResultEntryPage() {
   const [dirty, setDirty] = useState(false)
   const [dialog, setDialog] = useState<'return' | 'amend' | 'discard' | null>(null)
   const [notifying, setNotifying] = useState<AlertDto | null>(null)
+  /** Where the user wanted to go while values were not saved (asks first). */
+  const [leaveTo, setLeaveTo] = useState<string | null>(null)
+  const orderTests = useOrderTests(m?.orderId)
 
   // Reset the form to what the server has whenever the saved version or its state changes.
   const stamp = m ? `${m.current?.id}:${m.current?.rowVersion}:${m.current?.status}` : ''
@@ -120,6 +125,9 @@ export function ResultEntryPage() {
     onError: (e) => { setDialog(null); failed(e) },
   })
 
+  /** Move to another test of the order (or its report); unsaved values are never dropped without asking. */
+  const go = (path: string) => { if (dirty) setLeaveTo(path); else navigate(path) }
+
   const setCell = (id: number, patch: Partial<Cell>) => { setCells((c) => ({ ...c, [id]: { ...{ value: '', optionId: null }, ...c[id], ...patch } })); setDirty(true) }
 
   /** Enter moves to the next field, like a form on paper; after the last one it lands on Save. */
@@ -143,6 +151,7 @@ export function ResultEntryPage() {
   const a = m.actions
   const cur = m.current
   const amending = !!m.released && !!cur && cur.status !== 30
+  const next = nextTest(orderTests, itemId)
   const flagOf = (p: ParameterEntry): { flag: ResultFlag; preview: boolean } => {
     const saved = m.values.find((v) => v.parameterId === p.parameterId)
     if (!dirty && saved) return { flag: saved.flag, preview: false }
@@ -201,6 +210,8 @@ export function ResultEntryPage() {
         </div>
       </section>
 
+      <OrderTestsBar orderId={m.orderId} tests={orderTests} currentItemId={itemId} onGo={go} />
+
       <div className="form-stack" style={{ margin: '16px 0' }}>
         {amending && <div className="notice is-warning" role="status"><Pencil size={16} aria-hidden /><span><strong>{t('results.amendingBanner', { n: cur!.version })}</strong> <span dir="auto">{cur!.amendmentReason}</span><span className="cell-sub">{t('results.releasedStaysValid', { n: m.released!.version })}</span></span></div>}
         {a.isOwnEntry && cur?.status === 10 && !a.verify && <div className="notice is-info" role="status"><ShieldCheck size={16} aria-hidden /><span>{t('results.ownEntryNotice')}</span></div>}
@@ -249,6 +260,7 @@ export function ResultEntryPage() {
           {a.save && <Button variant="primary" icon={<Send size={16} />} loading={submit.isPending} disabled={invalid.size > 0 || busy || (!dirty && !a.submit)} onClick={() => submit.mutate()}>{t('results.submit')}</Button>}
           {a.verify && <Button variant="primary" icon={<CheckCircle2 size={16} />} loading={verify.isPending} disabled={busy} onClick={() => verify.mutate()}>{t('results.verify')}</Button>}
           {a.approve && <Button variant="primary" icon={<ShieldCheck size={16} />} loading={approve.isPending} disabled={busy} onClick={() => approve.mutate()}>{t('results.approve')}</Button>}
+          {next && <Button variant="ghost" icon={<ArrowRight size={16} className="flip-rtl" />} disabled={busy} onClick={() => go(`/results/item/${next.orderItemId}`)}>{t('results.nextTest', { code: next.testCode })}</Button>}
         </div>
       </Card>
 
@@ -287,6 +299,8 @@ export function ResultEntryPage() {
       {dialog === 'amend' && <ReasonDialog title={t('results.amendTitle')} text={t('results.amendText')} confirmLabel={t('results.amend')} busy={amend.isPending} onConfirm={(r) => amend.mutate(r)} onClose={() => setDialog(null)} />}
       <ConfirmDialog open={dialog === 'discard'} icon={<Trash2 size={20} />} tone="danger" title={t('results.discardTitle')} text={t('results.discardText')} confirmLabel={t('results.discard')} loading={discard.isPending} onConfirm={() => discard.mutate()} onCancel={() => setDialog(null)} />
       {notifying && <NotifyDialog alert={notifying} onClose={() => setNotifying(null)} />}
+      <ConfirmDialog open={leaveTo !== null} icon={<AlertTriangle size={20} />} tone="danger" title={t('results.leaveTitle')} text={t('results.leaveText')} confirmLabel={t('results.leaveConfirm')}
+        onConfirm={() => { const to = leaveTo!; setLeaveTo(null); setDirty(false); navigate(to) }} onCancel={() => setLeaveTo(null)} />
     </div>
   )
 }

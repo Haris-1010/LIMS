@@ -22,6 +22,8 @@ export class ApiError extends Error {
 }
 
 export const UNAUTHORIZED_EVENT = 'lims:unauthorized'
+/** The server refused a call because this installation has no valid licence (the licence gate then shows activation). */
+export const LICENSE_EVENT = 'lims:license-required'
 
 let csrfToken: string | null = null
 let csrfRequest: Promise<string> | null = null
@@ -100,6 +102,7 @@ export async function api<T = void>(path: string, opts: RequestOptions = {}, ret
     return api<T>(path, opts, true)
   }
   if (res.status === 401 && !opts.silent401) window.dispatchEvent(new Event(UNAUTHORIZED_EVENT))
+  if (code === 'license_required') window.dispatchEvent(new Event(LICENSE_EVENT))
 
   throw new ApiError(res.status, code, problem.title ?? res.statusText, problem.errors ?? {}, problem)
 }

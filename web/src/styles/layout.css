@@ -13,8 +13,10 @@
   width: var(--sidebar-w);
   height: 100vh;
   flex-shrink: 0;
-  background: var(--surface);
-  border-inline-end: 1px solid var(--border);
+  background: var(--chrome-bg);
+  color: var(--chrome-text);
+  border-inline-end: 1px solid rgba(0, 0, 0, 0.12);
+  box-shadow: 2px 0 18px -8px rgba(4, 51, 46, 0.45);
   transition: width var(--transition);
   z-index: 30;
 }
@@ -27,7 +29,7 @@
   gap: var(--space-3);
   height: var(--header-h);
   padding: 0 var(--space-5);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--chrome-line);
   flex-shrink: 0;
   overflow: hidden;
 }
@@ -47,11 +49,11 @@
   font-weight: 700;
   font-size: var(--text-md);
   letter-spacing: -0.01em;
-  color: var(--primary-800);
+  color: var(--chrome-text-strong);
 }
 .brand-tag {
   font-size: 11px;
-  color: var(--muted);
+  color: var(--chrome-muted);
 }
 .shell.is-collapsed .brand-text {
   display: none;
@@ -77,7 +79,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--subtle);
+  color: var(--chrome-muted);
   white-space: nowrap;
 }
 :root[lang='ur'] .nav-group-label {
@@ -89,7 +91,7 @@
   visibility: hidden;
   height: 1px;
   margin: var(--space-2) var(--space-3);
-  background: var(--border);
+  background: var(--chrome-line);
 }
 
 .nav-item {
@@ -103,7 +105,7 @@
   border: 0;
   border-radius: var(--radius-md);
   background: transparent;
-  color: var(--text-2);
+  color: var(--chrome-text);
   font-size: var(--text-base);
   font-weight: 500;
   text-align: start;
@@ -116,23 +118,24 @@
 }
 .nav-item svg {
   flex-shrink: 0;
-  color: var(--muted);
+  color: var(--chrome-muted);
   transition: color var(--transition);
 }
 .nav-item:hover {
-  background: var(--surface-hover);
-  color: var(--text);
+  background: var(--chrome-hover);
+  color: var(--chrome-text-strong);
 }
 .nav-item:hover svg {
-  color: var(--text-2);
+  color: var(--chrome-text-strong);
 }
 .nav-item.is-active {
-  background: var(--primary-50);
-  color: var(--primary-700);
+  background: var(--chrome-active);
+  color: var(--chrome-text-strong);
   font-weight: 600;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 .nav-item.is-active svg {
-  color: var(--primary-600);
+  color: var(--chrome-indicator);
 }
 .nav-item.is-active::before {
   content: '';
@@ -142,7 +145,7 @@
   bottom: 8px;
   width: 3px;
   border-radius: 0 3px 3px 0;
-  background: var(--primary-600);
+  background: var(--chrome-indicator);
 }
 [dir='rtl'] .nav-item.is-active::before {
   border-radius: 3px 0 0 3px;
@@ -176,7 +179,7 @@
   top: 4px;
   bottom: 4px;
   width: 1px;
-  background: var(--border);
+  background: var(--chrome-line);
 }
 .nav-children .nav-item {
   height: 34px;
@@ -200,7 +203,7 @@
 
 .sidebar-foot {
   padding: var(--space-3);
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--chrome-line);
 }
 
 /* ---------- Main area ---------- */
@@ -221,9 +224,13 @@
   gap: var(--space-4);
   height: var(--header-h);
   padding: 0 var(--space-6);
-  background: rgba(255, 255, 255, 0.86);
-  backdrop-filter: saturate(180%) blur(10px);
-  border-bottom: 1px solid var(--border);
+  background: var(--chrome-bg-header);
+  color: var(--chrome-text);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 14px -6px rgba(4, 51, 46, 0.45);
+}
+.header .header-title h1 {
+  color: var(--chrome-text-strong);
 }
 .header-title {
   display: flex;
@@ -242,10 +249,10 @@
   align-items: center;
   gap: 6px;
   font-size: var(--text-xs);
-  color: var(--muted);
+  color: var(--chrome-muted);
 }
 .breadcrumbs svg {
-  color: var(--subtle);
+  color: var(--chrome-muted);
 }
 [dir='rtl'] .breadcrumbs svg {
   transform: scaleX(-1);
@@ -260,7 +267,7 @@
   width: 1px;
   height: 24px;
   margin: 0 var(--space-1);
-  background: var(--border);
+  background: var(--chrome-line);
 }
 
 .branch-select {
@@ -269,21 +276,27 @@
   gap: var(--space-2);
   height: 36px;
   padding: 0 var(--space-2) 0 var(--space-3);
-  border: 1px solid var(--border);
+  border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: var(--radius-md);
-  background: var(--surface);
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--chrome-text-strong);
 }
 .branch-select svg {
-  color: var(--primary-600);
+  color: var(--chrome-indicator);
 }
 .branch-select select {
   border: 0;
   background: transparent;
   font-size: var(--text-sm);
   font-weight: 550;
-  color: var(--text);
+  color: var(--chrome-text-strong);
   cursor: pointer;
   padding-inline-end: 4px;
+}
+/* The open list is drawn by the system on white: keep its text dark. */
+.branch-select option {
+  color: var(--text);
+  background: var(--surface);
 }
 .branch-select select:focus {
   outline: none;
@@ -375,6 +388,50 @@
 .profile-role {
   font-size: 11px;
   color: var(--muted);
+}
+
+/* ---------- Header on the dark green surface ---------- */
+.header .lang-switch {
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.1);
+}
+.header .lang-switch button {
+  color: var(--chrome-text);
+}
+.header .lang-switch button[aria-pressed='true'] {
+  background: #fff;
+  color: var(--primary-700);
+  box-shadow: var(--shadow-xs);
+}
+.header .icon-btn {
+  color: var(--chrome-text);
+}
+.header .icon-btn:hover,
+.header .profile:hover {
+  background: var(--chrome-hover);
+}
+.header .icon-btn .dot {
+  border-color: var(--primary-800);
+}
+.header .profile-name {
+  color: var(--chrome-text-strong);
+}
+.header .profile-role,
+.header .profile > svg {
+  color: var(--chrome-muted);
+}
+.header .avatar {
+  background: linear-gradient(135deg, #a7f3e6, var(--accent-300));
+  color: var(--primary-900);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+}
+.header .branch-single {
+  font-size: var(--text-sm);
+  font-weight: 550;
+}
+/* Menus opened from the header are white cards: keep their own colours. */
+.header .menu {
+  color: var(--text);
 }
 
 /* ---------- Page ---------- */
@@ -489,3 +546,56 @@ input.urdu-input { height: 44px; }
 .menu-trigger:focus-visible { box-shadow: var(--ring); }
 .menu-trigger .icon-btn { pointer-events: none; }
 .menu-root:has(> .menu-trigger:hover) .icon-btn { background: var(--surface-hover); }
+
+/* ---------- Urdu (Nastaliq) ----------
+ * Nastaliq glyphs reach far above and below the line box. Anything that clips its content
+ * (overflow: hidden for an ellipsis, a fixed height, a tight line-height) cuts the bottom of
+ * the letters off. In Urdu: clip only sideways, and give single-line text room vertically. */
+:root[lang='ur'] {
+  --header-h: 76px;
+}
+:root[lang='ur'] .nav-item-label,
+:root[lang='ur'] .header-title h1 {
+  overflow-x: clip;
+  overflow-y: visible;
+}
+:root[lang='ur'] .nav-item {
+  height: 44px;
+  line-height: 2.2;
+}
+:root[lang='ur'] .nav-children .nav-item {
+  height: 40px;
+}
+:root[lang='ur'] .nav-group-label {
+  line-height: 2;
+}
+:root[lang='ur'] .brand-text,
+:root[lang='ur'] .profile-meta {
+  line-height: 1.8;
+}
+:root[lang='ur'] .profile-role {
+  font-size: var(--text-xs);
+}
+:root[lang='ur'] .header-title {
+  line-height: 1.9;
+}
+:root[lang='ur'] .header-title h1 {
+  font-size: var(--text-md);
+  line-height: 2.1;
+}
+:root[lang='ur'] .breadcrumbs {
+  line-height: 1.9;
+}
+:root[lang='ur'] .branch-select {
+  height: 40px;
+}
+:root[lang='ur'] .branch-select select {
+  line-height: 2;
+}
+
+
+/* The logo tile is dark green too: a thin light ring keeps it visible on the sidebar. */
+.sidebar .brand-mark {
+  border-radius: 8px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.28);
+}

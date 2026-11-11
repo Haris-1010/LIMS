@@ -1,28 +1,17 @@
 import type { LucideIcon } from 'lucide-react'
 import {
-  Activity,
-  AlertTriangle,
-  Archive,
-  Banknote,
   Boxes,
   Building2,
   ClipboardCheck,
   ClipboardList,
-  DatabaseBackup,
   FileText,
   FlaskConical,
-  KeyRound,
   LayoutDashboard,
-  Microscope,
+  PlusCircle,
   ReceiptText,
-  ScrollText,
   Settings,
-  Stethoscope,
   TestTubes,
-  Truck,
-  Users,
   UserRound,
-  Wallet,
 } from 'lucide-react'
 
 /**
@@ -44,30 +33,29 @@ export interface NavGroup {
   items: NavItem[]
 }
 
+/*
+ * Kept short on purpose (owner, 2026-11-12): four groups and about twelve top-level entries,
+ * daily work first. Less-used pages sit one level down under a parent; every page is still here.
+ * A parent without its own permission shows when the user can open at least one of its children.
+ */
 export const navigation: NavGroup[] = [
   {
     key: 'overview',
     items: [{ key: 'dashboard', path: '/', icon: LayoutDashboard, permission: 'dashboard.view', phase: 12 }],
   },
   {
-    key: 'frontDesk',
+    key: 'dailyWork',
     items: [
-      { key: 'patients', path: '/patients', icon: UserRound, permission: 'patients.view', phase: 4 },
+      { key: 'newOrder', path: '/orders/new', icon: PlusCircle, permission: 'orders.create', phase: 6 },
+      { key: 'orderList', path: '/orders', icon: ClipboardList, permission: 'orders.view', phase: 6 },
       {
-        key: 'orders',
-        icon: ClipboardList,
-        permission: 'orders.view',
+        key: 'patientsMenu',
+        icon: UserRound,
         children: [
-          { key: 'newOrder', path: '/orders/new', permission: 'orders.create', phase: 6 },
-          { key: 'orderList', path: '/orders', permission: 'orders.view', phase: 6 },
+          { key: 'patients', path: '/patients', permission: 'patients.view', phase: 4 },
+          { key: 'doctors', path: '/doctors', permission: 'doctors.view', phase: 4 },
         ],
       },
-      { key: 'doctors', path: '/doctors', icon: Stethoscope, permission: 'doctors.view', phase: 4 },
-    ],
-  },
-  {
-    key: 'laboratory',
-    items: [
       {
         key: 'samples',
         icon: TestTubes,
@@ -80,25 +68,31 @@ export const navigation: NavGroup[] = [
           { key: 'rejections', path: '/samples/rejections', permission: 'samples.reject', phase: 7 },
         ],
       },
-      { key: 'worklists', path: '/worklists', icon: Microscope, permission: 'results.enter', phase: 8 },
       {
         key: 'results',
         icon: ClipboardCheck,
-        permission: 'results.view',
         children: [
+          { key: 'worklists', path: '/worklists', permission: 'results.enter', phase: 8 },
           { key: 'resultEntry', path: '/results/entry', permission: 'results.enter', phase: 8 },
           { key: 'verification', path: '/results/verification', permission: 'results.verify', phase: 8 },
+          { key: 'criticalAlerts', path: '/critical-alerts', permission: 'results.critical', phase: 8 },
         ],
       },
-      { key: 'criticalAlerts', path: '/critical-alerts', icon: AlertTriangle, permission: 'results.critical', phase: 8 },
       { key: 'reports', path: '/reports', icon: FileText, permission: 'reports.view', phase: 9 },
     ],
   },
   {
-    key: 'billing',
+    key: 'accounts',
     items: [
-      { key: 'invoices', path: '/billing/invoices', icon: ReceiptText, permission: 'billing.view', phase: 6 },
-      { key: 'payments', path: '/billing/payments', icon: Banknote, permission: 'payments.collect', phase: 6 },
+      {
+        key: 'billingMenu',
+        icon: ReceiptText,
+        children: [
+          { key: 'invoices', path: '/billing/invoices', permission: 'billing.view', phase: 6 },
+          { key: 'payments', path: '/billing/payments', permission: 'payments.collect', phase: 6 },
+          { key: 'cashDrawer', path: '/billing/cash-drawer', permission: 'cash.close', phase: 6 },
+        ],
+      },
       {
         key: 'corporate',
         icon: Building2,
@@ -109,44 +103,44 @@ export const navigation: NavGroup[] = [
           { key: 'corporateReceipts', path: '/corporate/receipts', permission: 'corporate.receive', phase: 10 },
         ],
       },
-      { key: 'cashDrawer', path: '/billing/cash-drawer', icon: Wallet, permission: 'cash.close', phase: 6 },
-    ],
-  },
-  {
-    key: 'inventory',
-    items: [
-      { key: 'stockItems', path: '/inventory/items', icon: Boxes, permission: 'inventory.view', phase: 11 },
-      { key: 'purchases', path: '/inventory/purchases', icon: Archive, permission: 'inventory.purchase', phase: 11 },
-      { key: 'suppliers', path: '/inventory/suppliers', icon: Truck, permission: 'inventory.view', phase: 11 },
-      { key: 'stockLedger', path: '/inventory/ledger', icon: Activity, permission: 'inventory.view', phase: 11 },
-    ],
-  },
-  {
-    key: 'configuration',
-    items: [
       {
-        key: 'catalog',
-        icon: FlaskConical,
-        permission: 'catalog.view',
+        key: 'inventoryMenu',
+        icon: Boxes,
         children: [
-          { key: 'tests', path: '/catalog/tests', permission: 'catalog.view', phase: 5 },
-          { key: 'categories', path: '/catalog/categories', permission: 'catalog.view', phase: 5 },
-          { key: 'packages', path: '/catalog/packages', permission: 'catalog.view', phase: 5 },
-          { key: 'referenceRanges', path: '/catalog/reference-ranges', permission: 'catalog.clinical', phase: 5 },
+          { key: 'stockItems', path: '/inventory/items', permission: 'inventory.view', phase: 11 },
+          { key: 'purchases', path: '/inventory/purchases', permission: 'inventory.purchase', phase: 11 },
+          { key: 'suppliers', path: '/inventory/suppliers', permission: 'inventory.view', phase: 11 },
+          { key: 'stockLedger', path: '/inventory/ledger', permission: 'inventory.view', phase: 11 },
         ],
       },
-      { key: 'reportTemplate', path: '/reports/template', icon: FileText, permission: 'reports.templates', phase: 9 },
-      { key: 'branches', path: '/admin/branches', icon: Building2, permission: 'org.manage', phase: 3 },
     ],
   },
   {
-    key: 'administration',
+    key: 'setup',
     items: [
-      { key: 'users', path: '/admin/users', icon: Users, permission: 'users.manage', phase: 3 },
-      { key: 'roles', path: '/admin/roles', icon: KeyRound, permission: 'roles.manage', phase: 3 },
-      { key: 'audit', path: '/admin/audit', icon: ScrollText, permission: 'audit.view', phase: 12 },
-      { key: 'settings', path: '/admin/settings', icon: Settings, permission: 'settings.manage', phase: 12 },
-      { key: 'backup', path: '/admin/backup', icon: DatabaseBackup, permission: 'backup.manage', phase: 13 },
+      {
+        key: 'labSetup',
+        icon: FlaskConical,
+        children: [
+          { key: 'tests', path: '/catalog/tests', permission: 'catalog.view', phase: 5 },
+          { key: 'packages', path: '/catalog/packages', permission: 'catalog.view', phase: 5 },
+          { key: 'categories', path: '/catalog/categories', permission: 'catalog.view', phase: 5 },
+          { key: 'referenceRanges', path: '/catalog/reference-ranges', permission: 'catalog.clinical', phase: 5 },
+          { key: 'reportTemplate', path: '/reports/template', permission: 'reports.templates', phase: 9 },
+        ],
+      },
+      {
+        key: 'adminMenu',
+        icon: Settings,
+        children: [
+          { key: 'users', path: '/admin/users', permission: 'users.manage', phase: 3 },
+          { key: 'roles', path: '/admin/roles', permission: 'roles.manage', phase: 3 },
+          { key: 'branches', path: '/admin/branches', permission: 'org.manage', phase: 3 },
+          { key: 'settings', path: '/admin/settings', permission: 'settings.manage', phase: 12 },
+          { key: 'backup', path: '/admin/backup', permission: 'backup.manage', phase: 13 },
+          { key: 'audit', path: '/admin/audit', permission: 'audit.view', phase: 12 },
+        ],
+      },
     ],
   },
 ]

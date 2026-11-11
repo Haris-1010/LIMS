@@ -240,7 +240,8 @@ public sealed class Phase12ApiTests(DatabaseFixture fx)
     {
         var admin = await A("SYSADMIN");
         var s = (await Get(admin, "/api/settings")).EnumerateArray().Single(x => x.GetProperty("key").GetString() == "Results.BlockApprovalUntilCriticalNotified");
-        Assert.Equal("true", s.GetProperty("value").GetString());   // the default is on
+        Assert.Equal("true", s.GetProperty("value").GetString());   // switched on for the test laboratory (DatabaseFixture)
+        Assert.Equal("false", s.GetProperty("defaultValue").GetString()); // a new laboratory starts with it off
         var off = await ApiClient.Body(await admin.PutAsync("/api/settings/Results.BlockApprovalUntilCriticalNotified", new { value = "FALSE", rowVersion = s.GetProperty("rowVersion").GetString() }));
         Assert.Equal("false", off.GetProperty("value").GetString());   // normalised
         ApiClient.Ok(await admin.PutAsync("/api/settings/Results.BlockApprovalUntilCriticalNotified", new { value = "true", rowVersion = off.GetProperty("rowVersion").GetString() }));

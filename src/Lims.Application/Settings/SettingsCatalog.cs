@@ -8,14 +8,18 @@ public sealed record SettingDefinition(string Key, string Group, SettingKind Kin
 public static class SettingsCatalog
 {
 
-    /// <summary>Every setting here is read by the code today. The defaults match the defaults used where the setting is read.</summary>
+    /// <summary>
+    /// Every setting here is read by the code today. The defaults match the defaults used where the setting is read.
+    /// The two result settings default to a one-person laboratory (owner, 2026-11-12): self-verification on, critical
+    /// read-back not blocking approval. A laboratory with separate reviewers switches them on the settings page.
+    /// </summary>
     public static readonly IReadOnlyList<SettingDefinition> Known =
     [
         new SettingDefinition("Samples.RequirePaymentBeforeCollection", "Samples", SettingKind.Boolean, "false", null, null,
             "A sample cannot be collected until its order is fully paid.", "آرڈر کی مکمل ادائیگی تک نمونہ جمع نہیں کیا جا سکتا۔"),
-        new SettingDefinition("Results.AllowSelfVerification", "Results", SettingKind.Boolean, "false", null, null,
+        new SettingDefinition("Results.AllowSelfVerification", "Results", SettingKind.Boolean, "true", null, null,
             "Let the person who entered a result also verify or approve it (for one-person laboratories).", "جس نے نتیجہ درج کیا وہی اسے تصدیق یا منظور بھی کر سکے (ایک فرد کی لیبارٹری کے لیے)۔"),
-        new SettingDefinition("Results.BlockApprovalUntilCriticalNotified", "Results", SettingKind.Boolean, "true", null, null,
+        new SettingDefinition("Results.BlockApprovalUntilCriticalNotified", "Results", SettingKind.Boolean, "false", null, null,
             "A result with a critical value cannot be approved until who was told, and the read-back, is recorded.", "نازک قدر والا نتیجہ اس وقت تک منظور نہیں ہو سکتا جب تک بتانے والے کا نام اور دہرائی درج نہ ہو۔"),
         new SettingDefinition("Inventory.AllowNegativeStock", "Inventory", SettingKind.Boolean, "false", null, null,
             "When a test needs more reagent than is in stock, take the difference into a negative balance instead of recording a shortfall.", "ٹیسٹ کو اسٹاک سے زیادہ ری ایجنٹ درکار ہو تو کمی درج کرنے کے بجائے فرق منفی بیلنس میں لیا جائے۔"),

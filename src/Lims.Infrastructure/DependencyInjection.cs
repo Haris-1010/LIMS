@@ -1,4 +1,4 @@
-﻿using Lims.Application.Abstractions;
+using Lims.Application.Abstractions;
 using Lims.Domain.Security;
 using Lims.Infrastructure.Organizations;
 using Lims.Infrastructure.Security;
@@ -35,6 +35,7 @@ public static class DependencyInjection
         services.AddScoped<Patients.DoctorService>();
         services.AddScoped<Catalog.CatalogService>();
         services.AddScoped<Catalog.ReferenceRangeService>();
+        services.AddScoped<Catalog.StarterCatalogSeeder>();
         services.AddScoped<Samples.SampleService>();
         services.AddScoped<Samples.TransferService>();
         services.AddScoped<Inventory.InventoryService>();
@@ -51,6 +52,8 @@ public static class DependencyInjection
         services.AddScoped<Results.CriticalAlertService>();
         services.AddScoped<Results.ResultReportSource>();
         services.AddScoped<Reports.ReportTemplateService>();
+        services.AddScoped<Reports.ReportLayoutService>();
+        services.AddScoped<Reports.ReportSignatoryService>();
         services.AddScoped<Reports.ReportService>();
         services.AddScoped<Reports.SignatureService>();
         services.AddScoped<Orders.BillingService>();
@@ -73,3 +76,4 @@ public static class DependencyInjection
             sql.TranslateParameterizedCollectionsToConstants();
         }));
 }
+

@@ -112,6 +112,32 @@ public sealed class ReferenceRangeService(LimsDbContext db, ILabClock clock)
         await tx.CommitAsync(ct);
     }
 
+    /// <summary>
+    /// Approves several drafts one by one, each with the same checks and transaction as <see cref="ApproveAsync"/>.
+    /// A draft that fails (overlap, missing source, already approved…) is reported and the rest still go ahead.
+    /// Only the ids the reviewer saw are approved, never "whatever is pending now".
+    /// </summary>
+    public async Task<BulkApproveResult> ApproveManyAsync(IReadOnlyCollection<int> ids, CancellationToken ct)
+    {
+        var approved = 0;
+        var failed = new List<BulkApproveFailure>();
+        foreach (var id in ids.Distinct())
+        {
+            try
+            {
+                await ApproveAsync(id, ct);
+                approved++;
+            }
+            catch (BusinessRuleException ex)
+            {
+                // Throw away anything the failed approval left tracked so it is not saved with the next one.
+                db.ChangeTracker.Clear();
+                failed.Add(new BulkApproveFailure(id, ex.Code));
+            }
+        }
+        return new BulkApproveResult(approved, failed);
+    }
+
     public async Task RetireAsync(int id, string? reason, CancellationToken ct)
     {
         var range = await db.ReferenceRanges.SingleOrDefaultAsync(r => r.Id == id, ct) ?? throw BusinessRuleException.NotFound("Range");

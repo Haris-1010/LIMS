@@ -16,8 +16,8 @@
   color: #fff;
   background:
     radial-gradient(1200px 600px at 110% -10%, rgba(14, 159, 154, 0.45), transparent 60%),
-    radial-gradient(900px 500px at -20% 120%, rgba(44, 100, 166, 0.55), transparent 60%),
-    linear-gradient(160deg, #10294a 0%, #163b69 55%, #1d4e89 100%);
+    radial-gradient(900px 500px at -20% 120%, rgba(20, 169, 154, 0.45), transparent 60%),
+    linear-gradient(160deg, #04332e 0%, #075247 55%, #0b7566 100%);
 }
 /* Fine grid texture */
 .login-hero::before {

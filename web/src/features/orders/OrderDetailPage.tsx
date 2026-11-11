@@ -22,6 +22,7 @@ import { METHODS, invoiceTone, newKey, orderKeys, type InvoiceLineDto, type Orde
 import { OrderResultsCard } from '../results/OrderResultsCard'
 import { OrderSamplesCard } from '../samples/OrderSamplesCard'
 import { Receipt } from './Receipt'
+import { OrderWorkflow } from './OrderWorkflow'
 import './orders.css'
 
 export function OrderDetailPage() {
@@ -90,6 +91,8 @@ export function OrderDetailPage() {
           {!cancelled && can('orders.cancel') && <Button variant="ghost" icon={<XCircle size={16} />} onClick={() => setCancelling('order')}>{t('orders.cancelOrder')}</Button>}
         </div>
       </section>
+
+      <div className="section-gap"><OrderWorkflow orderId={o.id} cancelled={cancelled} /></div>
 
       <div className="grid-2-1 section-gap no-print">
         <Card title={t('orders.invoice')} subtitle={<span className="num">{inv.invoiceNo}</span>} flush>

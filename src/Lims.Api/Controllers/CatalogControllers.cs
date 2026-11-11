@@ -134,6 +134,12 @@ public sealed class ReferenceRangesController(ReferenceRangeService ranges) : Co
         return NoContent();
     }
 
+    /// <summary>Approves the listed drafts one by one; returns how many were approved and why the others were not.</summary>
+    [HttpPost("ranges/approve-many")]
+    [HasPermission(Permissions.CatalogClinical)]
+    public async Task<IActionResult> ApproveMany(BulkApproveRequest input, CancellationToken ct) =>
+        Ok(await ranges.ApproveManyAsync(input.Ids, ct));
+
     public sealed record RetireRequest(string? Reason);
 
     [HttpPost("ranges/{id:int}/retire")]

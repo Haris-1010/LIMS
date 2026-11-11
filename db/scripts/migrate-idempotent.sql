@@ -3874,6 +3874,156 @@ BEGIN
     VALUES (N'20261110154051_AddPerformanceIndexes', N'9.0.10');
 END;
 
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261111183315_AddReportLayouts'
+)
+BEGIN
+    CREATE TABLE [lab].[ReportLayouts] (
+        [Id] int NOT NULL IDENTITY,
+        [OrganizationId] int NOT NULL,
+        [Name] nvarchar(100) NOT NULL,
+        [IsDefault] bit NOT NULL,
+        [DesignJson] nvarchar(4000) NOT NULL,
+        [CreatedAtUtc] datetime2(3) NOT NULL,
+        [CreatedByUserId] int NULL,
+        [UpdatedAtUtc] datetime2(3) NULL,
+        [UpdatedByUserId] int NULL,
+        [RowVersion] rowversion NOT NULL,
+        CONSTRAINT [PK_ReportLayouts] PRIMARY KEY ([Id]),
+        CONSTRAINT [AK_ReportLayouts_OrganizationId_Id] UNIQUE ([OrganizationId], [Id]),
+        CONSTRAINT [CK_ReportLayouts_Design] CHECK (LEN([DesignJson]) >= 2 AND ISJSON([DesignJson]) = 1),
+        CONSTRAINT [FK_ReportLayouts_Organizations_OrganizationId] FOREIGN KEY ([OrganizationId]) REFERENCES [core].[Organizations] ([Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261111183315_AddReportLayouts'
+)
+BEGIN
+    CREATE UNIQUE INDEX [UX_ReportLayouts_Name] ON [lab].[ReportLayouts] ([OrganizationId], [Name]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261111183315_AddReportLayouts'
+)
+BEGIN
+    EXEC(N'CREATE UNIQUE INDEX [UX_ReportLayouts_OneDefault] ON [lab].[ReportLayouts] ([OrganizationId]) WHERE [IsDefault] = 1');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261111183315_AddReportLayouts'
+)
+BEGIN
+    INSERT INTO [core].[__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261111183315_AddReportLayouts', N'9.0.10');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261111193546_AddReportBannerImages'
+)
+BEGIN
+    ALTER TABLE [lab].[ReportTemplates] ADD [FooterImage] varbinary(max) NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261111193546_AddReportBannerImages'
+)
+BEGIN
+    ALTER TABLE [lab].[ReportTemplates] ADD [FooterImageContentType] varchar(50) NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261111193546_AddReportBannerImages'
+)
+BEGIN
+    ALTER TABLE [lab].[ReportTemplates] ADD [HeaderImage] varbinary(max) NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261111193546_AddReportBannerImages'
+)
+BEGIN
+    ALTER TABLE [lab].[ReportTemplates] ADD [HeaderImageContentType] varchar(50) NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261111193546_AddReportBannerImages'
+)
+BEGIN
+    EXEC(N'ALTER TABLE [lab].[ReportTemplates] ADD CONSTRAINT [CK_ReportTemplates_FooterImage] CHECK ([FooterImage] IS NULL OR (DATALENGTH([FooterImage]) <= 614400 AND [FooterImageContentType] IN (''image/png'',''image/jpeg'')))');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261111193546_AddReportBannerImages'
+)
+BEGIN
+    EXEC(N'ALTER TABLE [lab].[ReportTemplates] ADD CONSTRAINT [CK_ReportTemplates_HeaderImage] CHECK ([HeaderImage] IS NULL OR (DATALENGTH([HeaderImage]) <= 614400 AND [HeaderImageContentType] IN (''image/png'',''image/jpeg'')))');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261111193546_AddReportBannerImages'
+)
+BEGIN
+    INSERT INTO [core].[__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261111193546_AddReportBannerImages', N'9.0.10');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261111203221_AddReportSignatories'
+)
+BEGIN
+    CREATE TABLE [lab].[ReportSignatories] (
+        [Id] int NOT NULL IDENTITY,
+        [OrganizationId] int NOT NULL,
+        [NameEn] nvarchar(150) NOT NULL,
+        [NameUr] nvarchar(150) NULL,
+        [Qualification] nvarchar(200) NULL,
+        [Designation] nvarchar(150) NULL,
+        [RegistrationNo] nvarchar(50) NULL,
+        [SignatureImage] varbinary(max) NULL,
+        [SignatureContentType] varchar(50) NULL,
+        [IsActive] bit NOT NULL,
+        [CreatedAtUtc] datetime2(3) NOT NULL,
+        [CreatedByUserId] int NULL,
+        [UpdatedAtUtc] datetime2(3) NULL,
+        [UpdatedByUserId] int NULL,
+        [RowVersion] rowversion NOT NULL,
+        CONSTRAINT [PK_ReportSignatories] PRIMARY KEY ([Id]),
+        CONSTRAINT [AK_ReportSignatories_OrganizationId_Id] UNIQUE ([OrganizationId], [Id]),
+        CONSTRAINT [CK_ReportSignatories_Signature] CHECK ([SignatureImage] IS NULL OR (DATALENGTH([SignatureImage]) <= 204800 AND [SignatureContentType] IN ('image/png','image/jpeg'))),
+        CONSTRAINT [FK_ReportSignatories_Organizations_OrganizationId] FOREIGN KEY ([OrganizationId]) REFERENCES [core].[Organizations] ([Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261111203221_AddReportSignatories'
+)
+BEGIN
+    CREATE INDEX [IX_ReportSignatories_OrganizationId_IsActive] ON [lab].[ReportSignatories] ([OrganizationId], [IsActive]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261111203221_AddReportSignatories'
+)
+BEGIN
+    INSERT INTO [core].[__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261111203221_AddReportSignatories', N'9.0.10');
+END;
+
 COMMIT;
 GO
 

@@ -52,4 +52,26 @@ public sealed record TemplateUpdate
     [Required] public TemplateTextInput Ur { get; init; } = new();
 }
 
-public sealed record TemplateDto(TemplateTextInput En, TemplateTextInput Ur, bool HasLogo, string? LogoContentType, string? RowVersion);
+public sealed record TemplateDto(TemplateTextInput En, TemplateTextInput Ur, bool HasLogo, string? LogoContentType, string? RowVersion,
+    bool HasHeaderImage = false, bool HasFooterImage = false);
+
+/// <summary>A signatory printed on every new report from the template.</summary>
+public sealed record ReportSignatoryDto(int Id, string NameEn, string? NameUr, string? Qualification, string? Designation, string? RegistrationNo,
+    bool HasSignature, string RowVersion);
+
+public record ReportSignatoryInput
+{
+    [Required, MaxLength(150)] public string NameEn { get; init; } = "";
+    [MaxLength(150)] public string? NameUr { get; init; }
+    [MaxLength(200)] public string? Qualification { get; init; }
+    [MaxLength(150)] public string? Designation { get; init; }
+    [MaxLength(50)] public string? RegistrationNo { get; init; }
+}
+
+public sealed record ReportSignatoryUpdate : ReportSignatoryInput
+{
+    [Required] public string RowVersion { get; init; } = "";
+}
+
+/// <summary>The three images of the report template.</summary>
+public enum TemplateImage { Logo, Header, Footer }

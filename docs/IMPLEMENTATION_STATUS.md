@@ -19,6 +19,46 @@ _Last updated: 2026-11-10_
 | 13 | Security review, performance, IIS deployment, backup/restore | **Everything that can be done on one development PC is done and tested; not complete.** Still open: installing from the guide on a clean Windows Server, the timed restore drill, real Task Scheduler registration, HTTPS/IIS settings, and repeating the load test on server hardware (all need a second machine or an elevated session; see below) |
 | 14 | Analyzer integration (needs device specs) | Blocked: needs device model, protocol and interface documentation |
 
+## Owner requests, 2026-11-12 (approved by the owner)
+
+**Done and tested by automated tests** (`StarterCatalogTests`, 6 tests):
+- **Starter test catalog** (decision 61): `StarterCatalog` / `StarterCatalogSeeder` in `Lims.Infrastructure/Catalog`. 29 tests in 6 categories with parameters, options and draft reference ranges (typical adult values, from 18 years; a few critical limits), price 0. `db migrate` adds it to every organisation that has not had it, `db create-org` to the new one; marker setting `Catalog.StarterCatalog` keeps it to once, so deleted tests are not re-added; a test code the laboratory already uses is skipped. Tested: data rules (every range valid and approvable together, option "normal" text is an option), added once, existing code left alone, all drafts approvable with "approve all", an approved range flags results.
+- **One-person laboratory defaults:** `Results.AllowSelfVerification` now defaults to on and `Results.BlockApprovalUntilCriticalNotified` to off (decisions 17, 19). Organisations that saved a value keep it. Tested end to end: one user enters, verifies and approves a critical glucose result in a new organisation. The integration-test laboratories store the strict values, so the separation-of-duties tests still run.
+
+- **One test per page on reports** (decision 62): `ReportDocument` draws one fitted A4 page per test, each with the full branding and "Page n of N"; print breaks after every page; the watermark is drawn once per printed page. Checked by lint, type check and build only.
+
+**Not verified:** the one-test-per-page report has not been looked at or printed in a browser; the new `db migrate` / `db create-org` output was not run against `LIMS_Dev` or a client database; the ranges have not been reviewed by a pathologist.
+
+## Owner requests, 2026-11-12 (outside the phase plan, requested by the owner)
+
+**Done and tested by automated tests:**
+- **Header and footer images** for reports: `PUT/GET/DELETE /api/report-template/images/{header|footer}` (PNG/JPEG checked by bytes, 600 KB), migration 13 `AddReportBannerImages`; a design chooses "logo and name / header image / nothing" and "footer image" (`useHeaderImage`, `showFooterImage`; older designs read with both off).
+- **Offline licence (HART LIMS)**: `LicenseService` (Lims.Api/Licensing, same signed format and key as HART POS, product "HART LIMS", installation ID = SHA-256 of product + Windows machine GUID), `GET /api/license`, `POST /api/license/install` (anonymous, anti-forgery required), middleware refusing every other `/api` call with 403 `license_required` until a valid licence is installed. Enforced in every environment except Development and Testing; no setting turns it off; public key built into the code. Activation screen in the web app (English/Urdu). 4 integration tests (no licence, wrong key, edited file, POS licence, other server, expired, oversized, replaced on disk, the gate's open paths).
+- **Licence generator** (`..\POSLicenseGenerator`): product choice HART POS / HART LIMS (web page and CLI). Builds; not tested beyond the build.
+
+- **Print an issued report in another language**: the snapshot holds every name in English and Urdu, so the report page and print dialog offer English / Urdu / both for any issued report; content and fingerprint unchanged; the print audit line records `language` and `issuedIn`.
+- **Moving through an order on the result screen**: strip with every test of the order and its state, "Next test" (next one still needing work), "Open report"; unsaved values are never dropped without asking (frontend only).
+- **Template signatories** (migration 14 `AddReportSignatories`, snapshot schema 3): up to 4 people (name English/Urdu, qualification, designation, PMDC number, signature image) printed on every new report beside whoever approved, with their own designation and never as "approved by". Copied into the report at issue; removing one only hides it from new reports (issued reports keep it and its signature image). Reports issued before schema 3 read unchanged. 1 unit and 1 integration test.
+
+**Not verified in a browser:** one-page fitting of reports (preview, print, PDF), the redesigned template page, the header/footer images on paper, the order progress bar on the order page, the activation screen, the language choice when printing, the order-tests strip on the result screen, the signatories card and how the signatories look on paper.
+
+**Not run anywhere yet:** `deploy\Install-Lims.ps1` (one-step offline installation on a single PC: IIS, Hosting Bundle, SQL Server Express, folders, permissions, site, settings, Deploy-Lims.ps1, laboratory and administrator) and `deploy\New-LimsKit.ps1` (makes the USB kit). Syntax-checked only.
+
+**Known failing test, not caused by this work:** `OrderApiTests.All_branches_view_cannot_register_orders` fails since commit b7c7a34 ("Default to the main branch at sign-in"): an all-branches user now has a branch selected at sign-in, so the order is accepted. Owner to decide whether the test or the behaviour is right.
+
+**Security finding:** `..\POSLicenseGenerator\keys\private-key.xml` (the signing key for POS and LIMS licences) is committed in that repository, which has a GitHub remote.
+
+## Owner requests, 2026-11-11 (outside the phase plan, approved by the owner)
+
+**Done and tested by automated tests:**
+- **Approve all reference ranges:** button on `/catalog/reference-ranges` (`catalog.clinical`), `POST /api/catalog/ranges/approve-many` with the ids shown on the page. Each draft is approved with the same checks and transaction as a single approval; drafts that fail (overlap, no source, other organisation) are listed with the reason and stay drafts.
+- **Range bars (graphs) on reports:** snapshot schema 2 adds the number and approved limits to each numeric line; the report draws a Low / Normal / High bar with the patient's value. Reports issued before schema 2 still read and verify (their stored JSON and fingerprint are untouched) and show no bar.
+- **Report designs:** new table `lab.ReportLayouts` (migration 12). Styles classic / modern / compact / colourful, accent colour, text size, page margins, letterhead on/off (pre-printed paper), logo position, table style, range bars, coloured results, flag words, order of the report parts. Managed on the report template page, "Designs" tab, with a live preview on a sample report (`reports.templates`); one default per organisation; chosen on the report page and in the print dialog.
+- **Print selected tests:** the print dialog picks the design and the tests; a partial copy says "shows X of Y tests" and the audit line records the design and tests.
+- **WhatsApp:** `POST /api/reports/{id}/share` (`reports.print`) checks the number (Pakistani local numbers get 92) and records the share without the number; the browser opens wa.me with the message, staff attach the saved PDF. Superseded versions cannot be shared. Decisions 58-60.
+
+**Not verified:** the new screens have not been checked in a browser (no browser tool available in that session): designs editor, live preview, print dialog, WhatsApp dialog, the look of each style on paper, Urdu layout of the new screens.
+
 ## Phase 13: progress (plan: `PHASE13_PLAN.md`)
 
 **Done and tested (workstream A1-A3):**

@@ -133,6 +133,50 @@ public sealed class CatalogApiTests(DatabaseFixture fx)
     }
 
     [Fact]
+    public async Task Approve_many_approves_each_draft_and_reports_the_ones_that_fail()
+    {
+        var admin = await SignedIn(fx.OrgA, "SYSADMIN");
+        var test = await CreateTest(admin);
+        var p1 = await AddNumericParameter(admin, test.GetProperty("id").GetInt32());
+        var p2 = await AddNumericParameter(admin, test.GetProperty("id").GetInt32());
+        async Task<int> Draft(int pid, int sex, string? source) =>
+            (await ApiClient.Body(await admin.PostAsync($"/api/catalog/parameters/{pid}/ranges", new { sex, ageFromDays = 0, low = 1, high = 2, source }))).GetProperty("id").GetInt32();
+
+        var male = await Draft(p1, 1, "Fixture");
+        var female = await Draft(p1, 2, "Fixture");
+        var any = await Draft(p2, 0, "Fixture");
+        var overlapsAny = await Draft(p2, 1, "Fixture");    // approved after "any" in the same batch -> overlap
+        var noSource = await Draft(p2, 2, null);
+
+        // Clinical permission is required, as for a single approval.
+        var technician = await SignedIn(fx.OrgA, "TECHNICIAN");
+        Assert.Equal(HttpStatusCode.Forbidden, (await technician.PostAsync("/api/catalog/ranges/approve-many", new { ids = new[] { male } })).StatusCode);
+
+        var pathologist = await SignedIn(fx.OrgA, "PATHOLOGIST");
+        var result = await ApiClient.Body(await pathologist.PostAsync("/api/catalog/ranges/approve-many", new { ids = new[] { male, female, any, overlapsAny, noSource } }));
+        Assert.Equal(3, result.GetProperty("approved").GetInt32());
+        var failed = result.GetProperty("failed").EnumerateArray().ToDictionary(f => f.GetProperty("id").GetInt32(), f => f.GetProperty("code").GetString());
+        Assert.Equal(2, failed.Count);
+        Assert.Equal("range_overlap", failed[overlapsAny]);
+        Assert.Equal("range_source_required", failed[noSource]);
+
+        await using var db = fx.System();
+        var all = await db.ReferenceRanges.Where(r => r.ParameterId == p1 || r.ParameterId == p2).ToDictionaryAsync(r => r.Id);
+        Assert.All(new[] { male, female, any }, id => Assert.Equal(Lims.Domain.Catalog.RangeStatus.Approved, all[id].Status));
+        Assert.All(new[] { overlapsAny, noSource }, id => Assert.Equal(Lims.Domain.Catalog.RangeStatus.Draft, all[id].Status));
+        Assert.Equal(3, await db.AuditLogs.CountAsync(a => a.Action == "ReferenceRange.Approved" && (a.EntityId == male.ToString() || a.EntityId == female.ToString() || a.EntityId == any.ToString())));
+
+        // Ranges of another organisation are not found, so they are reported as failures and left alone.
+        var otherAdmin = await SignedIn(fx.OrgB, "SYSADMIN");
+        var otherTest = await CreateTest(otherAdmin);
+        var otherPid = await AddNumericParameter(otherAdmin, otherTest.GetProperty("id").GetInt32());
+        var foreign = (await ApiClient.Body(await otherAdmin.PostAsync($"/api/catalog/parameters/{otherPid}/ranges", new { sex = 0, ageFromDays = 0, low = 1, high = 2, source = "Fixture" }))).GetProperty("id").GetInt32();
+        var cross = await ApiClient.Body(await pathologist.PostAsync("/api/catalog/ranges/approve-many", new { ids = new[] { foreign } }));
+        Assert.Equal(0, cross.GetProperty("approved").GetInt32());
+        Assert.Equal("not_found", cross.GetProperty("failed")[0].GetProperty("code").GetString());
+    }
+
+    [Fact]
     public async Task Inconsistent_range_is_rejected_on_entry()
     {
         var admin = await SignedIn(fx.OrgA, "SYSADMIN");

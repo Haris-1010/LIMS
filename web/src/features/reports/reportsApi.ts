@@ -61,6 +61,10 @@ export interface SnapParameter {
   flag: 0 | 1 | 2 | 3 | 4 | 5 | 6
   flagCode: string
   referenceText: string | null
+  /** Schema 2: number and approved limits, only for drawing the range bar (absent on older reports). */
+  value?: number | null
+  low?: number | null
+  high?: number | null
 }
 export interface SnapTest {
   orderItemId: number
@@ -75,6 +79,8 @@ export interface SnapTest {
 }
 export interface SnapSection { departmentNameEn: string; departmentNameUr: string | null; tests: SnapTest[] }
 export interface SnapPendingTest { code: string; nameEn: string; nameUr: string | null }
+/** Signatory from the report template, frozen at issue (schema 3; absent on older reports). */
+export interface SnapFixedSignatory { id: number; nameEn: string; nameUr: string | null; qualification: string | null; designation: string | null; registrationNo: string | null; hasSignature: boolean }
 export interface SnapSignatory { userId: number; nameEn: string; nameUr: string | null; designation: string | null; registrationNo: string | null; hasSignature: boolean; approved: boolean }
 
 export interface ReportSnapshot {
@@ -94,6 +100,7 @@ export interface ReportSnapshot {
   sections: SnapSection[]
   pending: SnapPendingTest[]
   signatories: SnapSignatory[]
+  fixedSignatories?: SnapFixedSignatory[] | null
 }
 
 export interface ReportMeta {
@@ -136,7 +143,43 @@ export interface ReportListItem {
 export interface ReportVersion { id: number; reportNo: string; version: number; status: ReportStatus; language: ReportLanguage; issuedAtUtc: string; issuedByName: string; amendmentReason: string | null; printCount: number; isOutdated: boolean }
 
 export interface TemplateText { headerNote: string | null; footerNote: string | null; disclaimer: string | null }
-export interface TemplateDto { en: TemplateText; ur: TemplateText; hasLogo: boolean; logoContentType: string | null; rowVersion: string | null }
+export interface TemplateDto { en: TemplateText; ur: TemplateText; hasLogo: boolean; logoContentType: string | null; rowVersion: string | null; hasHeaderImage: boolean; hasFooterImage: boolean }
+
+/** Which template images exist, and a token that changes whenever one of them is replaced (so browsers do not show a cached copy). */
+export interface ReportImages { logo: boolean; header: boolean; footer: boolean; version: string }
+export const imagesOf = (t: TemplateDto | undefined): ReportImages =>
+  ({ logo: !!t?.hasLogo, header: !!t?.hasHeaderImage, footer: !!t?.hasFooterImage, version: t?.rowVersion ?? '0' })
+export const NO_IMAGES: ReportImages = { logo: false, header: false, footer: false, version: '0' }
+
+export type DesignStyle = 'classic' | 'modern' | 'compact' | 'colourful'
+export type LogoPosition = 'start' | 'center' | 'end' | 'none'
+export type TableStyle = 'lines' | 'zebra' | 'boxed'
+export type ReportBlock = 'patient' | 'results' | 'pending' | 'signatures' | 'disclaimer'
+
+/** How a report is drawn (Lims.Application.Reports.ReportDesign). Presentation only: never what the report contains. */
+export interface ReportDesign {
+  style: DesignStyle
+  accentColor: string
+  fontSizePt: number
+  marginTopMm: number
+  marginBottomMm: number
+  marginSideMm: number
+  showLetterhead: boolean
+  logoPosition: LogoPosition
+  /** Header image across the top instead of logo, name and address (needs the letterhead on). */
+  useHeaderImage: boolean
+  /** Footer image across the bottom of the page. */
+  showFooterImage: boolean
+  showRangeBars: boolean
+  showFlagWords: boolean
+  colourFlags: boolean
+  tableStyle: TableStyle
+  blocks: ReportBlock[]
+}
+/** /api/report-template/signatories */
+export interface ReportSignatoryDto { id: number; nameEn: string; nameUr: string | null; qualification: string | null; designation: string | null; registrationNo: string | null; hasSignature: boolean; rowVersion: string }
+
+export interface ReportLayoutDto { id: number; name: string; isDefault: boolean; design: ReportDesign; rowVersion: string }
 
 export const reportKeys = {
   all: ['reports'] as const,
@@ -145,4 +188,6 @@ export const reportKeys = {
   view: (id: number) => ['reports', 'view', id] as const,
   preview: (orderId: number, lang: number) => ['reports', 'preview', orderId, lang] as const,
   template: ['reports', 'template'] as const,
+  layouts: ['reports', 'layouts'] as const,
+  signatories: ['reports', 'signatories'] as const,
 }

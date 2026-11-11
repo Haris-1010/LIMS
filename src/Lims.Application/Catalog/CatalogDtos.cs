@@ -130,6 +130,16 @@ public sealed record PendingRange(
     RangeDto Range, int TestId, string TestCode, string TestName, string ParameterName, ResultType ResultType,
     string? UnitCode, RangeDto? Replaces);
 
+/// <summary>The drafts the reviewer saw on the approval queue and chose to approve together.</summary>
+public sealed record BulkApproveRequest
+{
+    [Required, MinLength(1), MaxLength(500)] public int[] Ids { get; init; } = [];
+}
+
+public sealed record BulkApproveFailure(int Id, string Code);
+
+public sealed record BulkApproveResult(int Approved, IReadOnlyList<BulkApproveFailure> Failed);
+
 // ---------- Packages ----------
 public sealed record PackageTestDto(int Id, string Code, string NameEn, string? NameUr, decimal Price);
 

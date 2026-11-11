@@ -78,6 +78,14 @@ public sealed class DatabaseFixture : IAsyncLifetime
         OrgA = await provisioner.ProvisionAsync(new("LABA", "Lab A", "لیب اے", "MAIN", "Main A", "مین اے"));
         OrgB = await provisioner.ProvisionAsync(new("LABB", "Lab B", null, "MAIN", "Main B", null));
 
+        // The test laboratories have separate reviewers: separation of duties and the critical read-back are switched on
+        // (a new organisation defaults to a one-person laboratory, where both are relaxed).
+        foreach (var org in new[] { OrgA, OrgB })
+        {
+            db.BusinessSettings.Add(new BusinessSetting { OrganizationId = org, Key = "Results.AllowSelfVerification", Value = "false" });
+            db.BusinessSettings.Add(new BusinessSetting { OrganizationId = org, Key = "Results.BlockApprovalUntilCriticalNotified", Value = "true" });
+        }
+
         var second = new Branch { OrganizationId = OrgA, Code = "CC1", NameEn = "Collection Centre 1" };
         db.Branches.Add(second);
         await db.SaveChangesAsync();

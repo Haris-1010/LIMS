@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, Eye, FilePlus2, Fingerprint, Printer } from 'lucide-react'
+import { ArrowLeft, Eye, FileDown, FilePlus2, Fingerprint, MessageCircle, Printer } from 'lucide-react'
 import { api, ApiError } from '../../lib/api'
 import { errorMessage } from '../../lib/errors'
 import { formatDateTime } from '../../lib/format'
@@ -10,14 +10,16 @@ import { useSession } from '../../app/session'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
-import { SelectField, TextAreaField } from '../../components/ui/Controls'
+import { CheckList, SelectField, TextAreaField } from '../../components/ui/Controls'
+import { Field } from '../../components/ui/Field'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { Modal } from '../../components/ui/Modal'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { useToast } from '../../components/ui/Toast'
 import { PrintReport } from './PrintReport'
 import { ReportDocument } from './ReportDocument'
-import { reportKeys, reportTone, type ReportLanguage, type ReportVersion, type ReportView, type TemplateDto } from './reportsApi'
+import { defaultLayout, designFor } from './reportDesign'
+import { imagesOf, reportKeys, reportTone, type ReportLanguage, type ReportLayoutDto, type ReportVersion, type ReportView, type TemplateDto } from './reportsApi'
 import './report.css'
 
 /** One order's report: preview what would be issued, issue it, open earlier versions, print and check integrity. */
@@ -29,12 +31,21 @@ export function ReportOrderPage() {
   const toast = useToast()
   const { can } = useSession()
   const [lang, setLang] = useState<ReportLanguage>(0)
+  /** Language to show and print an issued report in; null = the language it was issued in. */
+  const [copyLang, setCopyLang] = useState<ReportLanguage | null>(null)
   const [selected, setSelected] = useState<number | 'preview' | null>(null)
   const [issuing, setIssuing] = useState(false)
-  const [printing, setPrinting] = useState<ReportView | null>(null)
+  const [printing, setPrinting] = useState<PrintJob | null>(null)
+  const [printOptions, setPrintOptions] = useState(false)
+  const [sharing, setSharing] = useState(false)
+  /** Chosen design: undefined = the organisation's default, null = built-in classic. */
+  const [layoutChoice, setLayoutChoice] = useState<number | null | undefined>(undefined)
 
   const versions = useQuery({ queryKey: reportKeys.versions(orderId), queryFn: () => api<ReportVersion[]>(`/api/orders/${orderId}/reports`), enabled: Number.isInteger(orderId) })
   const template = useQuery({ queryKey: reportKeys.template, queryFn: () => api<TemplateDto>('/api/report-template'), staleTime: 60_000 })
+  const layouts = useQuery({ queryKey: reportKeys.layouts, queryFn: () => api<ReportLayoutDto[]>('/api/report-layouts'), staleTime: 60_000 })
+  const layoutId = layoutChoice === undefined ? defaultLayout(layouts.data)?.id ?? null : layoutChoice
+  const design = designFor(layouts.data, layoutId)
   const list = versions.data ?? []
   const live = list.find((v) => v.status !== 90)
   const effective: number | 'preview' = selected ?? live?.id ?? 'preview'
@@ -59,7 +70,7 @@ export function ReportOrderPage() {
     onError: (e) => toast.show({ tone: 'danger', title: t('reports.actionFailed'), text: errorMessage(t, e) }),
   })
   const printed = useMutation({
-    mutationFn: (id: number) => api(`/api/reports/${id}/printed`, { method: 'POST' }),
+    mutationFn: (job: PrintJob) => api(`/api/reports/${job.view.meta.id}/printed`, { method: 'POST', body: { layoutId: job.layoutId, orderItemIds: job.onlyTests ?? null, language: job.language } }),
     onSettled: refresh,
   })
 
@@ -85,9 +96,21 @@ export function ReportOrderPage() {
               {[0, 1, 2].map((l) => <option key={l} value={l}>{t(`reportLanguage.${l}`)}</option>)}
             </select>
           )}
+          {v && !v.isPreview && (
+            <select className="select select-sm" value={copyLang ?? v.snapshot.language} onChange={(e) => setCopyLang(Number(e.target.value) as ReportLanguage)} aria-label={t('reports.copyLanguage')} title={t('reports.copyLanguageHint')}>
+              {[0, 1, 2].map((l) => <option key={l} value={l}>{t(`reportLanguage.${l}`)}{l === v.snapshot.language ? ` (${t('reports.asIssued')})` : ''}</option>)}
+            </select>
+          )}
           {effective !== 'preview' && <Button variant="ghost" icon={<Eye size={16} />} onClick={() => setSelected('preview')}>{t('reports.previewCurrent')}</Button>}
           {canIssue && <Button variant="primary" icon={<FilePlus2 size={16} />} onClick={() => setIssuing(true)} disabled={view.isError}>{live ? t('reports.issueNewVersion') : t('reports.issue')}</Button>}
-          {v && !v.isPreview && can('reports.print') && <Button icon={<Printer size={16} />} onClick={() => setPrinting(v)}>{t('reports.print')}</Button>}
+          {(layouts.data?.length ?? 0) > 0 && (
+            <select className="select select-sm" value={layoutId ?? ''} onChange={(e) => setLayoutChoice(e.target.value === '' ? null : Number(e.target.value))} aria-label={t('reports.design')}>
+              <option value="">{t('reports.builtIn')}</option>
+              {layouts.data!.map((l) => <option key={l.id} value={l.id}>{l.name}{l.isDefault ? ` (${t('reports.default')})` : ''}</option>)}
+            </select>
+          )}
+          {v && !v.isPreview && can('reports.print') && <Button icon={<Printer size={16} />} onClick={() => setPrintOptions(true)}>{t('reports.print')}</Button>}
+          {v && !v.isPreview && can('reports.print') && v.meta.status !== 90 && <Button icon={<MessageCircle size={16} />} onClick={() => setSharing(true)}>{t('reports.whatsapp')}</Button>}
           {v && !v.isPreview && <Button variant="ghost" icon={<Fingerprint size={16} />} loading={verify.isPending} onClick={() => verify.mutate()}>{t('reports.verify')}</Button>}
         </span>
       </div>
@@ -100,7 +123,7 @@ export function ReportOrderPage() {
 
       <div className="report-layout">
         <div className="report-stage">
-          {view.isLoading || !v ? <Skeleton height={600} width={600} radius={4} /> : <ReportDocument view={v} hasLogo={!!template.data?.hasLogo} />}
+          {view.isLoading || !v ? <Skeleton height={600} width={600} radius={4} /> : <ReportDocument view={v} images={imagesOf(template.data)} design={design} language={v.isPreview ? undefined : copyLang ?? undefined} />}
         </div>
         <aside className="no-print">
           <Card title={t('reports.versions')} flush>
@@ -125,7 +148,15 @@ export function ReportOrderPage() {
 
       {issuing && <IssueDialog orderId={orderId} hasLive={!!live} preview={view.data?.isPreview ? view.data : null} initialLang={lang}
         onClose={() => setIssuing(false)} onIssued={async (r) => { setIssuing(false); setSelected(r.meta.id); await refresh() }} />}
-      {printing && <PrintReport view={printing} hasLogo={!!template.data?.hasLogo} onDone={() => { const id = printing.meta.id; setPrinting(null); if (id) printed.mutate(id) }} />}
+      {printOptions && v && !v.isPreview && (
+        <PrintDialog view={v} layouts={layouts.data ?? []} layoutId={layoutId} onLayout={setLayoutChoice} language={copyLang ?? v.snapshot.language} onLanguage={setCopyLang} onClose={() => setPrintOptions(false)}
+          onPrint={(onlyTests) => { setPrintOptions(false); setPrinting({ view: v, layoutId, onlyTests, language: copyLang ?? undefined }) }} />
+      )}
+      {sharing && v && !v.isPreview && (
+        <ShareDialog view={v} onClose={() => setSharing(false)} onSavePdf={() => setPrinting({ view: v, layoutId, onlyTests: undefined, language: copyLang ?? undefined })} />
+      )}
+      {printing && <PrintReport view={printing.view} images={imagesOf(template.data)} design={designFor(layouts.data, printing.layoutId)} onlyTests={printing.onlyTests} language={printing.language}
+        onDone={() => { const job = printing; setPrinting(null); if (job.view.meta.id) printed.mutate(job) }} />}
     </div>
   )
 }
@@ -158,3 +189,99 @@ function IssueDialog({ orderId, hasLive, preview, initialLang, onClose, onIssued
     </Modal>
   )
 }
+
+/** One print (or "Save as PDF"): the report, the design and, for a partial copy, the chosen tests. */
+interface PrintJob {
+  view: ReportView
+  layoutId: number | null
+  onlyTests: number[] | undefined
+  /** undefined = the language the report was issued in. */
+  language: ReportLanguage | undefined
+}
+
+/** Choose the design and which tests go on this copy. Choosing every test is a normal full print. */
+function PrintDialog({ view, layouts, layoutId, onLayout, language, onLanguage, onClose, onPrint }: {
+  view: ReportView; layouts: ReportLayoutDto[]; layoutId: number | null; onLayout: (id: number | null) => void
+  language: ReportLanguage; onLanguage: (l: ReportLanguage) => void; onClose: () => void; onPrint: (onlyTests: number[] | undefined) => void
+}) {
+  const { t, i18n } = useTranslation()
+  const tests = view.snapshot.sections.flatMap((sec) => sec.tests)
+  const [chosen, setChosen] = useState<(number | string)[]>(tests.map((x) => x.orderItemId))
+  const all = chosen.length === tests.length
+  const ur = i18n.language === 'ur'
+  return (
+    <Modal open title={t('reports.printOptions')} subtitle={t('reports.printOptionsHint')} onClose={onClose} size="md"
+      footer={<><Button variant="ghost" onClick={onClose}>{t('common.cancel')}</Button>
+        <Button variant="primary" icon={<Printer size={16} />} disabled={chosen.length === 0} onClick={() => onPrint(all ? undefined : chosen.map(Number))}>{t('reports.printNow')}</Button></>}>
+      <div className="form-stack">
+        <SelectField label={t('reports.design')} value={layoutId ?? ''} onChange={(e) => onLayout(e.target.value === '' ? null : Number(e.target.value))}>
+          <option value="">{t('reports.builtIn')}</option>
+          {layouts.map((l) => <option key={l.id} value={l.id}>{l.name}{l.isDefault ? ` (${t('reports.default')})` : ''}</option>)}
+        </SelectField>
+        <SelectField label={t('reports.copyLanguage')} hint={t('reports.copyLanguageHint')} value={language} onChange={(e) => onLanguage(Number(e.target.value) as ReportLanguage)}>
+          {[0, 1, 2].map((l) => <option key={l} value={l}>{t(`reportLanguage.${l}`)}{l === view.snapshot.language ? ` (${t('reports.asIssued')})` : ''}</option>)}
+        </SelectField>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
+            <strong>{t('reports.testsToPrint')}</strong>
+            <span className="toolbar">
+              <Button size="sm" variant="ghost" onClick={() => setChosen(tests.map((x) => x.orderItemId))}>{t('reports.selectAll')}</Button>
+              <Button size="sm" variant="ghost" onClick={() => setChosen([])}>{t('reports.selectNone')}</Button>
+            </span>
+          </div>
+          <div className="print-tests">
+            <CheckList columns={1} selected={chosen} onChange={setChosen}
+              items={tests.map((x) => ({ id: x.orderItemId, label: ur && x.nameUr ? x.nameUr : x.nameEn, sub: x.code }))} />
+          </div>
+          <p className="field-hint" style={{ marginTop: 8 }}>{t('reports.testsChosen', { count: chosen.length, total: tests.length })}</p>
+          {chosen.length === 0 && <p className="field-error">{t('reports.chooseTests')}</p>}
+          {chosen.length > 0 && !all && <div className="notice is-info" role="status" style={{ marginTop: 8 }}><span>{t('reports.partialNote')}</span></div>}
+        </div>
+      </div>
+    </Modal>
+  )
+}
+
+/**
+ * WhatsApp without internet on the server: the number is checked (and the share recorded) by the API, then the browser opens
+ * wa.me with the number and message in a new tab. A file cannot be attached through a link, so staff save the PDF first and
+ * attach it in WhatsApp.
+ */
+function ShareDialog({ view, onClose, onSavePdf }: { view: ReportView; onClose: () => void; onSavePdf: () => void }) {
+  const { t, i18n } = useTranslation()
+  const toast = useToast()
+  const s = view.snapshot
+  const name = i18n.language === 'ur' && s.patient.nameUr ? s.patient.nameUr : s.patient.nameEn
+  const lab = i18n.language === 'ur' && s.letterhead.organizationNameUr ? s.letterhead.organizationNameUr : s.letterhead.organizationNameEn
+  const [phone, setPhone] = useState(s.patient.mobile ?? '')
+  const [message, setMessage] = useState(t('reports.whatsappDefault', { name, reportNo: view.meta.reportNo, lab }))
+  const [error, setError] = useState<string | null>(null)
+  const share = useMutation({
+    mutationFn: () => api<{ phone: string }>(`/api/reports/${view.meta.id}/share`, { method: 'POST', body: { channel: 'whatsapp', phone } }),
+    onSuccess: (r) => {
+      setError(null)
+      window.open(`https://wa.me/${r.phone}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer')
+      toast.show({ tone: 'success', title: t('reports.whatsappOpened') })
+      onClose()
+    },
+    onError: (e) => setError(errorMessage(t, e)),
+  })
+  return (
+    <Modal open title={t('reports.whatsappTitle')} subtitle={t('reports.whatsappHint')} onClose={onClose} size="md"
+      footer={<Button variant="ghost" onClick={onClose}>{t('common.cancel')}</Button>}>
+      <div className="form-stack">
+        <div>
+          <strong>{t('reports.whatsappStep1')}</strong>
+          <p className="field-hint">{t('reports.whatsappStep1Hint')}</p>
+          <Button icon={<FileDown size={16} />} onClick={onSavePdf}>{t('reports.savePdf')}</Button>
+        </div>
+        <strong>{t('reports.whatsappStep2')}</strong>
+        <Field label={t('reports.whatsappNumber')} hint={t('reports.whatsappNumberHint')} value={phone} inputMode="tel" dir="ltr" maxLength={30}
+          error={error ?? undefined} onChange={(e) => setPhone(e.target.value)} />
+        <TextAreaField label={t('reports.whatsappMessage')} value={message} rows={4} maxLength={1000} onChange={(e) => setMessage(e.target.value)} />
+        <div><Button variant="primary" icon={<MessageCircle size={16} />} loading={share.isPending} disabled={!phone.trim()} onClick={() => share.mutate()}>{t('reports.openWhatsapp')}</Button></div>
+      </div>
+    </Modal>
+  )
+}
+

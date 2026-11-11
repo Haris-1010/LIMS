@@ -27,9 +27,9 @@
 | 14 | Collection rule | The collector must tick an identity confirmation (two identifiers). Payment before collection is **not** required; the setting `Samples.RequirePaymentBeforeCollection` exists (default off) but has no screen yet | Low |
 | 15 | Rejection reasons | Ten default operational reasons, editable by `catalog.manage`; the laboratory should confirm the list | Low |
 | 16 | Label size | 50 × 25 mm by default, changeable per computer (stored in the browser); printed through the browser print dialog | Low: a thermal-printer driver or ZPL is a later option |
-| 17 | Separation of duties | Nobody verifies or approves a result they entered. A pathologist with both permissions may verify and approve a result another person entered. Setting `Results.AllowSelfVerification` can relax this for one-person laboratories | Medium |
+| 17 | Separation of duties | Nobody verifies or approves a result they entered. A pathologist with both permissions may verify and approve a result another person entered. Setting `Results.AllowSelfVerification` relaxes this for one-person laboratories; **default on since 2026-11-12 (owner)**, a laboratory with separate reviewers switches it off | Medium |
 | 18 | Two-step release | Every result is verified, then approved; verification and approval are separate permissions | Medium |
-| 19 | Critical values | Alert raised on submit; approval is blocked until the notification (who, how, read-back) is recorded (`Results.BlockApprovalUntilCriticalNotified`, default on) | Medium |
+| 19 | Critical values | Alert raised on submit; approval is blocked until the notification (who, how, read-back) is recorded (`Results.BlockApprovalUntilCriticalNotified`); **default off since 2026-11-12 (owner)**, so a one-person laboratory is not blocked; the alert is still raised | Medium |
 | 20 | Partial results | Not allowed: every active parameter needs a value to submit | Low |
 | 21 | Reference range choice | Approved range by sex and age **on the collection date**; copied onto the result | Medium |
 | 22 | Amendments | The released version stays valid until the amendment is approved; reason mandatory; versions kept | Medium |
@@ -70,8 +70,13 @@
 | 55 | Password rule (O2) | Kept as is: 8 characters, a letter and a digit. A longer minimum is recommended. | Low: owner to decide |
 | 56 | "Remember me" (O3) | Kept as is: 7 days. | Low: owner to decide, especially for shared PCs |
 | 57 | Public health endpoint (O4) | Kept open: the deploy script and monitoring use it. | Low |
+| 58 | Sending reports on WhatsApp (owner, 2026-11-11) | A WhatsApp link (wa.me) opened by the browser with the number and a message; staff save the PDF and attach it in WhatsApp. No WhatsApp Business API: the server stays offline and no patient data goes to a third party. The PC that shares needs internet. Only the live version can be shared; the number is checked by the API and kept out of the audit log. | Medium: needs internet on the sharing PC |
+| 59 | Report designs (owner, 2026-11-11) | Ready-made styles with settings (colours, text size, margins, letterhead on/off, logo position, table style, range bars, order of the parts), not a free drag-and-drop canvas. A design is chosen when viewing or printing and is not frozen into the snapshot: it changes the look only, and every part (results, pending tests, signatories, report number, fingerprint) always prints. | Low |
+| 60 | Partial prints (owner, 2026-11-11) | Within one report only. The copy says "shows X of Y tests"; the audit line records which tests. The issued report itself is unchanged. | Low |
+| 61 | Starter test catalog (owner, 2026-11-12) | 29 commonly ordered tests (CBC, LFT, RFT, lipids, thyroid, serology, urine/stool R/E…) with parameters, options and typical adult reference ranges and some critical limits are added to each organisation by `db migrate` and `db create-org` (once per organisation; `--no-starter-catalog` skips). Every range is a **draft** until approved in the range approval screen; prices start at 0; children get no range until the laboratory adds one. Tenant data cannot live in an EF migration (organisations do not exist yet), so it is added by the server command right after migrating. | Medium: the laboratory must check every range against its own analyser and kit insert before approving |
+| 62 | One test per page (owner, 2026-11-12) | Every test of a report prints on its own A4 page, each page with the full branding (letterhead or header image, patient details, signatures, disclaimer, footer, report number and fingerprint, "Page n of N"). A test never runs onto a second page: a page whose content is too tall is scaled down evenly until it fits. Tests still awaited are listed on the last page. Layout only: the snapshot and its fingerprint are unchanged. Replaces "the whole report on one page". | Low: a very long test is printed small |
 
 ## Clinical safety rules (fixed)
 
-- No reference ranges, critical limits or interpretation rules are seeded. They must be entered and approved by qualified laboratory staff.
+- No reference range or critical limit is ever **approved** automatically. The starter catalog (decision 61) only proposes drafts; they flag nothing until qualified laboratory staff approve them.
 - High/low flags appear only when an approved range exists for that parameter, sex and age.

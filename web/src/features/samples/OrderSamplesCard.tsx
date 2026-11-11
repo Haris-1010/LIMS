@@ -72,7 +72,7 @@ export function OrderSamplesCard({ orderId, cancelled }: { orderId: number; canc
   )
 }
 
-function CollectAllDialog({ orderId, sample, count, onClose, onPrint }: { orderId: number; sample: SampleListItem; count: number; onClose: () => void; onPrint: (s: SampleListItem[]) => void }) {
+export function CollectAllDialog({ orderId, sample, count, onClose, onPrint }: { orderId: number; sample: SampleListItem; count: number; onClose: () => void; onPrint: (s: SampleListItem[]) => void }) {
   const { t } = useTranslation()
   const toast = useToast()
   const refresh = useRefreshSamples()

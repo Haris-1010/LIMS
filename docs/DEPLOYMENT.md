@@ -85,7 +85,7 @@ Copy `deploy\appsettings.Production.example.json` to `C:\inetpub\lims\appsetting
    dotnet .\Lims.Api.dll db create-org LAB "Your Laboratory Name" "لیبارٹری کا نام"
    dotnet .\Lims.Api.dll db create-admin LAB admin "Administrator Name"
    ```
-   The temporary password is printed once on the screen (not in the logs); the administrator must change it at first sign-in. Then set up branches, users, roles, tests, prices and report letterhead through the screens.
+   The temporary password is printed once on the screen (not in the logs); the administrator must change it at first sign-in. `create-org` also adds the starter test catalog (29 common tests; add `--no-starter-catalog` to start empty), and `db migrate` adds it to an existing organisation that never had it. Its reference ranges are drafts: a pathologist checks them on **Catalog → Reference ranges** and approves them ("Approve all" is there). Then set up branches, users, roles, test prices and report letterhead through the screens.
 5. Back up the key folder and `appsettings.Production.json` with the database backups (see `BACKUP_RESTORE.md`).
 
 ## 6. Updating an installation

@@ -3416,6 +3416,142 @@ namespace Lims.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Lims.Domain.Reports.ReportLayout", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("DesignJson")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("UpdatedByUserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasAlternateKey("OrganizationId", "Id");
+
+                    b.HasIndex(new[] { "OrganizationId", "Name" }, "UX_ReportLayouts_Name")
+                        .IsUnique();
+
+                    b.HasIndex(new[] { "OrganizationId" }, "UX_ReportLayouts_OneDefault")
+                        .IsUnique()
+                        .HasFilter("[IsDefault] = 1");
+
+                    b.ToTable("ReportLayouts", "lab", t =>
+                        {
+                            t.HasCheckConstraint("CK_ReportLayouts_Design", "LEN([DesignJson]) >= 2 AND ISJSON([DesignJson]) = 1");
+                        });
+                });
+
+            modelBuilder.Entity("Lims.Domain.Reports.ReportSignatory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Designation")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("NameEn")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("NameUr")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Qualification")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("RegistrationNo")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("SignatureContentType")
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<byte[]>("SignatureImage")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("UpdatedByUserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasAlternateKey("OrganizationId", "Id");
+
+                    b.HasIndex("OrganizationId", "IsActive");
+
+                    b.ToTable("ReportSignatories", "lab", t =>
+                        {
+                            t.HasCheckConstraint("CK_ReportSignatories_Signature", "[SignatureImage] IS NULL OR (DATALENGTH([SignatureImage]) <= 204800 AND [SignatureContentType] IN ('image/png','image/jpeg'))");
+                        });
+                });
+
             modelBuilder.Entity("Lims.Domain.Reports.ReportTemplate", b =>
                 {
                     b.Property<int>("Id")
@@ -3430,6 +3566,22 @@ namespace Lims.Infrastructure.Persistence.Migrations
 
                     b.Property<int?>("CreatedByUserId")
                         .HasColumnType("int");
+
+                    b.Property<byte[]>("FooterImage")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<string>("FooterImageContentType")
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<byte[]>("HeaderImage")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<string>("HeaderImageContentType")
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
 
                     b.Property<string>("LogoContentType")
                         .HasMaxLength(50)
@@ -3462,6 +3614,10 @@ namespace Lims.Infrastructure.Persistence.Migrations
 
                     b.ToTable("ReportTemplates", "lab", t =>
                         {
+                            t.HasCheckConstraint("CK_ReportTemplates_FooterImage", "[FooterImage] IS NULL OR (DATALENGTH([FooterImage]) <= 614400 AND [FooterImageContentType] IN ('image/png','image/jpeg'))");
+
+                            t.HasCheckConstraint("CK_ReportTemplates_HeaderImage", "[HeaderImage] IS NULL OR (DATALENGTH([HeaderImage]) <= 614400 AND [HeaderImageContentType] IN ('image/png','image/jpeg'))");
+
                             t.HasCheckConstraint("CK_ReportTemplates_Logo", "[LogoImage] IS NULL OR (DATALENGTH([LogoImage]) <= 307200 AND [LogoContentType] IN ('image/png','image/jpeg'))");
                         });
                 });
@@ -5719,6 +5875,24 @@ namespace Lims.Infrastructure.Persistence.Migrations
                         .HasForeignKey("OrganizationId", "ReplacesReportId")
                         .HasPrincipalKey("OrganizationId", "Id")
                         .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("Lims.Domain.Reports.ReportLayout", b =>
+                {
+                    b.HasOne("Lims.Domain.Core.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Lims.Domain.Reports.ReportSignatory", b =>
+                {
+                    b.HasOne("Lims.Domain.Core.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Lims.Domain.Reports.ReportTemplate", b =>

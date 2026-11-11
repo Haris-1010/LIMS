@@ -943,3 +943,19 @@
 .cell-sub { display: block; font-size: var(--text-xs); color: var(--muted); }
 .modal-xl { width: min(1060px, 100%); }
 .nowrap { white-space: nowrap; }
+
+/* ---------- Urdu (Nastaliq): controls tall enough that letters are not cut ---------- */
+:root[lang='ur'] .btn { height: 42px; }
+:root[lang='ur'] .btn-sm { height: 36px; }
+:root[lang='ur'] .btn-lg { height: 48px; }
+:root[lang='ur'] .input,
+:root[lang='ur'] .select { height: 44px; line-height: 2; }
+:root[lang='ur'] .select-sm { height: 38px; }
+:root[lang='ur'] .badge { height: auto; min-height: 24px; line-height: 1.9; padding-block: 0; }
+:root[lang='ur'] .segmented button { height: 34px; }
+:root[lang='ur'] .tab { height: 48px; }
+:root[lang='ur'] .menu-item { height: 42px; }
+
+
+/* A dropdown in a toolbar is as wide as its text, not the whole row (selects are 100% wide inside forms). */
+.toolbar > .select { width: auto; max-width: 260px; }

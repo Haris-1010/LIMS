@@ -17,7 +17,7 @@ namespace Lims.Infrastructure.Reports;
 /// <see cref="Visible"/>, and the architecture tests allow `db.LabReports` only on lines marked VISIBILITY-GATE (or an Add).
 /// The released results themselves are read through <see cref="ResultReportSource"/>, which applies the result visibility rule.
 /// </summary>
-public sealed class ReportService(LimsDbContext db, ResultReportSource source, ReportTemplateService templates, INumberSequenceService numbers, ILabClock clock)
+public sealed class ReportService(LimsDbContext db, ResultReportSource source, ReportTemplateService templates, ReportLayoutService layouts, INumberSequenceService numbers, ILabClock clock)
 {
     private int OrgId => db.Request.OrganizationId ?? throw new TenantViolationException("No organisation in the request context.");
     private int UserId => db.Request.UserId ?? throw new BusinessRuleException("forbidden", "Sign in required.", 403);
@@ -252,15 +252,60 @@ public sealed class ReportService(LimsDbContext db, ResultReportSource source, R
             ReportRules.ShortFingerprint(r.SnapshotHash), supersededBy), snap, false);
     }
 
-    /// <summary>Counts a print. The count is atomic, so two people printing at once never lose one; later prints are marked as copies.</summary>
-    public async Task<int> PrintedAsync(long id, CancellationToken ct)
+    /// <summary>
+    /// Counts a print. The count is atomic, so two people printing at once never lose one; later prints are marked as copies.
+    /// The audit line records the design and language used and, for a partial print, which of the report's tests were printed.
+    /// </summary>
+    public async Task<int> PrintedAsync(long id, PrintedRequest? req, CancellationToken ct)
     {
-        var r = await Visible().AsNoTracking().Where(x => x.Id == id).Select(x => new { x.ReportNo, x.Version, x.PrintCount }).SingleOrDefaultAsync(ct) ?? throw BusinessRuleException.NotFound("Report");
+        var r = await Visible().AsNoTracking().Where(x => x.Id == id).Select(x => new { x.ReportNo, x.Version, x.PrintCount, x.SnapshotJson, x.Language }).SingleOrDefaultAsync(ct) ?? throw BusinessRuleException.NotFound("Report");
+        if (req?.LayoutId is int layoutId && !await layouts.ExistsAsync(layoutId, ct)) throw BusinessRuleException.NotFound("Report design");
+        if (req?.Language is { } chosenLanguage && !Enum.IsDefined(chosenLanguage))
+            throw new BusinessRuleException("report_language_invalid", "Choose English, Urdu or both.");
+        long[]? printedTests = null;
+        var totalTests = 0;
+        if (req?.OrderItemIds is { Length: > 0 } chosen)
+        {
+            var inReport = (ReportJson.Deserialize(r.SnapshotJson)?.Sections ?? []).SelectMany(s => s.Tests).Select(t => t.OrderItemId).ToHashSet();
+            totalTests = inReport.Count;
+            if (chosen.Any(x => !inReport.Contains(x)))
+                throw new BusinessRuleException("report_tests_invalid", "Choose tests that are on this report.");
+            printedTests = chosen.Distinct().Order().ToArray();
+            if (printedTests.Length == inReport.Count) printedTests = null;   // every test chosen = a full print
+        }
         var now = clock.UtcNow;
         await Visible().Where(x => x.Id == id).ExecuteUpdateAsync(u => u.SetProperty(x => x.PrintCount, x => x.PrintCount + 1).SetProperty(x => x.LastPrintedAtUtc, now), ct);
-        db.AddBusinessAudit("Report.Print", nameof(LabReport), $"{r.ReportNo}/v{r.Version}", new { copy = ReportRules.IsDuplicate(r.PrintCount) });
+        db.AddBusinessAudit("Report.Print", nameof(LabReport), $"{r.ReportNo}/v{r.Version}", new
+        {
+            copy = ReportRules.IsDuplicate(r.PrintCount),
+            layoutId = req?.LayoutId,
+            language = (req?.Language ?? r.Language).ToString(),
+            issuedIn = r.Language.ToString(),
+            partial = printedTests is not null,
+            tests = printedTests,
+            ofTests = printedTests is null ? (int?)null : totalTests,
+        });
         await db.SaveChangesAsync(ct);
         return await Visible().Where(x => x.Id == id).Select(x => x.PrintCount).SingleAsync(ct);
+    }
+
+    /// <summary>
+    /// Checks the number for a WhatsApp message and records that the report was shared. Nothing is sent from the server (the lab
+    /// network has no internet): the browser opens WhatsApp with the number and message, and staff attach the saved PDF there.
+    /// Only the live version can be shared, so a patient is never sent a superseded report.
+    /// </summary>
+    public async Task<ShareResult> ShareAsync(long id, ShareRequest req, CancellationToken ct)
+    {
+        if (!string.Equals(req.Channel, "whatsapp", StringComparison.OrdinalIgnoreCase))
+            throw new BusinessRuleException("share_channel_invalid", "This way of sharing is not available.");
+        var r = await Visible().AsNoTracking().Where(x => x.Id == id).Select(x => new { x.ReportNo, x.Version, x.Status }).SingleOrDefaultAsync(ct) ?? throw BusinessRuleException.NotFound("Report");
+        if (r.Status == ReportStatus.Superseded)
+            throw BusinessRuleException.Conflict("report_superseded_share", "This version has been replaced. Share the current version.");
+        var phone = PhoneRules.ToWhatsApp(req.Phone) ?? throw new BusinessRuleException("phone_invalid", "Enter a valid mobile number.");
+        // The number is personal data and stays out of the audit log; the channel and the report are enough to trace the action.
+        db.AddBusinessAudit("Report.Share", nameof(LabReport), $"{r.ReportNo}/v{r.Version}", new { channel = "whatsapp" });
+        await db.SaveChangesAsync(ct);
+        return new ShareResult(phone);
     }
 
     public async Task<VerifyResult> VerifyAsync(long id, CancellationToken ct)

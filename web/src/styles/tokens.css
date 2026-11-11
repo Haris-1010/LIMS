@@ -1,28 +1,40 @@
 /*
- * LIMS design tokens — "Clinical Navy".
+ * LIMS design tokens — "Feroza" (deep turquoise green).
  * Every colour, radius, shadow and spacing value in the app comes from here.
  * Components use logical properties (inline-start/end) so the same CSS works for LTR and RTL.
  */
 :root {
   color-scheme: light;
 
-  /* Brand — navy primary */
-  --primary-25: #f5f8fc;
-  --primary-50: #eef4fb;
-  --primary-100: #d9e6f5;
-  --primary-200: #b3cdea;
-  --primary-300: #7fa7d6;
-  --primary-500: #2c64a6;
-  --primary-600: #1d4e89;
-  --primary-700: #163b69;
-  --primary-800: #10294a;
-  --primary-900: #0b1c33;
+  /* Brand — one colour family: deep turquoise / dark green */
+  --primary-25: #f2faf8;
+  --primary-50: #e5f5f1;
+  --primary-100: #c2e8df;
+  --primary-200: #8ed3c4;
+  --primary-300: #4fb8a5;
+  --primary-500: #0f8f7e;
+  --primary-600: #0b7566;
+  --primary-700: #095e53;
+  --primary-800: #074a42;
+  --primary-900: #04332e;
 
-  /* Accent — teal, used sparingly */
-  --accent-50: #e7f7f6;
-  --accent-100: #c4ece9;
-  --accent-500: #0e9f9a;
-  --accent-600: #0b827e;
+  /* Accent — lighter turquoise (feroozi), used sparingly */
+  --accent-50: #e6f8f6;
+  --accent-100: #c0eee8;
+  --accent-300: #5fdccb;
+  --accent-500: #14a99a;
+  --accent-600: #0e8a7e;
+
+  /* Sidebar and header surface: dark green to turquoise */
+  --chrome-bg: linear-gradient(180deg, #06403a 0%, #075247 55%, #0a6b5d 100%);
+  --chrome-bg-header: linear-gradient(90deg, #06403a 0%, #075247 45%, #0b7566 100%);
+  --chrome-text: rgba(255, 255, 255, 0.82);
+  --chrome-text-strong: #ffffff;
+  --chrome-muted: rgba(255, 255, 255, 0.58);
+  --chrome-hover: rgba(255, 255, 255, 0.09);
+  --chrome-active: rgba(255, 255, 255, 0.16);
+  --chrome-line: rgba(255, 255, 255, 0.12);
+  --chrome-indicator: #7ae8d6;
 
   /* Neutrals */
   --bg: #f7f8fa;
@@ -51,8 +63,8 @@
   --info-bg: #eaf2fd;
 
   /* Charts (validated for colour-blind separation on white) */
-  --chart-1: #2c64a6;
-  --chart-2: #0e9f9a;
+  --chart-1: #0b7566;
+  --chart-2: #c47d12;
   --chart-grid: #eef0f3;
   --chart-axis: #98a2b3;
 
@@ -69,7 +81,7 @@
   --shadow-sm: 0 1px 3px rgba(16, 24, 40, 0.07), 0 1px 2px rgba(16, 24, 40, 0.04);
   --shadow-md: 0 6px 16px -4px rgba(16, 24, 40, 0.08), 0 2px 4px -2px rgba(16, 24, 40, 0.04);
   --shadow-lg: 0 20px 40px -12px rgba(16, 24, 40, 0.2);
-  --ring: 0 0 0 3px rgba(44, 100, 166, 0.22);
+  --ring: 0 0 0 3px rgba(11, 117, 102, 0.24);
   --ring-danger: 0 0 0 3px rgba(214, 69, 69, 0.2);
 
   /* Spacing (4px scale) */

@@ -26,6 +26,9 @@ public sealed class ResultService(LimsDbContext db, SampleService samples, ILabC
 {
     public const string SettingAllowSelfVerification = "Results.AllowSelfVerification";
     public const string SettingBlockApproval = "Results.BlockApprovalUntilCriticalNotified";
+    // Defaults when the organisation has not saved the setting; they must match SettingsCatalog.
+    public const bool DefaultAllowSelfVerification = true;
+    public const bool DefaultBlockApproval = false;
 
     private int OrgId => db.Request.OrganizationId ?? throw new TenantViolationException("No organisation in the request context.");
     private int UserId => db.Request.UserId ?? throw new BusinessRuleException("forbidden", "Sign in required.", 403);
@@ -205,7 +208,7 @@ public sealed class ResultService(LimsDbContext db, SampleService samples, ILabC
             ToDto(ReferenceRules.Select(p.Ranges, c.Patient.Sex, ageDays)))).ToList();
 
         var alerts = shown is null ? [] : await AlertsForAsync(shown.Id, c, ps, units, ct);
-        var settingSelf = await SettingAsync(SettingAllowSelfVerification, false, ct);
+        var settingSelf = await SettingAsync(SettingAllowSelfVerification, DefaultAllowSelfVerification, ct);
         return new EntryModel(
             c.Item.Id, c.Order.Id, c.Order.OrderNo, c.Order.Priority, c.Item.Status,
             c.Patient.Id, c.Patient.PatientNo, c.Patient.FullName, c.Patient.FullNameUr, c.Patient.Sex, c.Patient.DateOfBirth, ageDays,
@@ -514,7 +517,7 @@ public sealed class ResultService(LimsDbContext db, SampleService samples, ILabC
 
     private async Task RequireReviewerAsync(TestResult r, CancellationToken ct)
     {
-        var allowSelf = await SettingAsync(SettingAllowSelfVerification, false, ct);
+        var allowSelf = await SettingAsync(SettingAllowSelfVerification, DefaultAllowSelfVerification, ct);
         if (!ResultRules.MayReview(UserId, r.EnteredByUserId, allowSelf))
             throw new BusinessRuleException("result_self_review", "You entered this result, so someone else must verify and approve it.", 403);
     }
@@ -539,7 +542,7 @@ public sealed class ResultService(LimsDbContext db, SampleService samples, ILabC
         var r = await LoadForChangeAsync(id, req.RowVersion, ct);
         if (r.Status != ResultStatus.Verified) throw WrongState(r);
         await RequireReviewerAsync(r, ct);
-        if (await SettingAsync(SettingBlockApproval, true, ct) && await db.CriticalValueAlerts.AnyAsync(a => a.ResultId == r.Id && a.Status == AlertStatus.Open, ct))
+        if (await SettingAsync(SettingBlockApproval, DefaultBlockApproval, ct) && await db.CriticalValueAlerts.AnyAsync(a => a.ResultId == r.Id && a.Status == AlertStatus.Open, ct))
             throw BusinessRuleException.Conflict("critical_alert_open", "A critical value must be reported (and read back) before this result can be approved.");
 
         // An amendment replaces the released version first, so there is never more than one released version per test.

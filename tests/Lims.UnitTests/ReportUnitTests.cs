@@ -185,6 +185,155 @@ public sealed class ReportSnapshotBuilderTests
         Assert.Equal(("Open 24h", "چوبیس گھنٹے", "Disclaimer", "دستبرداری"), (s.Letterhead.HeaderNoteEn, s.Letterhead.HeaderNoteUr, s.Letterhead.DisclaimerEn, s.Letterhead.DisclaimerUr));
         Assert.Equal("مال روڈ 12", s.Letterhead.AddressUr);
     }
+
+    [Fact]
+    public void Numeric_lines_carry_the_value_and_limits_for_the_range_bar_and_other_lines_do_not()
+    {
+        var opt = new ReleasedValue(2, "SCR", "Screen", null, null, 1, ResultType.Option, null, "Positive", null, null, 0, ResultFlag.Abnormal, null, null, null, null, "Negative");
+        var s = Build(Data([Test(1, "HB", "Haematology", 10, Num(1, "HGB", 12.345m, lo: 13, hi: null), opt)]));
+        var p = s.Sections[0].Tests[0].Parameters;
+        Assert.Equal((12.345m, 13m, (decimal?)null), (p[0].Value, p[0].Low, p[0].High));
+        Assert.Equal(((decimal?)null, (decimal?)null, (decimal?)null), (p[1].Value, p[1].Low, p[1].High));
+        Assert.Equal(3, s.SchemaVersion);
+    }
+
+    [Fact]
+    public void Template_signatories_are_copied_into_the_report_and_older_reports_read_without_them()
+    {
+        var d = Data([Test(1, "HB", "Haematology", 10, Num(1, "HGB", 14))]);
+        var t = new ReportTemplateText(null, null, null, null, null, null,
+            [new SnapFixedSignatory(7, "Dr. Consultant", "ڈاکٹر کنسلٹنٹ", "MBBS, FCPS", "Consultant Pathologist", "PMDC 1-P", true)]);
+        var s = ReportSnapshotBuilder.Build(d, t, ReportLanguage.English, "REP-2611-0002", 1, ReportStatus.Final, At, "Dr Pathologist", null, null, null);
+        var fixedOne = Assert.Single(s.FixedSignatories!);
+        Assert.Equal(("Dr. Consultant", "MBBS, FCPS", true), (fixedOne.NameEn, fixedOne.Qualification, fixedOne.HasSignature));
+        // They never join the people who verified or approved results.
+        Assert.DoesNotContain(s.Signatories, x => x.NameEn == "Dr. Consultant");
+        Assert.Equal("Dr. Consultant", ReportJson.Deserialize(ReportJson.Serialize(s))!.FixedSignatories![0].NameEn);
+
+        // A report issued before schema 3 has no such field; it still reads (its stored JSON, so its fingerprint, is untouched).
+        var json = ReportJson.Serialize(Build(d));
+        var old = Regex.Replace(json, ",\"fixedSignatories\":\\[[^\\]]*\\]", "");
+        Assert.DoesNotContain("fixedSignatories", old);
+        Assert.Null(ReportJson.Deserialize(old)!.FixedSignatories);
+    }
+
+    [Fact]
+    public void A_report_issued_before_schema_2_still_reads_and_has_no_bar_values()
+    {
+        var json = ReportJson.Serialize(Build(Data([Test(1, "HB", "Haematology", 10, Num(1, "HGB", 14))])));
+        // Remove the schema-2 fields, as in a report issued before them.
+        var old = Regex.Replace(json, ",\"(value|low|high)\":[^,}]+", "");
+        Assert.DoesNotContain("\"low\"", old);
+        var p = ReportJson.Deserialize(old)!.Sections[0].Tests[0].Parameters[0];
+        Assert.Equal("14.0", p.Display);
+        Assert.Null(p.Value);
+        Assert.Null(p.Low);
+    }
+}
+
+public sealed class ReportDesignRulesTests
+{
+    [Fact]
+    public void The_built_in_design_is_valid_and_survives_a_round_trip()
+    {
+        var d = new ReportDesign();
+        Assert.Null(ReportDesignRules.Problem(d));
+        var back = ReportDesignRules.Read(ReportDesignRules.Serialize(d));
+        Assert.Equal(d.Blocks, back.Blocks);
+        Assert.Equal(d with { Blocks = back.Blocks }, back);
+    }
+
+    [Fact]
+    public void Designs_saved_before_header_and_footer_images_existed_read_with_both_off()
+    {
+        var old = """{"style":"modern","accentColor":"#0f766e","fontSizePt":9.5,"marginTopMm":12,"marginBottomMm":14,"marginSideMm":12,"showLetterhead":true,"logoPosition":"start","showRangeBars":true,"showFlagWords":true,"colourFlags":false,"tableStyle":"zebra","blocks":["patient","results","pending","signatures","disclaimer"]}""";
+        var d = ReportDesignRules.Read(old);
+        Assert.Equal("modern", d.Style);
+        Assert.False(d.UseHeaderImage);
+        Assert.False(d.ShowFooterImage);
+        var withImages = ReportDesignRules.Read(ReportDesignRules.Serialize(d with { UseHeaderImage = true, ShowFooterImage = true }));
+        Assert.True(withImages.UseHeaderImage);
+        Assert.True(withImages.ShowFooterImage);
+    }
+
+    [Theory]
+    [InlineData("style")]
+    [InlineData("accentColor")]
+    [InlineData("fontSizePt")]
+    [InlineData("marginTopMm")]
+    [InlineData("marginBottomMm")]
+    [InlineData("marginSideMm")]
+    [InlineData("logoPosition")]
+    [InlineData("tableStyle")]
+    public void Each_setting_outside_its_allowed_values_is_named(string setting)
+    {
+        var d = new ReportDesign();
+        var bad = setting switch
+        {
+            "style" => d with { Style = "neon" },
+            "accentColor" => d with { AccentColor = "red" },
+            "fontSizePt" => d with { FontSizePt = 20 },
+            "marginTopMm" => d with { MarginTopMm = 2 },
+            "marginBottomMm" => d with { MarginBottomMm = 90 },
+            "marginSideMm" => d with { MarginSideMm = 40 },
+            "logoPosition" => d with { LogoPosition = "top" },
+            _ => d with { TableStyle = "fancy" },
+        };
+        Assert.Equal(setting, ReportDesignRules.Problem(bad));
+    }
+
+    [Theory]
+    [InlineData("patient,results,pending,signatures")]                 // a block left out
+    [InlineData("patient,results,pending,signatures,disclaimer,qr")]   // an unknown block
+    [InlineData("patient,results,results,signatures,disclaimer")]      // a block twice
+    public void The_body_must_keep_every_block_exactly_once(string blocks)
+    {
+        Assert.Equal("blocks", ReportDesignRules.Problem(new ReportDesign { Blocks = blocks.Split(',') }));
+    }
+
+    [Fact]
+    public void A_reordered_body_is_allowed()
+    {
+        Assert.Null(ReportDesignRules.Problem(new ReportDesign { Blocks = ["results", "signatures", "patient", "disclaimer", "pending"] }));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("not json")]
+    [InlineData("{\"style\":\"neon\"}")]
+    public void An_unreadable_or_invalid_stored_design_falls_back_to_classic(string json)
+    {
+        Assert.Equal("classic", ReportDesignRules.Read(json).Style);
+    }
+}
+
+public sealed class PhoneRulesTests
+{
+    [Theory]
+    [InlineData("03001234567", "923001234567")]
+    [InlineData("0300-1234567", "923001234567")]
+    [InlineData("0300 123 4567", "923001234567")]
+    [InlineData("3001234567", "923001234567")]
+    [InlineData("+92 300 1234567", "923001234567")]
+    [InlineData("0092 300 1234567", "923001234567")]
+    [InlineData("923001234567", "923001234567")]
+    [InlineData("+44 7700 900123", "447700900123")]
+    public void Numbers_become_international_digits(string input, string expected)
+    {
+        Assert.Equal(expected, PhoneRules.ToWhatsApp(input));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("12345")]
+    [InlineData("0300-12ab567")]
+    [InlineData("+0300 1234567")]
+    [InlineData("1234567890123456")]
+    public void Unusable_numbers_are_refused(string? input)
+    {
+        Assert.Null(PhoneRules.ToWhatsApp(input));
+    }
 }
 
 public sealed class ReportArchitectureTests

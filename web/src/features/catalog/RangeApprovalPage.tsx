@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
-import { AlertCircle, ArrowRight, CheckCircle2, ShieldAlert, ShieldCheck } from 'lucide-react'
+import { AlertCircle, ArrowRight, CheckCheck, CheckCircle2, ShieldAlert, ShieldCheck } from 'lucide-react'
 import { api } from '../../lib/api'
 import { errorMessage } from '../../lib/errors'
 import { formatDateTime } from '../../lib/format'
@@ -12,7 +12,7 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { DataTable, type Column } from '../../components/ui/DataTable'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { useToast } from '../../components/ui/Toast'
-import { catalogKeys, formatAgeBand, formatLimits, type PendingRange } from './catalogApi'
+import { catalogKeys, formatAgeBand, formatLimits, type BulkApproveFailure, type BulkApproveResult, type PendingRange } from './catalogApi'
 import './catalog.css'
 
 /** The pathologist's queue: every draft range in the organisation, oldest first. */
@@ -25,6 +25,8 @@ export function RangeApprovalPage() {
   const [approving, setApproving] = useState<PendingRange | null>(null)
   const [busy, setBusy] = useState(false)
   const [failure, setFailure] = useState<string | null>(null)
+  const [confirmAll, setConfirmAll] = useState(false)
+  const [bulkFailures, setBulkFailures] = useState<{ name: string; message: string }[]>([])
 
   const { data, isLoading } = useQuery({ queryKey: catalogKeys.pending, queryFn: () => api<PendingRange[]>('/api/catalog/ranges/pending') })
 
@@ -41,6 +43,44 @@ export function RangeApprovalPage() {
     } finally {
       setBusy(false)
       setApproving(null)
+    }
+  }
+
+  // Only drafts with a source can be approved; the rest stay in the queue.
+  const approvable = (data ?? []).filter((p) => !!p.range.source)
+
+  const approveAll = async () => {
+    const rows = approvable
+    setBusy(true)
+    setFailure(null)
+    setBulkFailures([])
+    try {
+      let approved = 0
+      const failed: BulkApproveFailure[] = []
+      // The API takes at most 500 ids per call.
+      for (let i = 0; i < rows.length; i += 500) {
+        const res = await api<BulkApproveResult>('/api/catalog/ranges/approve-many', {
+          method: 'POST',
+          body: { ids: rows.slice(i, i + 500).map((p) => p.range.id) },
+        })
+        approved += res.approved
+        failed.push(...res.failed)
+      }
+      if (approved > 0) toast.show({ tone: 'success', title: t('catalog.approvedMany', { count: approved }) })
+      const byId = new Map(rows.map((p) => [p.range.id, p]))
+      setBulkFailures(failed.map((f) => {
+        const p = byId.get(f.id)
+        return {
+          name: p ? `${p.testCode} · ${p.parameterName} (${t(`rangeSex.${p.range.sex}`)})` : `#${f.id}`,
+          message: t(`errors.${f.code}`, { defaultValue: f.code }),
+        }
+      }))
+      await qc.invalidateQueries({ queryKey: ['catalog'] })
+    } catch (e) {
+      setFailure(errorMessage(t, e))
+    } finally {
+      setBusy(false)
+      setConfirmAll(false)
     }
   }
 
@@ -101,11 +141,27 @@ export function RangeApprovalPage() {
           <h2>{t('catalog.queueTitle')}</h2>
           <p>{t('catalog.queueSubtitle')}</p>
         </div>
+        {canApprove && approvable.length > 0 && (
+          <Button variant="primary" icon={<CheckCheck size={16} />} onClick={() => setConfirmAll(true)}>
+            {t('catalog.approveAll', { count: approvable.length })}
+          </Button>
+        )}
       </div>
       {failure && (
         <div className="banner tone-danger" role="alert" style={{ marginBottom: 16 }}>
           <AlertCircle size={16} aria-hidden style={{ flexShrink: 0 }} />
           <span>{failure}</span>
+        </div>
+      )}
+      {bulkFailures.length > 0 && (
+        <div className="banner tone-warning" role="alert" style={{ marginBottom: 16, alignItems: 'flex-start' }}>
+          <AlertCircle size={16} aria-hidden style={{ flexShrink: 0 }} />
+          <div>
+            <strong>{t('catalog.approveManyFailed', { count: bulkFailures.length })}</strong>
+            <ul style={{ margin: '4px 0 0', paddingInlineStart: 18 }}>
+              {bulkFailures.map((f, i) => <li key={i}><span dir="auto">{f.name}</span>: {f.message}</li>)}
+            </ul>
+          </div>
         </div>
       )}
       <section className="card">
@@ -126,6 +182,16 @@ export function RangeApprovalPage() {
         loading={busy}
         onCancel={() => setApproving(null)}
         onConfirm={() => void approve()}
+      />
+      <ConfirmDialog
+        open={confirmAll}
+        icon={<CheckCheck size={20} />}
+        title={t('catalog.approveAllTitle', { count: approvable.length })}
+        text={t('catalog.approveAllText', { count: approvable.length })}
+        confirmLabel={t('catalog.approveAll', { count: approvable.length })}
+        loading={busy}
+        onCancel={() => setConfirmAll(false)}
+        onConfirm={() => void approveAll()}
       />
     </div>
   )

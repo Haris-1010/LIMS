@@ -7,7 +7,8 @@ namespace Lims.Api.Cli;
 
 /// <summary>
 /// Administrative commands run on the server, not over HTTP:
-///   dotnet Lims.Api.dll db migrate      take a full backup (when there is something to migrate), then apply pending migrations
+///   dotnet Lims.Api.dll db migrate      take a full backup (when there is something to migrate), apply pending migrations,
+///                                       then add the starter test catalog to any organisation that has not had it (--no-starter-catalog skips)
 ///   dotnet Lims.Api.dll db backup [--folder X] [--log]   take a full (or log) backup now, as the automatic backups do
 ///   dotnet Lims.Api.dll db seed-demo    create a demo organisation (development/training only)
 /// </summary>
@@ -70,6 +71,22 @@ public static class DatabaseCommands
         return 0;
     }
 
+    /// <summary>
+    /// Adds the starter test catalog (common tests, parameters, draft reference ranges) to one organisation, once.
+    /// Skipped with --no-starter-catalog. See <see cref="Lims.Infrastructure.Catalog.StarterCatalog"/>.
+    /// </summary>
+    private static async Task AddStarterCatalogAsync(WebApplication app, int orgId, string orgCode, ILogger log)
+    {
+        using var scope = app.Services.CreateScope();
+        var ctx = scope.ServiceProvider.GetRequiredService<RequestContext>();
+        ctx.BecomeSystem();
+        ctx.OrganizationId = orgId;
+        var result = await scope.ServiceProvider.GetRequiredService<Lims.Infrastructure.Catalog.StarterCatalogSeeder>().SeedAsync(orgId);
+        if (!result.AlreadyAdded)
+            log.LogInformation("Organisation {Code}: starter catalog added ({Tests} tests, {Parameters} parameters, {Ranges} reference ranges waiting for approval; {Skipped} skipped because the code is already used). Set prices and approve the ranges in the catalog screens",
+                orgCode, result.Tests, result.Parameters, result.Ranges, result.SkippedTests);
+    }
+
     /// <summary>Takes a backup with the same engine and settings as the automatic backups. Waits if one is already running.</summary>
     private static async Task<int> BackupAsync(WebApplication app, string[] args, ILogger log)
     {
@@ -117,6 +134,9 @@ public static class DatabaseCommands
                 log.LogInformation("Applying {Count} migration(s): {Names}", pending.Count, string.Join(", ", pending));
                 await db.Database.MigrateAsync();
                 log.LogInformation("Database is up to date");
+                if (!args.Contains("--no-starter-catalog"))
+                    foreach (var o in await db.Organizations.Select(o => new { o.Id, o.Code }).ToListAsync())
+                        await AddStarterCatalogAsync(app, o.Id, o.Code, log);
                 return 0;
 
             case "seed-demo":
@@ -156,8 +176,10 @@ public static class DatabaseCommands
                     return 1;
                 }
                 var newOrgId = await scope.ServiceProvider.GetRequiredService<IOrganizationProvisioner>().ProvisionAsync(new OrganizationSetup(
-                    newCode, args[3], args.Length > 4 ? args[4] : null, "MAIN", "Main Laboratory", "مرکزی لیبارٹری"));
+                    newCode, args[3], args.Length > 4 && !args[4].StartsWith("--") ? args[4] : null, "MAIN", "Main Laboratory", "مرکزی لیبارٹری"));
                 log.LogInformation("Organisation {Code} created with id {OrgId}. Next: db create-admin {Code} <username>", newCode, newOrgId, newCode);
+                if (!args.Contains("--no-starter-catalog"))
+                    await AddStarterCatalogAsync(app, newOrgId, newCode, log);
                 return 0;
 
             case "backup":
@@ -184,7 +206,7 @@ public static class DatabaseCommands
                 return 0;
 
             default:
-                log.LogError("Unknown command 'db {Command}'. Use: db migrate [--no-backup] | db backup [--folder X] [--log] | db seed-demo | db create-org <CODE> <name> [urdu name] | db create-admin <ORG> <username> [display name]", args[1]);
+                log.LogError("Unknown command 'db {Command}'. Use: db migrate [--no-backup] [--no-starter-catalog] | db backup [--folder X] [--log] | db seed-demo | db create-org <CODE> <name> [urdu name] [--no-starter-catalog] | db create-admin <ORG> <username> [display name]", args[1]);
                 return 1;
         }
     }
