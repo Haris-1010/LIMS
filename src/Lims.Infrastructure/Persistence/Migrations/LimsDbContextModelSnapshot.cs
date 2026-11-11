@@ -84,6 +84,9 @@ namespace Lims.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("OrganizationId", "AtUtc");
 
+                    b.HasIndex(new[] { "OrganizationId", "EntityType", "Action", "AtUtc" }, "IX_AuditLogs_Org_EntityType_Action_AtUtc")
+                        .IsDescending(false, false, false, true);
+
                     b.ToTable("AuditLogs", "audit");
                 });
 
@@ -614,6 +617,14 @@ namespace Lims.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("OrganizationId", "Status");
 
+                    b.HasIndex(new[] { "InvoiceNo" }, "IX_Invoices_InvoiceNo");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex(new[] { "InvoiceNo" }, "IX_Invoices_InvoiceNo"), new[] { "OrganizationId", "BranchId", "OrderId" });
+
+                    b.HasIndex(new[] { "OrderId" }, "IX_Invoices_OrderId");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex(new[] { "OrderId" }, "IX_Invoices_OrderId"), new[] { "OrganizationId", "BranchId" });
+
                     b.ToTable("Invoices", "billing", t =>
                         {
                             t.HasCheckConstraint("CK_Invoices_Amounts", "[Gross] >= 0 AND [DiscountAmount] >= 0 AND [DiscountAmount] <= [Gross] AND [Net] = [Gross] - [DiscountAmount] AND [Paid] >= 0 AND [Refunded] >= 0");
@@ -799,6 +810,11 @@ namespace Lims.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.HasIndex("OrganizationId", "BranchId", "ReceivedAtUtc");
+
+                    b.HasIndex(new[] { "ReceivedAtUtc" }, "IX_Payments_ReceivedAtUtc")
+                        .IsDescending();
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex(new[] { "ReceivedAtUtc" }, "IX_Payments_ReceivedAtUtc"), new[] { "OrganizationId", "BranchId", "Method", "Amount", "InvoiceId" });
 
                     b.ToTable("Payments", "billing", t =>
                         {
@@ -2896,6 +2912,18 @@ namespace Lims.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("OrganizationId", "BranchId", "CreatedAtUtc");
 
+                    b.HasIndex(new[] { "CreatedAtUtc" }, "IX_Orders_CreatedAtUtc");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex(new[] { "CreatedAtUtc" }, "IX_Orders_CreatedAtUtc"), new[] { "OrganizationId", "BranchId", "Status" });
+
+                    b.HasIndex(new[] { "OrderNo" }, "IX_Orders_OrderNo");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex(new[] { "OrderNo" }, "IX_Orders_OrderNo"), new[] { "OrganizationId", "BranchId" });
+
+                    b.HasIndex(new[] { "PatientId" }, "IX_Orders_PatientId");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex(new[] { "PatientId" }, "IX_Orders_PatientId"), new[] { "OrganizationId", "BranchId" });
+
                     b.ToTable("Orders", "lab", t =>
                         {
                             t.HasCheckConstraint("CK_Orders_Priority", "[Priority] IN (0,1)");
@@ -3211,6 +3239,25 @@ namespace Lims.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("OrganizationId", "RegisteredBranchId");
 
+                    b.HasIndex(new[] { "Cnic" }, "IX_Patients_Cnic")
+                        .HasFilter("[Cnic] IS NOT NULL");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex(new[] { "Cnic" }, "IX_Patients_Cnic"), new[] { "OrganizationId", "IsDeleted" });
+
+                    b.HasIndex(new[] { "CreatedAtUtc" }, "IX_Patients_CreatedAtUtc")
+                        .IsDescending();
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex(new[] { "CreatedAtUtc" }, "IX_Patients_CreatedAtUtc"), new[] { "OrganizationId", "IsDeleted" });
+
+                    b.HasIndex(new[] { "Mobile" }, "IX_Patients_Mobile")
+                        .HasFilter("[Mobile] IS NOT NULL");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex(new[] { "Mobile" }, "IX_Patients_Mobile"), new[] { "OrganizationId", "IsDeleted" });
+
+                    b.HasIndex(new[] { "PatientNo" }, "IX_Patients_PatientNo");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex(new[] { "PatientNo" }, "IX_Patients_PatientNo"), new[] { "OrganizationId", "IsDeleted" });
+
                     b.ToTable("Patients", "patient", t =>
                         {
                             t.HasCheckConstraint("CK_Patients_Sex", "[Sex] IN (0,1,2,3)");
@@ -3335,6 +3382,19 @@ namespace Lims.Infrastructure.Persistence.Migrations
                     b.HasIndex("OrganizationId", "ReportNo");
 
                     b.HasIndex("OrganizationId", "Status", "LabBranchId");
+
+                    b.HasIndex(new[] { "IssuedAtUtc", "Id" }, "IX_LabReports_IssuedAtUtc_Id")
+                        .IsDescending();
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex(new[] { "IssuedAtUtc", "Id" }, "IX_LabReports_IssuedAtUtc_Id"), new[] { "OrganizationId", "Status" });
+
+                    b.HasIndex(new[] { "PatientId" }, "IX_LabReports_PatientId");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex(new[] { "PatientId" }, "IX_LabReports_PatientId"), new[] { "OrganizationId", "Status" });
+
+                    b.HasIndex(new[] { "ReportNo" }, "IX_LabReports_ReportNo");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex(new[] { "ReportNo" }, "IX_LabReports_ReportNo"), new[] { "OrganizationId", "Status" });
 
                     b.HasIndex(new[] { "OrderId" }, "UX_LabReports_OneLivePerOrder")
                         .IsUnique()
@@ -3703,6 +3763,19 @@ namespace Lims.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("OrganizationId", "Status", "LabBranchId");
 
+                    b.HasIndex(new[] { "OrderId", "Status" }, "IX_TestResults_OrderId_Status");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex(new[] { "OrderId", "Status" }, "IX_TestResults_OrderId_Status"), new[] { "OrganizationId" });
+
+                    b.HasIndex(new[] { "Status", "ApprovedAtUtc", "Id" }, "IX_TestResults_Status_ApprovedAtUtc_Id")
+                        .IsDescending(false, true, true);
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex(new[] { "Status", "ApprovedAtUtc", "Id" }, "IX_TestResults_Status_ApprovedAtUtc_Id"), new[] { "OrganizationId", "OrderId" });
+
+                    b.HasIndex(new[] { "Status", "VerifiedAtUtc" }, "IX_TestResults_Status_VerifiedAtUtc");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex(new[] { "Status", "VerifiedAtUtc" }, "IX_TestResults_Status_VerifiedAtUtc"), new[] { "OrganizationId" });
+
                     b.HasIndex(new[] { "OrderItemId" }, "UX_TestResults_OneInProgress")
                         .IsUnique()
                         .HasFilter("[Status] < 30");
@@ -4056,6 +4129,24 @@ namespace Lims.Infrastructure.Persistence.Migrations
                     b.HasIndex("OrganizationId", "ReplacesSampleId");
 
                     b.HasIndex("OrganizationId", "Status", "CurrentBranchId");
+
+                    b.HasIndex(new[] { "Barcode" }, "IX_Samples_Barcode");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex(new[] { "Barcode" }, "IX_Samples_Barcode"), new[] { "OrganizationId", "OriginBranchId", "CurrentBranchId", "DestinationBranchId" });
+
+                    b.HasIndex(new[] { "PatientId" }, "IX_Samples_PatientId");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex(new[] { "PatientId" }, "IX_Samples_PatientId"), new[] { "OrganizationId", "OriginBranchId", "CurrentBranchId", "DestinationBranchId" });
+
+                    b.HasIndex(new[] { "ReplacesSampleId" }, "IX_Samples_ReplacesSampleId")
+                        .HasFilter("[ReplacesSampleId] IS NOT NULL");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex(new[] { "ReplacesSampleId" }, "IX_Samples_ReplacesSampleId"), new[] { "OrganizationId", "OriginBranchId", "CurrentBranchId", "DestinationBranchId" });
+
+                    b.HasIndex(new[] { "Status", "ReceivedAtUtc" }, "IX_Samples_Status_ReceivedAtUtc")
+                        .IsDescending(false, true);
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex(new[] { "Status", "ReceivedAtUtc" }, "IX_Samples_Status_ReceivedAtUtc"), new[] { "OrganizationId", "OriginBranchId", "CurrentBranchId", "DestinationBranchId" });
 
                     b.ToTable("Samples", "lab", t =>
                         {

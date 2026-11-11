@@ -86,6 +86,13 @@ public static class DatabaseCommands
                 return 0;
 
             case "seed-demo":
+                // Demo data must never be created on a production database by mistake.
+                if (!app.Environment.IsDevelopment() && !args.Contains("--allow-demo"))
+                {
+                    log.LogError("seed-demo creates demo data and is for development/training only. " +
+                        "Run with ASPNETCORE_ENVIRONMENT=Development, or add --allow-demo if this is a training database");
+                    return 1;
+                }
                 if (await db.Organizations.AnyAsync())
                 {
                     log.LogWarning("Organisations already exist; demo data not created");
@@ -100,6 +107,28 @@ public static class DatabaseCommands
                 await db.SaveChangesAsync();
                 log.LogInformation("Demo organisation created with id {OrgId}", orgId);
                 return 0;
+
+            case "create-org":
+                // Real (non-demo) organisation for a production installation: db create-org <CODE> "<English name>" ["<Urdu name>"]
+                if (args.Length < 4 || !System.Text.RegularExpressions.Regex.IsMatch(args[2], "^[A-Za-z0-9]{2,10}$"))
+                {
+                    log.LogError("Usage: db create-org <CODE (2-10 letters or digits)> \"<English name>\" [\"<Urdu name>\"]");
+                    return 1;
+                }
+                var newCode = args[2].ToUpperInvariant();
+                if (await db.Organizations.AnyAsync(o => o.Code == newCode))
+                {
+                    log.LogError("Organisation {Code} already exists", newCode);
+                    return 1;
+                }
+                var newOrgId = await scope.ServiceProvider.GetRequiredService<IOrganizationProvisioner>().ProvisionAsync(new OrganizationSetup(
+                    newCode, args[3], args.Length > 4 ? args[4] : null, "MAIN", "Main Laboratory", "مرکزی لیبارٹری"));
+                log.LogInformation("Organisation {Code} created with id {OrgId}. Next: db create-admin {Code} <username>", newCode, newOrgId, newCode);
+                return 0;
+
+            case "seed-load":
+                // Load-test data (Phase 13). Only on a database named LIMS_Load*; see LoadDataSeeder.
+                return await LoadDataSeeder.RunAsync(app, db, args, log);
 
             case "create-admin":
                 return await CreateAdminAsync(app, db, args, log);
@@ -118,7 +147,7 @@ public static class DatabaseCommands
                 return 0;
 
             default:
-                log.LogError("Unknown command 'db {Command}'. Use: db migrate | db seed-demo | db create-admin <ORG> <username> [display name]", args[1]);
+                log.LogError("Unknown command 'db {Command}'. Use: db migrate | db seed-demo | db create-org <CODE> <name> [urdu name] | db create-admin <ORG> <username> [display name]", args[1]);
                 return 1;
         }
     }

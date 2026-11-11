@@ -19,7 +19,7 @@ public sealed class ApiFactory(DatabaseFixture fx) : WebApplicationFactory<Progr
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
-        builder.UseSetting("ConnectionStrings:Lims", fx.ConnectionString);
+        builder.UseSetting("ConnectionStrings:Lims", fx.AppConnectionString);
         builder.UseSetting("DataProtection:KeysPath", Path.Combine(Path.GetTempPath(), "lims-test-keys"));
         // Re-check sessions against the database on every request so deactivation/password tests are immediate.
         builder.UseSetting("Auth:RevalidateSeconds", "0");

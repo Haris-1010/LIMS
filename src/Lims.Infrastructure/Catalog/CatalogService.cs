@@ -255,12 +255,35 @@ public sealed class CatalogService(LimsDbContext db)
             throw new BusinessRuleException("options_duplicate", "Each value can appear only once.");
 
         var before = p.Options.OrderBy(o => o.SortOrder).Select(o => $"{o.ValueEn}{(o.IsAbnormal ? "*" : "")}").ToList();
-        db.ParameterOptions.RemoveRange(p.Options);
-        p.Options.Clear();
+
+        // Sync by value so options that stay keep their IDs: recorded results reference ParameterOptions by Id,
+        // and deleting a referenced row is rejected by the FK (previously an unhandled 500).
+        var incoming = options.Select(o => (Value: o.ValueEn.Trim(), o.ValueUr, o.IsAbnormal)).ToList();
+        var keys = incoming.Select(x => x.Value.ToUpperInvariant()).ToHashSet();
+        var removed = p.Options.Where(o => !keys.Contains(o.ValueEn.Trim().ToUpperInvariant())).ToList();
+        if (removed.Count > 0)
+        {
+            var removedIds = removed.Select(o => o.Id).ToArray();
+            if (await db.TestResultValues.AnyAsync(v => v.OptionId != null && removedIds.Contains(v.OptionId.Value), ct))
+                throw BusinessRuleException.Conflict("option_in_use",
+                    "One or more options are used by recorded results, so they can't be removed. Amend or discard those results first.");
+            db.ParameterOptions.RemoveRange(removed);
+        }
         var order = 0;
-        foreach (var o in options)
-            p.Options.Add(new ParameterOption { OrganizationId = p.OrganizationId, ValueEn = o.ValueEn.Trim(), ValueUr = Blank(o.ValueUr), IsAbnormal = o.IsAbnormal, SortOrder = ++order });
-        var after = options.Select(o => $"{o.ValueEn.Trim()}{(o.IsAbnormal ? "*" : "")}").ToList();
+        foreach (var (value, valueUr, isAbnormal) in incoming)
+        {
+            var option = p.Options.FirstOrDefault(o => o.ValueEn.Trim().ToUpperInvariant() == value.ToUpperInvariant());
+            if (option is null)
+                p.Options.Add(new ParameterOption { OrganizationId = p.OrganizationId, ValueEn = value, ValueUr = Blank(valueUr), IsAbnormal = isAbnormal, SortOrder = ++order });
+            else
+            {
+                option.ValueEn = value;
+                option.ValueUr = Blank(valueUr);
+                option.IsAbnormal = isAbnormal;
+                option.SortOrder = ++order;
+            }
+        }
+        var after = incoming.Select(x => $"{x.Value}{(x.IsAbnormal ? "*" : "")}").ToList();
         if (p.Id != 0 && !before.SequenceEqual(after))
             db.AddBusinessAudit("Parameter.OptionsChanged", nameof(TestParameter), p.Id, new { old = before, @new = after });
     }

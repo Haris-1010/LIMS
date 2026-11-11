@@ -49,3 +49,13 @@ public sealed class SettingsController(SettingsService settings) : ControllerBas
     [HasPermission(Permissions.SettingsManage)]
     public async Task<IActionResult> Update(string key, SettingUpdate input, CancellationToken ct) => Ok(await settings.UpdateAsync(key, input, ct));
 }
+
+/// <summary>Read-only backup status (Phase 13). Backups are made by the scheduled scripts; this page only shows how they are doing.</summary>
+[ApiController]
+[Route("api/backup")]
+public sealed class BackupController(Lims.Infrastructure.Backup.BackupStatusService backups) : ControllerBase
+{
+    [HttpGet("status")]
+    [HasPermission(Permissions.BackupManage)]
+    public async Task<IActionResult> Status(CancellationToken ct) => Ok(await backups.GetAsync(ct));
+}

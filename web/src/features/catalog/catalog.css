@@ -22,16 +22,7 @@
 .test-hero-main { flex: 1; min-width: 0; }
 .test-hero-top { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2) var(--space-3); }
 .test-hero-top h2 { font-size: var(--text-xl); }
-.test-facts {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, auto));
-  justify-content: start;
-  gap: var(--space-2) var(--space-8);
-  margin: var(--space-4) 0 0;
-}
-.test-facts dt { font-size: var(--text-xs); color: var(--muted); font-weight: 550; }
-.test-facts dd { margin: 2px 0 0; font-size: var(--text-sm); font-weight: 600; color: var(--text); }
-@media (max-width: 1100px) { .test-facts { grid-template-columns: repeat(3, minmax(0, auto)); } }
+/* .test-facts lives in styles/components.css (global) so every feature page gets it. */
 
 .row-actions { display: inline-flex; align-items: center; justify-content: flex-end; gap: 4px; }
 

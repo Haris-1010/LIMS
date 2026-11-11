@@ -3697,6 +3697,183 @@ BEGIN
     VALUES (N'20261110081027_AddInventory', N'9.0.10');
 END;
 
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110154051_AddPerformanceIndexes'
+)
+BEGIN
+    CREATE INDEX [IX_TestResults_OrderId_Status] ON [lab].[TestResults] ([OrderId], [Status]) INCLUDE ([OrganizationId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110154051_AddPerformanceIndexes'
+)
+BEGIN
+    CREATE INDEX [IX_TestResults_Status_ApprovedAtUtc_Id] ON [lab].[TestResults] ([Status], [ApprovedAtUtc] DESC, [Id] DESC) INCLUDE ([OrganizationId], [OrderId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110154051_AddPerformanceIndexes'
+)
+BEGIN
+    CREATE INDEX [IX_TestResults_Status_VerifiedAtUtc] ON [lab].[TestResults] ([Status], [VerifiedAtUtc]) INCLUDE ([OrganizationId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110154051_AddPerformanceIndexes'
+)
+BEGIN
+    CREATE INDEX [IX_Samples_Barcode] ON [lab].[Samples] ([Barcode]) INCLUDE ([OrganizationId], [OriginBranchId], [CurrentBranchId], [DestinationBranchId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110154051_AddPerformanceIndexes'
+)
+BEGIN
+    CREATE INDEX [IX_Samples_PatientId] ON [lab].[Samples] ([PatientId]) INCLUDE ([OrganizationId], [OriginBranchId], [CurrentBranchId], [DestinationBranchId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110154051_AddPerformanceIndexes'
+)
+BEGIN
+    EXEC(N'CREATE INDEX [IX_Samples_ReplacesSampleId] ON [lab].[Samples] ([ReplacesSampleId]) INCLUDE ([OrganizationId], [OriginBranchId], [CurrentBranchId], [DestinationBranchId]) WHERE [ReplacesSampleId] IS NOT NULL');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110154051_AddPerformanceIndexes'
+)
+BEGIN
+    CREATE INDEX [IX_Samples_Status_ReceivedAtUtc] ON [lab].[Samples] ([Status], [ReceivedAtUtc] DESC) INCLUDE ([OrganizationId], [OriginBranchId], [CurrentBranchId], [DestinationBranchId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110154051_AddPerformanceIndexes'
+)
+BEGIN
+    CREATE INDEX [IX_Payments_ReceivedAtUtc] ON [billing].[Payments] ([ReceivedAtUtc] DESC) INCLUDE ([OrganizationId], [BranchId], [Method], [Amount], [InvoiceId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110154051_AddPerformanceIndexes'
+)
+BEGIN
+    EXEC(N'CREATE INDEX [IX_Patients_Cnic] ON [patient].[Patients] ([Cnic]) INCLUDE ([OrganizationId], [IsDeleted]) WHERE [Cnic] IS NOT NULL');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110154051_AddPerformanceIndexes'
+)
+BEGIN
+    CREATE INDEX [IX_Patients_CreatedAtUtc] ON [patient].[Patients] ([CreatedAtUtc] DESC) INCLUDE ([OrganizationId], [IsDeleted]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110154051_AddPerformanceIndexes'
+)
+BEGIN
+    EXEC(N'CREATE INDEX [IX_Patients_Mobile] ON [patient].[Patients] ([Mobile]) INCLUDE ([OrganizationId], [IsDeleted]) WHERE [Mobile] IS NOT NULL');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110154051_AddPerformanceIndexes'
+)
+BEGIN
+    CREATE INDEX [IX_Patients_PatientNo] ON [patient].[Patients] ([PatientNo]) INCLUDE ([OrganizationId], [IsDeleted]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110154051_AddPerformanceIndexes'
+)
+BEGIN
+    CREATE INDEX [IX_Orders_CreatedAtUtc] ON [lab].[Orders] ([CreatedAtUtc]) INCLUDE ([OrganizationId], [BranchId], [Status]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110154051_AddPerformanceIndexes'
+)
+BEGIN
+    CREATE INDEX [IX_Orders_OrderNo] ON [lab].[Orders] ([OrderNo]) INCLUDE ([OrganizationId], [BranchId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110154051_AddPerformanceIndexes'
+)
+BEGIN
+    CREATE INDEX [IX_Orders_PatientId] ON [lab].[Orders] ([PatientId]) INCLUDE ([OrganizationId], [BranchId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110154051_AddPerformanceIndexes'
+)
+BEGIN
+    CREATE INDEX [IX_LabReports_IssuedAtUtc_Id] ON [lab].[LabReports] ([IssuedAtUtc] DESC, [Id] DESC) INCLUDE ([OrganizationId], [Status]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110154051_AddPerformanceIndexes'
+)
+BEGIN
+    CREATE INDEX [IX_LabReports_PatientId] ON [lab].[LabReports] ([PatientId]) INCLUDE ([OrganizationId], [Status]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110154051_AddPerformanceIndexes'
+)
+BEGIN
+    CREATE INDEX [IX_LabReports_ReportNo] ON [lab].[LabReports] ([ReportNo]) INCLUDE ([OrganizationId], [Status]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110154051_AddPerformanceIndexes'
+)
+BEGIN
+    CREATE INDEX [IX_Invoices_InvoiceNo] ON [billing].[Invoices] ([InvoiceNo]) INCLUDE ([OrganizationId], [BranchId], [OrderId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110154051_AddPerformanceIndexes'
+)
+BEGIN
+    CREATE INDEX [IX_Invoices_OrderId] ON [billing].[Invoices] ([OrderId]) INCLUDE ([OrganizationId], [BranchId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110154051_AddPerformanceIndexes'
+)
+BEGIN
+    CREATE INDEX [IX_AuditLogs_Org_EntityType_Action_AtUtc] ON [audit].[AuditLogs] ([OrganizationId], [EntityType], [Action], [AtUtc] DESC);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [core].[__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261110154051_AddPerformanceIndexes'
+)
+BEGIN
+    INSERT INTO [core].[__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261110154051_AddPerformanceIndexes', N'9.0.10');
+END;
+
 COMMIT;
 GO
 

@@ -530,6 +530,64 @@ public sealed class ResultApiTests(DatabaseFixture fx)
         var both = await Assert.ThrowsAnyAsync<Exception>(() => db.Database.ExecuteSqlRawAsync("UPDATE lab.TestResultValues SET ValueText = 'x' WHERE ResultId = {0}", Rid(submitted)));
         Assert.Contains("CK_TestResultValues_OneKind", (both.InnerException ?? both).Message);
     }
+
+    /// <summary>
+    /// Editing an option parameter must keep the ids of options that stay (results reference ParameterOptions by id),
+    /// must allow dropping an unused option, and must refuse dropping an option a result already used with 409 option_in_use.
+    /// </summary>
+    [Fact]
+    public async Task Editing_an_option_parameter_keeps_ids_and_refuses_removing_an_option_in_use()
+    {
+        var f = await Setup();
+        var admin = await A("SYSADMIN");
+        var (item, _, _) = await ReceivedItem(f, f.Opt);
+        var tech = await A("TECHNICIAN");
+
+        // A stored result value references the "Positive" option.
+        var e = await ApiClient.Body(await tech.PutAsync($"/api/results/items/{item}/draft", Draft(null, (f.OptParam, null, f.OptPositive))));
+        Assert.Equal("Positive", e.GetProperty("values")[0].GetProperty("valueText").GetString());
+
+        async Task<JsonElement> Param()
+        {
+            var detail = await ApiClient.Body(await admin.GetAsync($"/api/catalog/tests/{f.Opt}"));
+            return detail.GetProperty("parameters").EnumerateArray().Single(p => p.GetProperty("id").GetInt32() == f.OptParam);
+        }
+        async Task<HttpResponseMessage> Save(params (string En, string? Ur, bool Ab)[] opts)
+        {
+            var p = await Param();
+            return await admin.PutAsync($"/api/catalog/parameters/{f.OptParam}", new
+            {
+                code = p.GetProperty("code").GetString(),
+                nameEn = "Screen",
+                resultType = 2,
+                isActive = true,
+                rowVersion = p.GetProperty("rowVersion").GetString(),
+                options = opts.Select(o => new { valueEn = o.En, valueUr = o.Ur, isAbnormal = o.Ab }).ToArray(),
+            });
+        }
+
+        // Saving the same options again used to recreate every option row and hit the FK (500).
+        ApiClient.Ok(await Save(("Negative", "منفی", false), ("Positive", "مثبت", true)), HttpStatusCode.NoContent);
+
+        // The stored result still points at the original option id.
+        e = await ApiClient.Body(await tech.GetAsync($"/api/results/items/{item}"));
+        Assert.Equal(f.OptPositive, e.GetProperty("values")[0].GetProperty("optionId").GetInt32());
+        await using (var db = fx.System())
+            Assert.True(await db.Set<Lims.Domain.Catalog.ParameterOption>().IgnoreQueryFilters().AnyAsync(o => o.Id == f.OptPositive));
+
+        // Dropping an unused option and adding a new one is allowed.
+        ApiClient.Ok(await Save(("Positive", "مثبت", true), ("Indeterminate", "غیر متعین", true)), HttpStatusCode.NoContent);
+
+        // An option a result already used can't be removed:409 with the translated code instead of a 500.
+        var conflict = await Save(("Indeterminate", "غیر متعین", true), ("Negative", "منفی", false));
+        Assert.Equal(HttpStatusCode.Conflict, conflict.StatusCode);
+        Assert.Equal("option_in_use", await ApiClient.Code(conflict));
+
+        // The used option survived the refused edit and the result still resolves.
+        e = await ApiClient.Body(await tech.GetAsync($"/api/results/items/{item}"));
+        Assert.Equal(f.OptPositive, e.GetProperty("values")[0].GetProperty("optionId").GetInt32());
+        Assert.Equal("Positive", e.GetProperty("values")[0].GetProperty("valueText").GetString());
+    }
 }
 
 internal static class ResultClientExtensions

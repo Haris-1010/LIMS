@@ -9,6 +9,7 @@ import { Button } from '../../components/ui/Button'
 import { Switch } from '../../components/ui/Controls'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { useToast } from '../../components/ui/Toast'
+import './admin.css'
 
 type SettingKind = 1 | 2
 interface Setting {
@@ -27,14 +28,18 @@ export function SettingsPage() {
   return (
     <div className="page">
       <div className="page-head"><div><h2>{t('settings.title')}</h2><p>{t('settings.subtitle')}</p></div></div>
-      {isLoading ? <section className="card"><div className="card-body"><Skeleton height={180} /></div></section> : groups.map((g) => (
-        <section className="card" key={g}>
-          <div className="card-head"><h3>{t(`settings.group.${g}`)}</h3></div>
-          <ul className="settings-list">
-            {data!.filter((s) => s.group === g).map((s) => <SettingRow key={`${s.key}-${s.rowVersion}`} setting={s} lang={i18n.language} />)}
-          </ul>
-        </section>
-      ))}
+      {isLoading ? <section className="card"><div className="card-body"><Skeleton height={180} /></div></section> : (
+        <div className="stack">
+          {groups.map((g) => (
+            <section className="card" key={g}>
+              <div className="card-header"><h3 className="card-title">{t(`settings.group.${g}`)}</h3></div>
+              <ul className="settings-list">
+                {data!.filter((s) => s.group === g).map((s) => <SettingRow key={`${s.key}-${s.rowVersion}`} setting={s} lang={i18n.language} />)}
+              </ul>
+            </section>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

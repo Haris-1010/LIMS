@@ -12,6 +12,12 @@
       "runtimeExecutable": "dotnet",
       "runtimeArgs": ["run", "--project", "src/Lims.Api", "--launch-profile", "http"],
       "port": 5088
+    },
+    {
+      "name": "pos",
+      "runtimeExecutable": "C:\\Program Files\\IIS Express\\iisexpress.exe",
+      "runtimeArgs": ["/path:D:\\Development\\New folder\\POS\\HART POS", "/port:50087"],
+      "port": 50087
     }
   ]
 }

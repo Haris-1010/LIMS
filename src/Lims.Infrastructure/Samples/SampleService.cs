@@ -127,12 +127,20 @@ public sealed class SampleService(LimsDbContext db, INumberSequenceService numbe
         {
             var term = q.Search.Trim();
             var norm = Code128.NormalizeScan(term);
-            var patientIds = await db.Patients.AsNoTracking()
-                .Where(p => p.PatientNo == norm || p.FullName.Contains(term) || (p.FullNameUr != null && p.FullNameUr.Contains(term)) || (p.Mobile != null && p.Mobile.Contains(term)))
-                .Select(p => p.Id).Take(500).ToListAsync(ct);
             var orgId = OrgId;
             var orderIds = await db.Orders.IgnoreQueryFilters().Where(o => o.OrganizationId == orgId && o.OrderNo == norm).Select(o => o.Id).ToListAsync(ct);
-            query = query.Where(s => s.Barcode == norm || patientIds.Contains(s.PatientId) || orderIds.Contains(s.OrderId));
+            // Barcode or order number first (indexed); otherwise search by patient. Separate id queries joined by UNION instead of one OR.
+            var exact = query.Where(s => s.Barcode == norm).Select(s => s.Id).Union(query.Where(s => orderIds.Contains(s.OrderId)).Select(s => s.Id));
+            var exactIds = await exact.Take(50).ToListAsync(ct);
+            if (exactIds.Count > 0) query = query.Where(s => exactIds.Contains(s.Id));
+            else
+            {
+                var hasDigits = term.Any(char.IsDigit);
+                var patientIds = await db.Patients.AsNoTracking()
+                    .Where(p => p.PatientNo == norm || p.FullName.Contains(term) || (p.FullNameUr != null && p.FullNameUr.Contains(term)) || (hasDigits && p.Mobile != null && p.Mobile.Contains(term)))
+                    .OrderByDescending(p => p.Id).Select(p => p.Id).Take(500).ToListAsync(ct);
+                query = query.Where(s => patientIds.Contains(s.PatientId));
+            }
         }
         var total = await query.CountAsync(ct);
         var page = await query.OrderByDescending(s => s.Id).Skip(q.Skip).Take(q.PageSize).ToListAsync(ct);

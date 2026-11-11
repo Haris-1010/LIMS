@@ -223,8 +223,20 @@ public sealed class OrderService(LimsDbContext db, INumberSequenceService number
         if (!string.IsNullOrWhiteSpace(q.Search))
         {
             var s = q.Search.Trim();
-            query = query.Where(x => x.o.OrderNo == s.ToUpper() || x.inv.InvoiceNo == s.ToUpper() || x.p.PatientNo == s.ToUpper() ||
-                                     x.p.FullName.Contains(s) || (x.p.Mobile != null && x.p.Mobile.Contains(s)));
+            var upper = s.ToUpper();
+            // Typed or scanned order / invoice numbers are looked up first, on their own indexes. One OR across the order, invoice and
+            // patient columns left SQL Server no usable index and timed out at 20,000 orders (17 s at 550,000).
+            var exactIds = await db.Orders.Where(o => o.OrderNo == upper).Select(o => o.Id)
+                .Union(db.Invoices.Where(i => i.InvoiceNo == upper).Select(i => i.OrderId)).Take(20).ToListAsync(ct);
+            if (exactIds.Count > 0) query = query.Where(x => exactIds.Contains(x.o.Id));
+            else
+            {
+                // Otherwise find the patients (newest registrations first, at most 1,000, as the report and sample searches do) and list their orders.
+                var hasDigits = s.Any(char.IsDigit);
+                var patientIds = await db.Patients.Where(p => p.PatientNo == upper || p.FullName.Contains(s) || (hasDigits && p.Mobile != null && p.Mobile.Contains(s)))
+                    .OrderByDescending(p => p.Id).Select(p => p.Id).Take(1000).ToListAsync(ct);
+                query = query.Where(x => patientIds.Contains(x.o.PatientId));
+            }
         }
 
         query = (q.Sort, q.Desc) switch

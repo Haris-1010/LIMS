@@ -14,6 +14,14 @@ namespace Lims.IntegrationTests;
 public sealed class DatabaseFixture : IAsyncLifetime
 {
     public string ConnectionString { get; }
+
+    /// <summary>
+    /// What the API under test connects with: a SQL login holding only the permissions of
+    /// db/scripts/Grant-LimsAppPermissions.sql (as production does). Set LIMS_TEST_ADMIN_API=1 to use the admin connection instead.
+    /// </summary>
+    public string AppConnectionString { get; private set; }
+    private string? _appLogin;
+    private readonly string _server;
     public int OrgA { get; private set; }
     public int OrgB { get; private set; }
     public int OrgAMainBranch { get; private set; }
@@ -24,7 +32,26 @@ public sealed class DatabaseFixture : IAsyncLifetime
     {
         var server = Environment.GetEnvironmentVariable("LIMS_TEST_SERVER") ?? "localhost";
         var name = $"LIMS_Test_{Guid.NewGuid():N}"[..18];
+        _server = server;
         ConnectionString = $"Server={server};Database={name};Trusted_Connection=True;TrustServerCertificate=True;Encrypt=True";
+        AppConnectionString = ConnectionString;
+    }
+
+    private async Task CreateRestrictedLoginAsync(LimsDbContext db)
+    {
+        if (Environment.GetEnvironmentVariable("LIMS_TEST_ADMIN_API") == "1") return;
+        var dbName = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(ConnectionString).InitialCatalog;
+        _appLogin = "lims_app_" + dbName[^8..];
+        var password = "Aa1-" + Guid.NewGuid().ToString("N");
+        await db.Database.ExecuteSqlRawAsync($"CREATE LOGIN [{_appLogin}] WITH PASSWORD = '{password}', CHECK_POLICY = OFF");
+
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "db", "scripts", "Grant-LimsAppPermissions.sql"))) dir = dir.Parent;
+        var script = File.ReadAllText(Path.Combine(dir!.FullName, "db", "scripts", "Grant-LimsAppPermissions.sql")).Replace("$(AppLogin)", _appLogin);
+        foreach (var batch in global::System.Text.RegularExpressions.Regex.Split(script, @"^\s*GO\s*$", global::System.Text.RegularExpressions.RegexOptions.Multiline))
+            if (!string.IsNullOrWhiteSpace(batch)) await db.Database.ExecuteSqlRawAsync(batch);
+
+        AppConnectionString = $"Server={_server};Database={dbName};User Id={_appLogin};Password={password};TrustServerCertificate=True;Encrypt=True";
     }
 
     public LimsDbContext Create(RequestContext request)
@@ -58,6 +85,8 @@ public sealed class DatabaseFixture : IAsyncLifetime
         OrgAMainBranch = await db.Branches.Where(b => b.OrganizationId == OrgA && b.IsMain).Select(b => b.Id).SingleAsync();
         OrgBMainBranch = await db.Branches.Where(b => b.OrganizationId == OrgB && b.IsMain).Select(b => b.Id).SingleAsync();
         OrgASecondBranch = second.Id;
+
+        await CreateRestrictedLoginAsync(db);
     }
 
     private Api.ApiFactory? _api;
@@ -70,6 +99,15 @@ public sealed class DatabaseFixture : IAsyncLifetime
         if (_api is not null) await _api.DisposeAsync();
         await using var db = System();
         await db.Database.EnsureDeletedAsync();
+        if (_appLogin is not null)
+        {
+            await using var master = new Microsoft.Data.SqlClient.SqlConnection(
+                new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(ConnectionString) { InitialCatalog = "master" }.ConnectionString);
+            await master.OpenAsync();
+            await using var cmd = master.CreateCommand();
+            cmd.CommandText = $"DROP LOGIN [{_appLogin}]";
+            await cmd.ExecuteNonQueryAsync();
+        }
     }
 }
 

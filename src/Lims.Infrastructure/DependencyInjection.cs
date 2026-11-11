@@ -41,6 +41,7 @@ public static class DependencyInjection
         services.AddScoped<Dashboard.DashboardService>();
         services.AddScoped<Audit.AuditService>();
         services.AddScoped<Settings.SettingsService>();
+        services.AddSingleton<Backup.BackupStatusService>();
         services.AddScoped<Results.ResultLookup>();
         services.AddScoped<Results.ResultService>();
         services.AddScoped<Results.WorklistService>();
@@ -64,5 +65,8 @@ public static class DependencyInjection
         {
             sql.MigrationsHistoryTable("__EFMigrationsHistory", "core");
             sql.MigrationsAssembly(typeof(LimsDbContext).Assembly.FullName);
+            // Contains(list) as literal values instead of OPENJSON(@json): with OPENJSON SQL Server guesses the list size
+            // and picks scans; with 550,000 orders the same predicate took 525 ms against 12 ms (docs/PERFORMANCE.md).
+            sql.TranslateParameterizedCollectionsToConstants();
         }));
 }

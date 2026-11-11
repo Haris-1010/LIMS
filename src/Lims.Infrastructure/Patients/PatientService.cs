@@ -23,15 +23,26 @@ public sealed class PatientService(LimsDbContext db, INumberSequenceService numb
             var s = q.Search.Trim();
             var digits = new string(s.Where(char.IsDigit).ToArray());
             var cnic = PatientAge.NormalizeCnic(s);
-            // A barcode scan or typed number matches the registration number exactly; otherwise search
-            // names, phone numbers and (for 13 digits) the CNIC.
-            query = query.Where(p =>
-                p.PatientNo == s.ToUpper() ||
-                p.FullName.Contains(s) ||
-                (p.FullNameUr != null && p.FullNameUr.Contains(s)) ||
-                (p.GuardianName != null && p.GuardianName.Contains(s)) ||
-                (digits.Length >= 4 && ((p.Mobile != null && p.Mobile.Contains(digits)) || (p.AltPhone != null && p.AltPhone.Contains(digits)) || p.PatientNo.EndsWith(digits))) ||
-                (cnic != null && p.Cnic == cnic));
+            var upper = s.ToUpper();
+            // A barcode scan or typed number matches the registration number exactly, a full phone number matches the phone, 13 digits
+            // the CNIC. Those are looked up first, each on its own index (one OR across all the columns made SQL Server scan every
+            // patient: 1.7 s at 300,000 patients). Only when no identifier matches does the wider name / partial-number search run.
+            var exact = db.Patients.Where(p => p.PatientNo == upper).Select(p => p.Id);
+            if (cnic != null) exact = exact.Union(db.Patients.Where(p => p.Cnic == cnic).Select(p => p.Id));
+            if (digits.Length >= 7)
+                exact = exact.Union(db.Patients.Where(p => p.Mobile == digits).Select(p => p.Id)).Union(db.Patients.Where(p => p.AltPhone == digits).Select(p => p.Id));
+            var exactIds = await exact.Take(50).ToListAsync(ct);
+            var looksLikeFullNumber = digits.Length >= 10 && !s.Any(char.IsLetter);
+            if (exactIds.Count > 0) query = query.Where(p => exactIds.Contains(p.Id));
+            else if (looksLikeFullNumber) query = query.Where(p => false);   // a complete phone or CNIC that matches nobody: nothing to scan for
+            else
+                query = query.Where(p =>
+                    p.PatientNo == upper ||
+                    p.FullName.Contains(s) ||
+                    (p.FullNameUr != null && p.FullNameUr.Contains(s)) ||
+                    (p.GuardianName != null && p.GuardianName.Contains(s)) ||
+                    (digits.Length >= 4 && ((p.Mobile != null && p.Mobile.Contains(digits)) || (p.AltPhone != null && p.AltPhone.Contains(digits)) || p.PatientNo.EndsWith(digits))) ||
+                    (cnic != null && p.Cnic == cnic));
         }
 
         query = (q.Sort, q.Desc) switch

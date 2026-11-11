@@ -17,7 +17,7 @@ Offline-first, bilingual (English / Urdu RTL) Laboratory Information Management 
 ```bash
 dotnet build Lims.sln
 dotnet test                                   # unit + integration (integration creates a throwaway LIMS_Test_* database)
-dotnet run --project src/Lims.Api -- db migrate | seed-demo | plan-samples | create-admin <ORG> <user> "<Name>"
+dotnet run --project src/Lims.Api -- db migrate | seed-demo (dev only) | create-org <CODE> "<Name>" | seed-load [orders] (load-test DB named LIMS_Load* only) | plan-samples | create-admin <ORG> <user> "<Name>"
 cd web && npm run dev | npm run build | npm run lint
 ```
 Dev database `LIMS_Dev` on the default local SQL Server instance. Dev logins are in `db/dev-accounts.local.md` (git-ignored).
@@ -45,3 +45,9 @@ Dev database `LIMS_Dev` on the default local SQL Server instance. Dev logins are
 
 ## Tests
 xUnit. Integration tests run the real API through `WebApplicationFactory` (`ApiFactory`, `ApiClient`) against a fresh database. Keep new behaviour covered there, plus unit tests for pure rules (`InvoiceCalculator`, `Code128`, `SampleRules`, `ResultRules`, `ResultValueParser`, `ReportRules`, `ReportSnapshotBuilder`, `ImageSniffer`).
+
+## Performance rules (measured at 550,000 orders, `docs/PERFORMANCE.md`)
+- The tenant filter `(@IsSystemContext = 1 OR OrganizationId = @org)` stops SQL Server seeking on an index that starts with `OrganizationId` when the query's own condition is on another column. Lookups by an order/invoice/report/patient number, barcode, patient id or status need an index that **starts with that column**, with `OrganizationId` included (`PerformanceIndexConfigurations.cs`). An index's sort direction must match the `ORDER BY` (direction of every column, `Id` included).
+- Do not write searches as one `OR` across columns or tables. Look up exact identifiers first (own index each, separate queries joined by `UNION`), and only then run a wider name search.
+- `list.Contains(x)` is translated to constants (`TranslateParameterizedCollectionsToConstants`), not `OPENJSON`; do not change that without re-measuring.
+- Timing tool: `tests/Lims.LoadTest`; data: `db seed-load` (never on anything but a `LIMS_Load_*` database). Re-measure after changing a list, search or queue query.

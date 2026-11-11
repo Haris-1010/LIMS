@@ -58,6 +58,19 @@
 | 44 | Audit log is read-only | No endpoint creates, changes or deletes a line; sensitive values are masked when written. Viewing the log is not itself logged. | Low |
 | 45 | Which settings are editable | Only the five settings the code reads today. `Billing.MaxDiscountPercentWithoutApproval` stays hidden until a discount limit is actually enforced. Settings are organisation-wide. | Low |
 
+| 46 | HTTPS on the LAN | Required: redirect, HSTS and Secure cookie are built and on in the production template. Needs a certificate from the lab's authority or self-signed and installed on every PC. | High until a real certificate is installed |
+| 47 | Hosting | IIS in-process on Windows Server with the .NET 9 Hosting Bundle (`DEPLOYMENT.md`). | Low |
+| 48 | Production SQL Server edition and version | **Not known.** Express has no SQL Agent (Task Scheduler is used), no backup compression and a 10 GB database limit. | Medium: needed before the volume and backup choices are final |
+| 49 | Recovery limits | Lose at most 15 minutes of work (log backups every 15 minutes); back running within 2 hours (to be measured in the restore drill). | Medium: owner to confirm the limits |
+| 50 | Backup destination, encryption, who is told of a failure | A second disk plus a second machine or removable drive; encrypted with a certificate; failures go to the Windows event log and `backup-status.json` and can run a notification script. **Who is told and how is not decided.** | Medium |
+| 51 | Expected volume | Assumed 300 orders a day, 3 branches, 30 users at once, 5 years (about 550,000 orders). To correct. | Medium: sets the load-test size and the targets |
+| 52 | Audit log retention | Keep everything for now; revisit when the table is large. | Low |
+| 53 | Independent penetration test | Not part of Phase 13; recommended before go-live if the system is reachable from outside the lab network. | Medium |
+| 54 | Sign-in lockout (SECURITY_REVIEW O1) | Kept as is: 5 wrong passwords lock the account 15 minutes; this reveals that a username exists. | Low-Medium: owner to accept or change |
+| 55 | Password rule (O2) | Kept as is: 8 characters, a letter and a digit. A longer minimum is recommended. | Low: owner to decide |
+| 56 | "Remember me" (O3) | Kept as is: 7 days. | Low: owner to decide, especially for shared PCs |
+| 57 | Public health endpoint (O4) | Kept open: the deploy script and monitoring use it. | Low |
+
 ## Clinical safety rules (fixed)
 
 - No reference ranges, critical limits or interpretation rules are seeded. They must be entered and approved by qualified laboratory staff.

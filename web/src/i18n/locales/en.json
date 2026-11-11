@@ -334,6 +334,7 @@
     "unit_invalid": "Choose a unit.",
     "options_required": "List at least two possible values.",
     "options_duplicate": "Each value can appear only once.",
+    "option_in_use": "One or more options are used by recorded results, so they can't be removed. Amend or discard those results first.",
     "package_code_taken": "A package with this code already exists.",
     "package_tests_required": "A package needs at least two tests.",
     "range_not_draft": "Approved ranges can't be edited. Create a new draft that replaces it.",
@@ -1694,6 +1695,88 @@
     "oldValue": "Before",
     "newValue": "After",
     "maskedNote": "Sensitive values such as identity numbers, email and addresses are masked when the entry is written, so they never appear here."
+  },
+  "backup": {
+    "title": "Backup status",
+    "subtitle": "How the database backups are doing. This page only shows status: backups are made by scheduled jobs on the server and restores are done by an administrator with the scripts.",
+    "refresh": "Refresh",
+    "loadFailed": "Could not load the backup status",
+    "notConfigured": {
+      "title": "Backup monitoring is not set up",
+      "text": "Set Backup:Folder in the server's appsettings.Production.json to the folder where the backup jobs write their files, then reload this page. See docs/BACKUP_RESTORE.md."
+    },
+    "healthy": "Backups are healthy",
+    "attention": "Backups need attention",
+    "checkedAt": "Checked {{time}}",
+    "problem": {
+      "folderUnreadable": "The backup folder cannot be read by the application. Check the folder path and give the site's application pool read access.",
+      "noFull": "No full backup was found in the backup folder.",
+      "fullOld": "The last full backup is older than {{hours}} hours (made {{when}}).",
+      "noLog": "No transaction-log backup was found, so the database cannot be restored to a chosen moment.",
+      "logOld": "The last log backup is older than {{minutes}} minutes (made {{when}}).",
+      "noStatusFile": "The backup jobs have not reported yet (no backup-status.json in the folder).",
+      "jobFailed": "{{job}} failed at {{when}}.",
+      "offsiteNever": "No copy of the backups outside this machine has been reported.",
+      "offsiteOld": "The last verified off-machine copy is too old."
+    },
+    "recoverable": {
+      "title": "Can be restored up to",
+      "subtitle": "The newest backup on disk",
+      "none": "There are no backups yet.",
+      "since": "Oldest full backup kept: {{time}}"
+    },
+    "stored": {
+      "title": "Backups on disk",
+      "files_one": "{{count}} file",
+      "files_other": "{{count}} files"
+    },
+    "jobs": {
+      "title": "Backup jobs",
+      "subtitle": "What each scheduled job last reported"
+    },
+    "job": {
+      "ok": "Working",
+      "failed": "Failed",
+      "noReport": "No report yet",
+      "neverSucceeded": "Has never succeeded",
+      "lastSuccess": "Last success {{when}}",
+      "lastFailure": "Failed {{when}}",
+      "Full": {
+        "name": "Full backup",
+        "about": "The whole database, every night"
+      },
+      "Differential": {
+        "name": "Differential backup",
+        "about": "Changes since the last full backup, once a day"
+      },
+      "Log": {
+        "name": "Log backup",
+        "about": "Every few minutes; allows restoring to a chosen moment"
+      },
+      "Offsite": {
+        "name": "Off-machine copy",
+        "about": "Copies each backup elsewhere and checks it"
+      },
+      "Retention": {
+        "name": "Clean-up",
+        "about": "Removes backups older than the retention rule"
+      }
+    },
+    "kind": {
+      "Full": "Full",
+      "Differential": "Differential",
+      "Log": "Log"
+    },
+    "files": {
+      "title": "Latest backup files",
+      "subtitle": "Most recent 60",
+      "kind": "Type",
+      "time": "Made",
+      "name": "File",
+      "size": "Size",
+      "empty": "No backup files"
+    },
+    "note": "To take a backup or restore the database, use the scripts described in docs/BACKUP_RESTORE.md on the database server."
   },
   "settings": {
     "title": "System settings",

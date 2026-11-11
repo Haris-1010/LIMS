@@ -51,6 +51,7 @@ const PurchasesPage = lazy(() => import('./features/inventory/InventoryPages').t
 const LedgerPage = lazy(() => import('./features/inventory/InventoryPages').then((m) => ({ default: m.LedgerPage })))
 const StockItemPage = lazy(() => import('./features/inventory/StockItemPage').then((m) => ({ default: m.StockItemPage })))
 const AuditPage = lazy(() => import('./features/admin/AuditPage').then((m) => ({ default: m.AuditPage })))
+const BackupPage = lazy(() => import('./features/admin/BackupPage').then((m) => ({ default: m.BackupPage })))
 const SettingsPage = lazy(() => import('./features/admin/SettingsPage').then((m) => ({ default: m.SettingsPage })))
 
 const queryClient = new QueryClient({
@@ -72,6 +73,7 @@ const pages: Record<string, ReactNode> = {
   '/admin/branches': <OrganizationPage />,
   '/admin/audit': <AuditPage />,
   '/admin/settings': <SettingsPage />,
+  '/admin/backup': <BackupPage />,
   '/patients': <PatientsPage />,
   '/doctors': <DoctorsPage />,
   '/catalog/tests': <TestsPage />,

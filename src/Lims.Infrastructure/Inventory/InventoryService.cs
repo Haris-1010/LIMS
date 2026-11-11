@@ -294,9 +294,12 @@ WHERE Id = {batchId} AND OrganizationId = {org} AND ({allowBelowZero} = 1 OR Qua
         var reference = await numbers.NextAsync(SequenceTypes.StockTransfer, source.BranchId, ct);
         var outM = Move(source, MovementType.TransferOut, -qty, balanceOut, req.Notes, reference);
         var inM = Move(dest, MovementType.TransferIn, qty, balanceIn, req.Notes, reference);
-        db.StockMovements.AddRange(outM, inM);
+        // The ledger is append-only (the application's database login cannot UPDATE it), so the pair is linked at insert time:
+        // the "in" line points to the "out" line; the "out" line is found through the shared reference or by that pointer.
+        db.StockMovements.Add(outM);
         await db.SaveChangesAsync(ct);
-        outM.PairedMovementId = inM.Id; inM.PairedMovementId = outM.Id;
+        inM.PairedMovementId = outM.Id;
+        db.StockMovements.Add(inM);
         db.AddBusinessAudit("Inventory.Transfer", nameof(StockBatch), reference, new { source.ItemId, from = source.BranchId, to = req.ToBranchId, quantity = qty });
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
