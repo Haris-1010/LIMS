@@ -187,3 +187,12 @@
   color: var(--text);
   font-variant-numeric: tabular-nums;
 }
+
+.receipt footer .receipt-footer-instruction,
+.receipt footer .receipt-footer-generated {
+  display: block;
+}
+
+.receipt footer .receipt-footer-generated {
+  margin-top: 2px;
+}

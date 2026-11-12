@@ -244,7 +244,7 @@ export function ReportDocument({ view, images = NO_IMAGES, design = CLASSIC, onl
           <p className="rp-generated">{L('systemGenerated')}</p>
           {design.showLetterhead && !footerImage && (lang === 'ur' ? lh.footerNoteUr ?? lh.footerNoteEn : lh.footerNoteEn) && <p dir="auto">{lang === 'ur' ? lh.footerNoteUr ?? lh.footerNoteEn : lh.footerNoteEn}</p>}
           <p className="rp-fp">
-            <span className="num">{meta.reportNo}</span> · {L('version', { n: meta.version })} · <span>{L('fingerprint')}:</span> <span className="num mono">{meta.fingerprint}</span>
+            <span className="num">{meta.reportNo}</span> · {L('version', { n: meta.version })}
             {pages.length > 1 && <span className="rp-page-no">{L('pageOf', { n: index + 1, total: pages.length })}</span>}
           </p>
           {footerImage && <img className="rp-foot-image" src={`/api/report-template/images/footer?v=${v}`} alt="" onLoad={refit} onError={(e) => { e.currentTarget.style.display = 'none' }} />}

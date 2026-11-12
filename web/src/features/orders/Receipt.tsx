@@ -85,7 +85,8 @@ export function Receipt({ order, payment, onDone }: { order: OrderDetail; paymen
       <div className="receipt-balance"><span>{t('orders.balanceDue')}</span><span className="num">{formatMoney(Math.max(inv.net - upTo, 0))}</span></div>
       <footer>
         {payment.receivedByName && <span>{t('orders.receivedBy')}: {payment.receivedByName}</span>}
-        <span>{t('orders.receiptFooter')}</span>
+        <span className="receipt-footer-instruction">{t('orders.receiptFooterInstruction')}</span>
+        <span className="receipt-footer-generated">{t('orders.systemGenerated')}</span>
       </footer>
     </div>,
     document.body,
