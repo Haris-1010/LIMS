@@ -21,7 +21,7 @@ import './report.css'
  * content is taller than the page, everything on that page (text, tables, images) is scaled down evenly until it fits, and the
  * footer sits at the bottom. Nothing is cut off. Tests still awaited are listed on the last page.
  */
-export function ReportDocument({ view, images = NO_IMAGES, design = CLASSIC, onlyTests, language }: {
+export function ReportDocument({ view, images = NO_IMAGES, design = CLASSIC, onlyTests, onlyParameters, language }: {
   view: ReportView
   /** Language of this copy; undefined = as issued. */
   language?: ReportLanguage
@@ -29,6 +29,8 @@ export function ReportDocument({ view, images = NO_IMAGES, design = CLASSIC, onl
   design?: ReportDesign
   /** Order item ids to include; undefined = every test. */
   onlyTests?: number[]
+  /** Parameter codes by order item id; undefined = every parameter. */
+  onlyParameters?: Record<number, string[]>
 }) {
   const { i18n } = useTranslation()
   const { snapshot: s, meta } = view
@@ -74,9 +76,15 @@ export function ReportDocument({ view, images = NO_IMAGES, design = CLASSIC, onl
   // A partial copy: only the chosen tests (sections left empty are dropped).
   const totalTests = s.sections.reduce((n, sec) => n + sec.tests.length, 0)
   const chosen = onlyTests ? new Set(onlyTests) : null
-  const sections = chosen
+  const sections = (chosen
     ? s.sections.map((sec) => ({ ...sec, tests: sec.tests.filter((t) => chosen.has(t.orderItemId)) })).filter((sec) => sec.tests.length > 0)
-    : s.sections
+    : s.sections).map((sec) => ({
+      ...sec,
+      tests: sec.tests.map((t) => {
+        const selectedParameters = onlyParameters?.[t.orderItemId]
+        return selectedParameters ? { ...t, parameters: t.parameters.filter((p) => selectedParameters.includes(p.code)) } : t
+      }).filter((t) => t.parameters.length > 0),
+    })).filter((sec) => sec.tests.length > 0)
   const shownTests = sections.reduce((n, sec) => n + sec.tests.length, 0)
   const partial = chosen !== null && shownTests < totalTests
 

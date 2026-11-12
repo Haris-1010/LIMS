@@ -149,7 +149,10 @@ public sealed class BillingService(LimsDbContext db, INumberSequenceService numb
                 x.pt.FullName, x.p.Method, x.p.Amount, x.p.Reference,
                 db.Users.Where(u => u.Id == x.p.ReceivedByUserId).Select(u => u.DisplayNameEn).FirstOrDefault()))
             .ToListAsync(ct);
-        return new PagedResult<PaymentListItem>(items, total, q.Page, q.PageSize);
+        return new PagedResult<PaymentListItem>(items, total, q.Page, q.PageSize)
+        {
+            SumAmount = await query.Select(x => x.p.Amount).SumAsync(ct),
+        };
     }
 
     /// <summary>Money received and refunded on a local business day, by method (branch-filtered for the caller).</summary>

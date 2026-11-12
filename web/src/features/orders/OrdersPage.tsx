@@ -10,29 +10,25 @@ import { Badge } from '../../components/ui/Badge'
 import { SearchInput } from '../../components/ui/Controls'
 import { DataTable, type Column, type SortState } from '../../components/ui/DataTable'
 import { EmptyState } from '../../components/ui/EmptyState'
+import { DateRangeFilter, type DateRangeValue } from '../../components/ui/DateRangeFilter'
 import type { Paged } from '../admin/adminApi'
 import { invoiceTone, orderKeys, type OrderListItem } from './ordersApi'
 import './orders.css'
 
 const PAGE_SIZE = 25
-const isoDay = (offset: number) => {
-  const d = new Date()
-  d.setDate(d.getDate() - offset)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
 export function OrdersPage() {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const { can } = useSession()
   const [search, setSearch] = useState('')
   const [range, setRange] = useState<'today' | '7' | '30' | 'all'>('today')
+  const [dates, setDates] = useState<DateRangeValue>({ from: '', to: '' })
   const [outstanding, setOutstanding] = useState(false)
   const [sort, setSort] = useState<SortState>({})
   const [page, setPage] = useState(1)
 
   const params = {
-    search, from: range === 'all' ? undefined : isoDay(range === 'today' ? 0 : Number(range)), to: range === 'all' ? undefined : isoDay(0),
+    search, from: dates.from || (range === 'all' ? undefined : new Date(Date.now() - (range === 'today' ? 0 : Number(range) * 86400000)).toISOString().slice(0, 10)), to: dates.to || (range === 'all' ? undefined : new Date().toISOString().slice(0, 10)),
     outstanding: outstanding || undefined, sort: sort.sort, desc: sort.desc, page, pageSize: PAGE_SIZE,
   }
   const { data, isLoading } = useQuery({ queryKey: orderKeys.list(params), queryFn: () => api<Paged<OrderListItem>>('/api/orders', { query: params }), placeholderData: keepPreviousData })
@@ -62,10 +58,12 @@ export function OrdersPage() {
               <button key={r} type="button" aria-pressed={range === r} onClick={() => { setRange(r); setPage(1) }}>{r === 'today' ? t('orders.today') : r === '7' ? t('orders.last7') : r === '30' ? t('orders.last30') : t('orders.allDates')}</button>
             ))}
           </div>
+          <DateRangeFilter value={dates} onChange={(v) => { setDates(v); setRange('all'); setPage(1) }} />
           <label className="checkbox"><input type="checkbox" checked={outstanding} onChange={(e) => { setOutstanding(e.target.checked); setPage(1) }} />{t('orders.outstandingOnly')}</label>
         </div>
         <DataTable columns={columns} rows={data?.items} rowKey={(o) => o.id} loading={isLoading} sort={sort} onSort={(s) => { setSort(s); setPage(1) }}
           onRowClick={(o) => navigate(`/orders/${o.id}`)} page={page} pageSize={PAGE_SIZE} total={data?.total} onPage={setPage}
+          summary={<div className="list-summary"><span>{t('common.filteredTotal')}</span><strong>{formatMoney(data?.sumNet ?? 0)}</strong><span>{t('orders.total')}</span><strong>{formatMoney(Math.abs(data?.sumBalance ?? 0))}</strong><span>{t('orders.balance')}</span></div>}
           empty={search || outstanding ? undefined : <EmptyState icon={<ClipboardList size={22} />} title={t('orders.emptyTitle')} text={t('orders.emptyText')} />} />
       </section>
     </div>

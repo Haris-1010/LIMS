@@ -255,7 +255,11 @@ public sealed class OrderService(LimsDbContext db, INumberSequenceService number
                 x.o.Items.Count(i => i.Status != OrderItemStatus.Cancelled), x.inv.Net, x.inv.Balance, x.inv.Status, x.o.Status, x.o.Priority,
                 db.Branches.Where(b => b.Id == x.o.BranchId).Select(b => b.NameEn).First()))
             .ToListAsync(ct);
-        return new PagedResult<OrderListItem>(items, total, q.Page, q.PageSize);
+        return new PagedResult<OrderListItem>(items, total, q.Page, q.PageSize)
+        {
+            SumNet = await query.Select(x => x.inv.Net).SumAsync(ct),
+            SumBalance = await query.Select(x => x.inv.Balance).SumAsync(ct),
+        };
     }
 
     public async Task<OrderDetail> GetAsync(long id, CancellationToken ct)

@@ -109,3 +109,81 @@
 .workflow-detail { font-size: var(--text-xs); color: var(--muted); overflow-wrap: anywhere; }
 .workflow-action { margin-top: 6px; }
 .workflow-action .btn { white-space: nowrap; }
+.date-range-filter {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 7px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--surface), var(--surface-muted));
+  color: var(--muted);
+  box-shadow: var(--shadow-xs);
+}
+
+.date-range-icon { display: inline-flex; margin-inline-end: 2px; color: var(--primary-600); }
+.date-range-title { margin-inline-end: 4px; font-size: var(--text-sm); font-weight: 650; color: var(--text-2); }
+
+.date-range-field {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 142px;
+  padding: 3px 8px 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: var(--text-xs);
+  line-height: 1.1;
+}
+
+.date-range-field:focus-within {
+  border-color: var(--primary-500);
+  box-shadow: var(--ring);
+}
+
+.date-range-field span {
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.date-range-field input {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: 500 var(--text-sm) var(--font-body);
+  cursor: pointer;
+}
+
+.date-range-field input:focus { outline: none; }
+.date-range-separator { color: var(--primary-500); font-weight: 700; }
+.date-range-filter .btn { flex: 0 0 auto; align-self: center; }
+
+.list-summary {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--surface-muted);
+  color: var(--muted);
+}
+
+@media (max-width: 700px) {
+  .date-range-filter { width: 100%; }
+  .date-range-title { flex: 1 0 calc(100% - 34px); }
+  .date-range-field { flex: 1 1 130px; min-width: 0; }
+  .date-range-separator { display: none; }
+}
+
+.list-summary strong {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}

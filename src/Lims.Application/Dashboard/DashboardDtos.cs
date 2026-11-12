@@ -4,6 +4,8 @@ namespace Lims.Application.Dashboard;
 public sealed record DashboardQuery
 {
     public string Range { get; init; } = "today";
+    public DateOnly? From { get; init; }
+    public DateOnly? To { get; init; }
 }
 
 /// <summary>

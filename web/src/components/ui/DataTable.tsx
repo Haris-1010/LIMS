@@ -32,6 +32,7 @@ interface DataTableProps<T> {
   pageSize?: number
   total?: number
   onPage?: (page: number) => void
+  summary?: ReactNode
 }
 
 /** Standard table: sortable headers, skeleton rows while loading, empty state, and server pagination. */
@@ -48,6 +49,7 @@ export function DataTable<T>({
   pageSize,
   total,
   onPage,
+  summary,
 }: DataTableProps<T>) {
   const { t } = useTranslation()
 
@@ -109,6 +111,7 @@ export function DataTable<T>({
         {!loading && rows?.length === 0 &&
           (empty ?? <EmptyState icon={<SearchX size={22} />} title={t('table.noResults')} text={t('table.noResultsText')} />)}
       </div>
+      {summary}
 
       {onPage && page && pageSize && total !== undefined && total > 0 && (
         <div className="pagination">

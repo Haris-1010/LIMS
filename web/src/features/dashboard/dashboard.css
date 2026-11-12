@@ -7,6 +7,10 @@
   animation: spin 0.8s linear infinite;
 }
 
+.date-range-filter {
+  box-shadow: var(--shadow-sm);
+}
+
 /* Chart tooltip */
 .chart-tip {
   min-width: 180px;

@@ -10,6 +10,7 @@ import { SearchInput } from '../../components/ui/Controls'
 import { DataTable, type Column } from '../../components/ui/DataTable'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { StatCard } from '../../components/ui/StatCard'
+import { DateRangeFilter, type DateRangeValue } from '../../components/ui/DateRangeFilter'
 import type { Paged } from '../admin/adminApi'
 import { METHODS, orderKeys, type DaySummary, type PaymentListItem } from './ordersApi'
 import './orders.css'
@@ -20,8 +21,9 @@ export function PaymentsPage() {
   const { t, i18n } = useTranslation()
   const [search, setSearch] = useState('')
   const [method, setMethod] = useState('')
+  const [dates, setDates] = useState<DateRangeValue>({ from: '', to: '' })
   const [page, setPage] = useState(1)
-  const params = { search, method: method || undefined, page, pageSize: PAGE_SIZE }
+  const params = { search, method: method || undefined, from: dates.from || undefined, to: dates.to || undefined, page, pageSize: PAGE_SIZE }
   const { data, isLoading } = useQuery({ queryKey: orderKeys.payments(params), queryFn: () => api<Paged<PaymentListItem>>('/api/billing/payments', { query: params }), placeholderData: keepPreviousData })
   const summary = useQuery({ queryKey: orderKeys.summary, queryFn: () => api<DaySummary>('/api/billing/day-summary') })
   const s = summary.data
@@ -55,8 +57,10 @@ export function PaymentsPage() {
             <option value="">{t('payments.anyMethod')}</option>
             {METHODS.map((m) => <option key={m} value={m}>{t(`paymentMethod.${m}`)}</option>)}
           </select>
+          <DateRangeFilter value={dates} onChange={(v) => { setDates(v); setPage(1) }} />
         </div>
         <DataTable columns={columns} rows={data?.items} rowKey={(p) => p.id} loading={isLoading} page={page} pageSize={PAGE_SIZE} total={data?.total} onPage={setPage}
+          summary={<div className="list-summary"><span>{t('common.filteredTotal')}</span><strong>{formatMoney(data?.sumAmount ?? 0)}</strong><span>{t('orders.amount')}</span></div>}
           empty={search || method ? undefined : <EmptyState icon={<Banknote size={22} />} title={t('payments.emptyTitle')} text={t('payments.emptyText')} />} />
       </section>
     </div>

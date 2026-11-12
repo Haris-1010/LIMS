@@ -132,6 +132,11 @@ export interface DaySummary {
   totalRefunded: number
   orderCount: number
 }
+export interface PagedTotals {
+  sumNet?: number
+  sumBalance?: number
+  sumAmount?: number
+}
 
 export const orderKeys = {
   list: (p: object) => ['orders', 'list', p] as const,

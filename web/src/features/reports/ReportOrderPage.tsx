@@ -150,12 +150,12 @@ export function ReportOrderPage() {
         onClose={() => setIssuing(false)} onIssued={async (r) => { setIssuing(false); setSelected(r.meta.id); await refresh() }} />}
       {printOptions && v && !v.isPreview && (
         <PrintDialog view={v} layouts={layouts.data ?? []} layoutId={layoutId} onLayout={setLayoutChoice} language={copyLang ?? v.snapshot.language} onLanguage={setCopyLang} onClose={() => setPrintOptions(false)}
-          onPrint={(onlyTests) => { setPrintOptions(false); setPrinting({ view: v, layoutId, onlyTests, language: copyLang ?? undefined }) }} />
+          onPrint={(onlyTests, onlyParameters) => { setPrintOptions(false); setPrinting({ view: v, layoutId, onlyTests, onlyParameters, language: copyLang ?? undefined }) }} />
       )}
       {sharing && v && !v.isPreview && (
-        <ShareDialog view={v} onClose={() => setSharing(false)} onSavePdf={() => setPrinting({ view: v, layoutId, onlyTests: undefined, language: copyLang ?? undefined })} />
+        <ShareDialog view={v} onClose={() => setSharing(false)} onSavePdf={() => setPrinting({ view: v, layoutId, onlyTests: undefined, onlyParameters: undefined, language: copyLang ?? undefined })} />
       )}
-      {printing && <PrintReport view={printing.view} images={imagesOf(template.data)} design={designFor(layouts.data, printing.layoutId)} onlyTests={printing.onlyTests} language={printing.language}
+      {printing && <PrintReport view={printing.view} images={imagesOf(template.data)} design={designFor(layouts.data, printing.layoutId)} onlyTests={printing.onlyTests} onlyParameters={printing.onlyParameters} language={printing.language}
         onDone={() => { const job = printing; setPrinting(null); if (job.view.meta.id) printed.mutate(job) }} />}
     </div>
   )
@@ -195,6 +195,7 @@ interface PrintJob {
   view: ReportView
   layoutId: number | null
   onlyTests: number[] | undefined
+  onlyParameters: Record<number, string[]> | undefined
   /** undefined = the language the report was issued in. */
   language: ReportLanguage | undefined
 }
@@ -202,17 +203,21 @@ interface PrintJob {
 /** Choose the design and which tests go on this copy. Choosing every test is a normal full print. */
 function PrintDialog({ view, layouts, layoutId, onLayout, language, onLanguage, onClose, onPrint }: {
   view: ReportView; layouts: ReportLayoutDto[]; layoutId: number | null; onLayout: (id: number | null) => void
-  language: ReportLanguage; onLanguage: (l: ReportLanguage) => void; onClose: () => void; onPrint: (onlyTests: number[] | undefined) => void
+  language: ReportLanguage; onLanguage: (l: ReportLanguage) => void; onClose: () => void; onPrint: (onlyTests: number[] | undefined, onlyParameters: Record<number, string[]> | undefined) => void
 }) {
   const { t, i18n } = useTranslation()
   const tests = view.snapshot.sections.flatMap((sec) => sec.tests)
   const [chosen, setChosen] = useState<(number | string)[]>(tests.map((x) => x.orderItemId))
+  const [chosenParameters, setChosenParameters] = useState<Record<number, string[]>>(
+    () => Object.fromEntries(tests.map((x) => [x.orderItemId, x.parameters.map((p) => p.code)])),
+  )
   const all = chosen.length === tests.length
+  const parametersComplete = tests.every((test) => chosen.includes(test.orderItemId) ? (chosenParameters[test.orderItemId]?.length ?? 0) > 0 : true)
   const ur = i18n.language === 'ur'
   return (
     <Modal open title={t('reports.printOptions')} subtitle={t('reports.printOptionsHint')} onClose={onClose} size="md"
       footer={<><Button variant="ghost" onClick={onClose}>{t('common.cancel')}</Button>
-        <Button variant="primary" icon={<Printer size={16} />} disabled={chosen.length === 0} onClick={() => onPrint(all ? undefined : chosen.map(Number))}>{t('reports.printNow')}</Button></>}>
+        <Button variant="primary" icon={<Printer size={16} />} disabled={chosen.length === 0 || !parametersComplete} onClick={() => onPrint(all ? undefined : chosen.map(Number), parametersComplete && chosen.every((id) => (chosenParameters[Number(id)]?.length ?? 0) === (tests.find((x) => x.orderItemId === Number(id))?.parameters.length ?? 0)) ? undefined : chosenParameters)}>{t('reports.printNow')}</Button></>}>
       <div className="form-stack">
         <SelectField label={t('reports.design')} value={layoutId ?? ''} onChange={(e) => onLayout(e.target.value === '' ? null : Number(e.target.value))}>
           <option value="">{t('reports.builtIn')}</option>
@@ -232,6 +237,16 @@ function PrintDialog({ view, layouts, layoutId, onLayout, language, onLanguage, 
           <div className="print-tests">
             <CheckList columns={1} selected={chosen} onChange={setChosen}
               items={tests.map((x) => ({ id: x.orderItemId, label: ur && x.nameUr ? x.nameUr : x.nameEn, sub: x.code }))} />
+          </div>
+          <div className="print-parameters">
+            <strong>{t('reports.parametersToPrint')}</strong>
+            {tests.filter((test) => chosen.includes(test.orderItemId)).map((test) => (
+              <div key={test.orderItemId} className="print-parameter-group">
+                <span className="cell-strong">{ur && test.nameUr ? test.nameUr : test.nameEn}</span>
+                <CheckList columns={1} selected={chosenParameters[test.orderItemId] ?? []} onChange={(next) => setChosenParameters((current) => ({ ...current, [test.orderItemId]: next.map(String) }))}
+                  items={test.parameters.map((p) => ({ id: p.code, label: ur && p.nameUr ? p.nameUr : p.nameEn, sub: p.unit ?? undefined }))} />
+              </div>
+            ))}
           </div>
           <p className="field-hint" style={{ marginTop: 8 }}>{t('reports.testsChosen', { count: chosen.length, total: tests.length })}</p>
           {chosen.length === 0 && <p className="field-error">{t('reports.chooseTests')}</p>}
@@ -284,4 +299,3 @@ function ShareDialog({ view, onClose, onSavePdf }: { view: ReportView; onClose: 
     </Modal>
   )
 }
-

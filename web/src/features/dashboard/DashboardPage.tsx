@@ -24,6 +24,7 @@ import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAx
 import { displayName, useSession } from '../../app/session'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
+import { DateRangeFilter, type DateRangeValue } from '../../components/ui/DateRangeFilter'
 import { Card } from '../../components/ui/Card'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { Skeleton } from '../../components/ui/Skeleton'
@@ -37,10 +38,11 @@ export function DashboardPage() {
   const { user } = useSession()
   const branchId = user?.activeBranchId ?? 'all'
   const [range, setRange] = useState<DashboardRange>('today')
+  const [dates, setDates] = useState<DateRangeValue>({ from: '', to: '' })
 
   const { data, isLoading, isFetching, refetch } = useQuery({
-    queryKey: dashboardKeys.summary(range, branchId),
-    queryFn: () => fetchDashboardSummary(range),
+    queryKey: dashboardKeys.summary(range, branchId, dates),
+    queryFn: () => fetchDashboardSummary(range, dates),
     refetchInterval: 60_000, // the figures are live: refresh once a minute while the page is open
   })
 
@@ -66,6 +68,7 @@ export function DashboardPage() {
               </button>
             ))}
           </div>
+          <DateRangeFilter value={dates} onChange={(v) => { setDates(v); setRange(v.from && v.to ? 'custom' : 'today') }} />
           <Button
             iconOnly
             aria-label={t('dashboard.refresh')}

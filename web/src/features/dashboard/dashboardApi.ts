@@ -1,7 +1,7 @@
 /* Contract of GET /api/dashboard/summary (see Lims.Application.Dashboard). Every figure comes from live data. */
 import { api } from '../../lib/api'
 
-export type DashboardRange = 'today' | 'd7' | 'd30'
+export type DashboardRange = 'today' | 'd7' | 'd30' | 'custom'
 export type PipelineStage = 'awaitingCollection' | 'collected' | 'received' | 'inProcess' | 'completed' | 'rejected'
 export type ActivityType = 'registration' | 'payment' | 'approval' | 'rejection' | 'critical'
 
@@ -51,7 +51,7 @@ export interface DashboardSummary {
 }
 
 export const dashboardKeys = {
-  summary: (range: DashboardRange, branchId: number | 'all') => ['dashboard', range, branchId] as const,
+  summary: (range: DashboardRange, branchId: number | 'all', dates?: object) => ['dashboard', range, branchId, dates] as const,
 }
 
-export const fetchDashboardSummary = (range: DashboardRange) => api<DashboardSummary>('/api/dashboard/summary', { query: { range } })
+export const fetchDashboardSummary = (range: DashboardRange, dates?: { from?: string; to?: string }) => api<DashboardSummary>('/api/dashboard/summary', { query: { range, ...dates } })

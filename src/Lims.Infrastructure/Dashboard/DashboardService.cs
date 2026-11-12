@@ -28,14 +28,17 @@ public sealed class DashboardService(LimsDbContext db, SampleService samples, Re
 
     public async Task<DashboardSummary> SummaryAsync(DashboardQuery q, CancellationToken ct)
     {
-        if (q.Range is not ("today" or "d7" or "d30")) throw new BusinessRuleException("range_invalid", "Choose today, 7 days or 30 days.");
+        if (q.Range is not ("today" or "d7" or "d30" or "custom")) throw new BusinessRuleException("range_invalid", "Choose a valid dashboard date range.");
         var ctx = db.Request;
         var branch = ctx.ActiveBranchId;
-        var days = DashboardRules.DaysOf(q.Range);
         var now = clock.UtcNow;
         var today = DateOnly.FromDateTime(clock.LocalNow);
-        var since = clock.LocalDateStartUtc(today.AddDays(-(days - 1)));
-        var prevSince = clock.LocalDateStartUtc(today.AddDays(-(2 * days - 1)));
+        var from = q.Range == "custom" ? q.From : today.AddDays(-(DashboardRules.DaysOf(q.Range) - 1));
+        var to = q.Range == "custom" ? q.To : today;
+        if (from is null || to is null || from > to) throw new BusinessRuleException("range_invalid", "Choose a valid date range.");
+        var days = to.Value.DayNumber - from.Value.DayNumber + 1;
+        var since = clock.LocalDateStartUtc(from.Value);
+        var prevSince = clock.LocalDateStartUtc(from.Value.AddDays(-days));
 
         var s = new DashboardSections(
             Patients: ctx.Can(Permissions.PatientsView), Orders: ctx.Can(Permissions.OrdersView), Samples: ctx.Can(Permissions.SamplesView), Results: ctx.Can(Permissions.ResultsView),
@@ -93,13 +96,13 @@ public sealed class DashboardService(LimsDbContext db, SampleService samples, Re
             cash = await pay.Where(p => p.ReceivedAtUtc >= since).SumAsync(p => (decimal?)p.Amount, ct) ?? 0;
             prevCash = await pay.Where(p => p.ReceivedAtUtc >= prevSince && p.ReceivedAtUtc < since).SumAsync(p => (decimal?)p.Amount, ct) ?? 0;
 
-            var trendDays = q.Range == "d30" ? 30 : 14;
-            var trendSince = clock.LocalDateStartUtc(today.AddDays(-(trendDays - 1)));
+            var trendDays = Math.Min(days, 31);
+            var trendSince = clock.LocalDateStartUtc(to.Value.AddDays(-(trendDays - 1)));
             var payRows = await pay.Where(p => p.ReceivedAtUtc >= trendSince).Select(p => new { p.ReceivedAtUtc, p.Amount }).ToListAsync(ct);
             var creditRows = await inv.Where(i => i.CorporateClientId != null && i.CreatedAtUtc >= trendSince).Select(i => new { i.CreatedAtUtc, i.Net }).ToListAsync(ct);
             var cashByDay = payRows.GroupBy(r => DateOnly.FromDateTime(clock.ToLocal(r.ReceivedAtUtc))).ToDictionary(g => g.Key, g => g.Sum(r => r.Amount));
             var creditByDay = creditRows.GroupBy(r => DateOnly.FromDateTime(clock.ToLocal(r.CreatedAtUtc))).ToDictionary(g => g.Key, g => g.Sum(r => r.Net));
-            for (var d = today.AddDays(-(trendDays - 1)); d <= today; d = d.AddDays(1))
+            for (var d = to.Value.AddDays(-(trendDays - 1)); d <= to.Value; d = d.AddDays(1))
                 trend.Add(new TrendPoint(d.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), cashByDay.GetValueOrDefault(d), creditByDay.GetValueOrDefault(d)));
         }
         if (s.Corporate)

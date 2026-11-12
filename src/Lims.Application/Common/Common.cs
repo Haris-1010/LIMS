@@ -15,7 +15,12 @@ public class BusinessRuleException(string code, string message, int status = 400
     public static BusinessRuleException Conflict(string code, string message) => new(code, message, 409);
 }
 
-public sealed record PagedResult<T>(IReadOnlyList<T> Items, int Total, int Page, int PageSize);
+public sealed record PagedResult<T>(IReadOnlyList<T> Items, int Total, int Page, int PageSize)
+{
+    public decimal? SumNet { get; init; }
+    public decimal? SumBalance { get; init; }
+    public decimal? SumAmount { get; init; }
+}
 
 public record PageQuery
 {

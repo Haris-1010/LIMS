@@ -8,6 +8,9 @@ export interface Paged<T> {
   total: number
   page: number
   pageSize: number
+  sumNet?: number
+  sumBalance?: number
+  sumAmount?: number
 }
 
 export interface UserListItem {
