@@ -171,6 +171,7 @@ export interface ReportDesign {
   /** Footer image across the bottom of the page. */
   showFooterImage: boolean
   showRangeBars: boolean
+  showSingleParameterCharts: boolean
   showFlagWords: boolean
   colourFlags: boolean
   tableStyle: TableStyle

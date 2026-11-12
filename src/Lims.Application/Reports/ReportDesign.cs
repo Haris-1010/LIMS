@@ -29,6 +29,8 @@ public sealed record ReportDesign
     public bool ShowFooterImage { get; init; }
     /// <summary>Small Low / Normal / High bar beside numeric results that have a range.</summary>
     public bool ShowRangeBars { get; init; } = true;
+    /// <summary>Draw a larger current-result graph for tests containing exactly one numeric parameter.</summary>
+    public bool ShowSingleParameterCharts { get; init; } = true;
     /// <summary>Flag words (High, Low…) printed under the flag code.</summary>
     public bool ShowFlagWords { get; init; } = true;
     /// <summary>Colour abnormal results (red high, blue low). Off keeps the report readable on black-and-white copies only.</summary>

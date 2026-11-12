@@ -1,10 +1,10 @@
 import { useId } from 'react'
 
-/** LIMS logo mark: a flask on a dark-green-to-turquoise tile. */
+/** HART LIMS logo mark: a flask on a dark-green-to-turquoise tile. */
 export function BrandMark({ className = 'brand-mark' }: { className?: string }) {
   const id = useId()
   return (
-    <svg className={className} viewBox="0 0 32 32" role="img" aria-label="LIMS">
+    <svg className={className} viewBox="0 0 32 32" role="img" aria-label="HART LIMS">
       <defs>
         <linearGradient id={id} x1="0" y1="0" x2="1" y2="1">
           <stop offset="0" stopColor="#075247" />

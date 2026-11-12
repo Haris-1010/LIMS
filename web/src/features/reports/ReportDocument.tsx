@@ -1,7 +1,7 @@
 import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, type CSSProperties, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { formatDateTime } from '../../lib/format'
-import { CLASSIC, designClasses, designVars, rangeBar } from './reportDesign'
+import { CLASSIC, designClasses, designVars, gaugeScale, rangeBar } from './reportDesign'
 import { docLang, NO_IMAGES, type DocLang, type ReportBlock, type ReportDesign, type ReportImages, type ReportLanguage, type ReportView, type SnapParameter } from './reportsApi'
 import './report.css'
 
@@ -132,6 +132,9 @@ export function ReportDocument({ view, images = NO_IMAGES, design = CLASSIC, onl
               {sec.tests.map((t) => (
                 <div key={t.orderItemId} className="rp-test">
                   <h4><Name en={t.nameEn} ur={t.nameUr} /> {t.resultVersion > 1 && <span className="rp-ver">{L('resultVersion', { n: t.resultVersion })}</span>}</h4>
+                  {design.showSingleParameterCharts && t.parameters.length === 1 && t.parameters[0]?.resultType === 1 && (
+                    <SingleParameterChart p={t.parameters[0]} lang={lang} fixed={fixed} L={L} Name={Name} />
+                  )}
                   <table className="rp-table">
                     <thead>
                       <tr>
@@ -230,6 +233,7 @@ export function ReportDocument({ view, images = NO_IMAGES, design = CLASSIC, onl
         </main>
 
         <footer className="rp-foot">
+          <p className="rp-generated">{L('systemGenerated')}</p>
           {design.showLetterhead && !footerImage && (lang === 'ur' ? lh.footerNoteUr ?? lh.footerNoteEn : lh.footerNoteEn) && <p dir="auto">{lang === 'ur' ? lh.footerNoteUr ?? lh.footerNoteEn : lh.footerNoteEn}</p>}
           <p className="rp-fp">
             <span className="num">{meta.reportNo}</span> · {L('version', { n: meta.version })} · <span>{L('fingerprint')}:</span> <span className="num mono">{meta.fingerprint}</span>
@@ -379,5 +383,109 @@ function RangeBar({ p }: { p: SnapParameter }) {
       {g.highStart < 100 && <rect className="z-hi" x={g.highStart} y="3" width={100 - g.highStart} height="4" rx="1" />}
       <rect className="mk" x={g.marker - 1.2} y="0.5" width="2.4" height="9" rx="1" />
     </svg>
+  )
+}
+
+/**
+ * The large graph for a test with one numeric parameter: the patient's value on a scale with its low, normal and high zones,
+ * round-numbered axis, the approved limits and a callout with the value. Drawn only from the snapshot (value and limits).
+ */
+function SingleParameterChart({ p, lang, fixed, L, Name }: {
+  p: SnapParameter
+  lang: DocLang
+  fixed: { en: (k: string) => string; ur: (k: string) => string }
+  L: (key: string) => ReactNode
+  Name: (props: { en: string; ur: string | null; className?: string }) => ReactNode
+}) {
+  const sc = gaugeScale(p.value, p.low, p.high)
+  if (!sc || p.value === null || p.value === undefined) return null
+  const tone = p.flag === 2 || p.flag === 4 ? 'lo' : p.flag === 3 || p.flag === 5 ? 'hi' : 'ok'
+  const critical = p.flag === 4 || p.flag === 5
+  const value = lang === 'ur' && p.displayUr ? p.displayUr : p.display
+  const zoneWord = (k: string) => (lang === 'ur' ? fixed.ur(`report.${k}`) : fixed.en(`report.${k}`))
+  const status = p.flag >= 2 ? `flagWord.${p.flag}` : 'normal'
+
+  // SVG units: 1000 wide. The scale runs left to right (low to high) on Urdu reports too, like the numbers.
+  const W = 1000, X0 = 14, X1 = 986
+  const x = (v: number) => X0 + (sc.pos(v) / 100) * (X1 - X0)
+  const lo = p.low ?? null, hi = p.high ?? null
+  const xLo = lo === null ? X0 : x(lo)
+  const xHi = hi === null ? X1 : x(hi)
+  const xv = x(p.value)
+  const BAND_Y = 66, BAND_H = 44, AXIS_Y = 136
+  const bubble = `${p.display}${p.unit ? ` ${p.unit}` : ''}`
+  const bw = Math.max(96, bubble.length * 14.5 + 36)
+  const bx = Math.min(W - bw, Math.max(0, xv - bw / 2))
+  const limits = [lo, hi].filter((v): v is number => v !== null)
+  // Axis numbers too close to a limit would overlap its (bold) label.
+  const ticks = sc.ticks.filter((t) => limits.every((l) => Math.abs(x(t.at) - x(l)) > 48))
+  const zones = [
+    { k: 'lo', from: X0, to: xLo, word: zoneWord('flagWord.2') },
+    { k: 'ok', from: xLo, to: xHi, word: zoneWord('normal') },
+    { k: 'hi', from: xHi, to: X1, word: zoneWord('flagWord.3') },
+  ].filter((z) => z.to - z.from > 0.5)
+  const clipId = `rpg-${p.code.replace(/[^A-Za-z0-9_-]/g, '')}`
+
+  return (
+    <figure className={`rp-gauge tone-${tone}${critical ? ' crit' : ''}`} aria-label={`${p.nameEn}: ${p.display}${p.unit ? ` ${p.unit}` : ''}`}>
+      <div className="rp-gauge-head">
+        <div className="rp-gauge-name">
+          <Name en={p.nameEn} ur={p.nameUr} />
+          {p.referenceText && <small>{L('referenceRange')}: <span className="num" dir="ltr">{p.referenceText}{p.unit ? ` ${p.unit}` : ''}</span></small>}
+        </div>
+        <div className="rp-gauge-result">
+          <span className="rp-gauge-num" dir="ltr">
+            <span className="rp-gauge-value num" dir={p.resultType === 1 ? 'ltr' : 'auto'}>{value}</span>
+            {p.unit && <span className="rp-gauge-unit">{p.unit}</span>}
+          </span>
+          <span className="rp-gauge-pill">{L(status)}</span>
+        </div>
+      </div>
+      <svg className="rp-gauge-plot" viewBox={`0 0 ${W} 170`} direction="ltr" aria-hidden>
+        <defs>
+          <clipPath id={clipId}><rect x={X0} y={BAND_Y} width={X1 - X0} height={BAND_H} rx={BAND_H / 2} /></clipPath>
+        </defs>
+        {/* Grid lines from the band down to the axis. */}
+        {ticks.map((t) => <line key={`g${t.at}`} className="g-grid" x1={x(t.at)} x2={x(t.at)} y1={BAND_Y + BAND_H + 2} y2={AXIS_Y} />)}
+        <g clipPath={`url(#${clipId})`}>
+          {zones.map((z) => <rect key={z.k} className={`z-${z.k}`} x={z.from} y={BAND_Y} width={z.to - z.from} height={BAND_H} />)}
+          <rect className="g-gloss" x={X0} y={BAND_Y} width={X1 - X0} height={BAND_H / 2} />
+          {lo !== null && <line className="g-edge" x1={xLo} x2={xLo} y1={BAND_Y} y2={BAND_Y + BAND_H} />}
+          {hi !== null && <line className="g-edge" x1={xHi} x2={xHi} y1={BAND_Y} y2={BAND_Y + BAND_H} />}
+        </g>
+        <rect className="g-outline" x={X0} y={BAND_Y} width={X1 - X0} height={BAND_H} rx={BAND_H / 2} />
+        {zones.filter((z) => z.to - z.from > 110).map((z) => {
+          // Keep the zone's name clear of the value's dot: move it to the wider side of the zone.
+          let cx = (z.from + z.to) / 2
+          if (Math.abs(cx - xv) < 75) cx = xv - z.from > z.to - xv ? (z.from + xv) / 2 : (xv + z.to) / 2
+          if (Math.abs(cx - xv) < 55) return null
+          return <text key={`t${z.k}`} className={`g-zone g-zone-${z.k}${lang === 'ur' ? ' ur' : ''}`} x={cx} y={BAND_Y + BAND_H / 2 + 6} textAnchor="middle">{z.word}</text>
+        })}
+
+        {/* Axis */}
+        <line className="g-axis" x1={X0} x2={X1} y1={AXIS_Y} y2={AXIS_Y} />
+        {ticks.map((t) => (
+          <g key={`t${t.at}`}>
+            <line className="g-tick" x1={x(t.at)} x2={x(t.at)} y1={AXIS_Y} y2={AXIS_Y + 5} />
+            <text className="g-tick-label" x={x(t.at)} y={AXIS_Y + 24} textAnchor="middle">{t.label}</text>
+          </g>
+        ))}
+        {limits.map((l) => (
+          <g key={`l${l}`}>
+            <line className="g-limit" x1={x(l)} x2={x(l)} y1={BAND_Y + BAND_H} y2={AXIS_Y + 6} />
+            <text className="g-limit-label" x={x(l)} y={AXIS_Y + 26} textAnchor="middle">{l}</text>
+          </g>
+        ))}
+
+        {/* The patient's value: callout, pointer and a dot on the band. */}
+        <g className="g-marker">
+          <rect className="g-bubble" x={bx} y={4} width={bw} height={40} rx={8} />
+          <path className="g-bubble" d={`M ${xv - 10} 43 L ${xv} 55 L ${xv + 10} 43 Z`} />
+          <text className="g-bubble-text" x={bx + bw / 2} y={31} textAnchor="middle">{sc.clipped ? (p.value > sc.max ? `${bubble} ▸` : `◂ ${bubble}`) : bubble}</text>
+          <line className="g-needle" x1={xv} x2={xv} y1={55} y2={BAND_Y + BAND_H + 6} />
+          <circle className="g-dot" cx={xv} cy={BAND_Y + BAND_H / 2} r={12} />
+        </g>
+      </svg>
+    </figure>
   )
 }

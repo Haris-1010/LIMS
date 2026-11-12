@@ -19,14 +19,28 @@ export function Receipt({ order, payment, onDone }: { order: OrderDetail; paymen
 
   useEffect(() => {
     document.body.classList.add('printing-receipt')
+    const logo = document.querySelector<HTMLImageElement>('.receipt-logo')
+    let timer: number | undefined
+    const print = () => {
+      if (timer !== undefined) window.clearTimeout(timer)
+      window.print()
+    }
     const done = () => {
       document.body.classList.remove('printing-receipt')
       onDone()
     }
     window.addEventListener('afterprint', done, { once: true })
-    const h = window.setTimeout(() => window.print(), 150)
+    if (logo && !logo.complete) {
+      logo.addEventListener('load', print, { once: true })
+      logo.addEventListener('error', print, { once: true })
+      timer = window.setTimeout(print, 1000)
+    } else {
+      timer = window.setTimeout(print, 150)
+    }
     return () => {
-      window.clearTimeout(h)
+      if (timer !== undefined) window.clearTimeout(timer)
+      logo?.removeEventListener('load', print)
+      logo?.removeEventListener('error', print)
       window.removeEventListener('afterprint', done)
       document.body.classList.remove('printing-receipt')
     }
@@ -39,6 +53,7 @@ export function Receipt({ order, payment, onDone }: { order: OrderDetail; paymen
   return createPortal(
     <div className="receipt" dir={i18n.dir()} lang={i18n.language}>
       <header>
+        <img className="receipt-logo" src="/api/report-template/logo" alt="" onError={(e) => { e.currentTarget.style.display = 'none' }} />
         <strong>{i18n.language === 'ur' && user?.organizationNameUr ? user.organizationNameUr : user?.organizationNameEn}</strong>
         <span>{localName({ nameEn: order.branchName, nameUr: order.branchNameUr }, i18n.language)}</span>
         <span className="receipt-title">{t('orders.receiptTitle')}</span>

@@ -67,8 +67,10 @@
   body.printing-receipt .receipt { display: block; width: 76mm; margin: 0 auto; padding: 2mm 0; color: #000; font-size: 9.5pt; line-height: 1.35; }
   body.printing-receipt { background: #fff; }
   .receipt header { display: flex; flex-direction: column; align-items: center; gap: 1px; padding-bottom: 3mm; border-bottom: 1px dashed #000; text-align: center; }
-  .receipt header strong { font-size: 12pt; }
-  .receipt-title { margin-top: 2mm; font-weight: 700; letter-spacing: 0.04em; }
+  .receipt-logo { display: block; width: auto; max-width: 48mm; height: auto; max-height: 18mm; margin-bottom: 1.5mm; object-fit: contain; }
+  .receipt header strong { font-size: 13pt; letter-spacing: 0.01em; }
+  .receipt header > span:not(.receipt-title) { color: #333; font-size: 8.5pt; }
+  .receipt-title { margin-top: 2mm; padding: 1mm 5mm; border-top: 1px solid #000; border-bottom: 1px solid #000; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
   .receipt dl { margin: 3mm 0; }
   .receipt dl div { display: flex; justify-content: space-between; gap: 4mm; }
   .receipt dt { color: #333; }

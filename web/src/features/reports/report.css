@@ -75,6 +75,7 @@
 .rp-end { margin: 3mm 0 0; text-align: center; font-size: 7.5pt; color: #666; letter-spacing: 0.08em; }
 .rp-foot { margin-top: 3mm; padding-top: 1.5mm; border-top: 0.2mm solid #999; font-size: 7.5pt; color: #444; }
 .rp-foot p { margin: 0; }
+.rp-generated { font-size: 7pt; color: #666; text-align: center; }
 .rp-fp { display: flex; flex-wrap: wrap; gap: 0 2mm; align-items: baseline; }
 .rp-page-no { margin-inline-start: auto; font-weight: 600; }
 
@@ -87,6 +88,61 @@
 .rp-bar .z-lo, .rp-bar .z-hi { fill: #cfcfcf; }
 .rp-bar .z-ok { fill: #f1f1f1; stroke: #9a9a9a; stroke-width: 0.4; vector-effect: non-scaling-stroke; }
 .rp-bar .mk { fill: #111; }
+/* ---------- Large graph for a single-parameter test ---------- */
+.rp-gauge { margin: 3mm 0 5mm; padding: 4mm 6mm 3mm; border: 0.25mm solid #d4d8de; border-radius: 2.5mm; background: linear-gradient(180deg, #fbfcfd 0%, #fff 60%); break-inside: avoid; }
+.rp-gauge-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 6mm; margin-bottom: 3mm; padding-bottom: 2.5mm; border-bottom: 0.2mm solid #eceef1; }
+.rp-gauge-name { display: flex; flex-direction: column; gap: 0.6mm; min-width: 0; font-size: 12pt; font-weight: 700; }
+.rp-gauge-name small { font-size: 8.5pt; font-weight: 400; color: #555; }
+.rp-gauge-result { display: flex; align-items: baseline; flex-wrap: wrap; justify-content: flex-end; gap: 1.5mm; }
+.rp-gauge-value { font-size: 26pt; font-weight: 800; line-height: 1; letter-spacing: -0.01em; }
+.rp-gauge-unit { font-size: 10pt; color: #555; font-weight: 500; }
+.rp-gauge-pill { align-self: center; margin-inline-start: 1.5mm; padding: 0.8mm 3mm; border-radius: 10mm; font-size: 8.5pt; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #fff; background: #111; }
+.rp-gauge-num { display: inline-flex; align-items: baseline; gap: 1.5mm; }
+.rp-gauge-name small .ur { display: inline; line-height: 1.6; }
+.rp-gauge-pill .ur { display: inline; line-height: 2; margin-inline-start: 1mm; color: inherit; }
+.report-ur .rp-gauge-pill, .report-both .rp-gauge-pill { padding-block: 0; line-height: 2; }
+/* Bilingual: the Urdu half is right-to-left, so its gap from the English is set on the physical left. */
+.report-both .rp-gauge-pill .ur, .report-both .rp-gauge-name small .ur { margin-inline-start: 0; margin-left: 1.5mm; }
+.report-ur .rp-gauge-pill, .report-both .rp-gauge-pill { text-transform: none; letter-spacing: 0; }
+.rp-gauge-plot { display: block; width: 100%; height: auto; overflow: visible; font-variant-numeric: tabular-nums; }
+.rp-gauge text { font-family: var(--font-body, Inter, system-ui, sans-serif); }
+.rp-gauge text.ur { font-family: 'Noto Nastaliq Urdu', serif; }
+.rp-gauge .g-grid { stroke: #e3e6ea; stroke-width: 1; stroke-dasharray: 2 3; }
+.rp-gauge .g-axis { stroke: #9aa1a9; stroke-width: 1.2; }
+.rp-gauge .g-tick { stroke: #9aa1a9; stroke-width: 1.2; }
+.rp-gauge .g-tick-label { font-size: 17px; fill: #6b7280; }
+.rp-gauge .g-limit { stroke: #374151; stroke-width: 1.2; stroke-dasharray: 3 2; }
+.rp-gauge .g-limit-label { font-size: 18px; font-weight: 700; fill: #111827; }
+.rp-gauge .g-edge { stroke: #fff; stroke-width: 2; }
+.rp-gauge .g-gloss { fill: #fff; opacity: 0.28; }
+.rp-gauge .g-outline { fill: none; stroke: rgba(0, 0, 0, 0.18); stroke-width: 1; }
+.rp-gauge .z-lo, .rp-gauge .z-hi { fill: #d1d5db; }
+.rp-gauge .z-ok { fill: #f3f4f6; }
+.rp-gauge .g-zone { font-size: 16px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; fill: #374151; }
+.rp-gauge .g-zone.ur { letter-spacing: 0; font-size: 15px; }
+.rp-gauge .g-bubble { fill: #111; }
+.rp-gauge .g-bubble-text { font-size: 21px; font-weight: 700; fill: #fff; }
+.rp-gauge .g-needle { stroke: #111; stroke-width: 3; }
+.rp-gauge .g-dot { fill: #fff; stroke: #111; stroke-width: 6; }
+.rp-gauge.crit { border-width: 0.45mm; }
+/* Colour for every design except classic, which stays black and white for photocopies. */
+.report:not(.rp-style-classic) .rp-gauge .z-lo { fill: #93c5fd; }
+.report:not(.rp-style-classic) .rp-gauge .z-ok { fill: #86efac; }
+.report:not(.rp-style-classic) .rp-gauge .z-hi { fill: #fca5a5; }
+.report:not(.rp-style-classic) .rp-gauge .g-zone-lo { fill: #1e3a8a; }
+.report:not(.rp-style-classic) .rp-gauge .g-zone-ok { fill: #14532d; }
+.report:not(.rp-style-classic) .rp-gauge .g-zone-hi { fill: #7f1d1d; }
+.report:not(.rp-style-classic) .rp-gauge { --g-tone: #15803d; }
+.report:not(.rp-style-classic) .rp-gauge.tone-lo { --g-tone: #1d4ed8; }
+.report:not(.rp-style-classic) .rp-gauge.tone-hi { --g-tone: #b91c1c; }
+.report:not(.rp-style-classic) .rp-gauge .rp-gauge-value { color: var(--g-tone); }
+.report:not(.rp-style-classic) .rp-gauge .rp-gauge-pill { background: var(--g-tone); }
+.report:not(.rp-style-classic) .rp-gauge .g-bubble { fill: var(--g-tone); }
+.report:not(.rp-style-classic) .rp-gauge .g-needle { stroke: var(--g-tone); }
+.report:not(.rp-style-classic) .rp-gauge .g-dot { stroke: var(--g-tone); }
+.report:not(.rp-style-classic) .rp-gauge.crit { border-color: var(--g-tone); }
+.rp-style-classic .rp-gauge { background: #fff; border-color: #999; }
+.rp-style-classic .rp-gauge .g-edge { stroke: #666; stroke-width: 1; }
 /* Coloured zones for every design except classic, which stays black and white for photocopies. */
 .report:not(.rp-style-classic) .rp-bar .z-lo { fill: #bfdbfe; }
 .report:not(.rp-style-classic) .rp-bar .z-ok { fill: #bbf7d0; stroke: none; }

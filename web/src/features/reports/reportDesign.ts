@@ -16,6 +16,7 @@ export const CLASSIC: ReportDesign = {
   useHeaderImage: false,
   showFooterImage: false,
   showRangeBars: true,
+  showSingleParameterCharts: true,
   showFlagWords: true,
   colourFlags: false,
   tableStyle: 'lines',
@@ -164,4 +165,64 @@ export function sampleView(): ReportView {
       ],
     },
   }
+}
+
+export interface GaugeScale {
+  /** Drawn scale, in result units. */
+  min: number
+  max: number
+  /** Axis ticks (round numbers inside the scale), with their labels. */
+  ticks: { at: number; label: string }[]
+  /** Position (0–100 % of the width) of a number on the scale, clamped to the edges. */
+  pos: (x: number) => number
+  /** The value lies beyond the drawn scale; its pointer sits at the edge. */
+  clipped: boolean
+}
+
+/**
+ * The scale for the large single-parameter graph. The same zones as `rangeBar`, but the scale is widened to show a value that
+ * lies a little outside it (up to one more scale width), and it gets round-numbered axis ticks.
+ */
+export function gaugeScale(value: number | null | undefined, low: number | null | undefined, high: number | null | undefined): GaugeScale | null {
+  const g = rangeBar(value, low, high)
+  if (!g || value === null || value === undefined) return null
+  const lo = low ?? null
+  const hi = high ?? null
+  let min: number
+  let max: number
+  if (lo !== null && hi !== null) {
+    const span = hi - lo || Math.abs(hi) * 0.1 || 1
+    min = lo - span * 0.6
+    max = hi + span * 0.6
+  } else if (hi !== null) { min = 0; max = hi * 1.6 }
+  else { min = 0; max = (lo as number) * 2 }
+  // A scale that starts below zero only for symmetry looks wrong on a lab report when the limits are positive.
+  if (min < 0 && (lo === null || lo >= 0)) min = 0
+
+  const width = max - min
+  let clipped = false
+  if (value > max) {
+    if (value <= max + width) max = value + width * 0.08
+    else { max = max + width; clipped = true }
+  } else if (value < min) {
+    if (value >= min - width) min = value - width * 0.08
+    else { min = min - width; clipped = true }
+  }
+
+  const step = niceStep((max - min) / 6)
+  const decimals = Math.max(0, -Math.floor(Math.log10(step) + 1e-9))
+  const ticks: { at: number; label: string }[] = []
+  for (let t = Math.ceil(min / step - 1e-9) * step; t <= max + step * 1e-6; t += step) {
+    ticks.push({ at: t, label: (Math.abs(t) < step * 1e-6 ? 0 : t).toFixed(decimals) })
+  }
+  const pos = (x: number) => Math.min(100, Math.max(0, ((x - min) / (max - min)) * 100))
+  return { min, max, ticks, pos, clipped }
+}
+
+/** 1, 2, 2.5 or 5 × a power of ten, at least `raw`. */
+function niceStep(raw: number): number {
+  if (!(raw > 0) || !Number.isFinite(raw)) return 1
+  const p = Math.pow(10, Math.floor(Math.log10(raw)))
+  const f = raw / p
+  return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p
 }

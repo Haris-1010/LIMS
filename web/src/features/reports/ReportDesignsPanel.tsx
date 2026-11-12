@@ -187,6 +187,7 @@ export function ReportDesignsPanel({ images }: { images: ReportImages }) {
               {(['lines', 'zebra', 'boxed'] as const).map((x) => <option key={x} value={x}>{t(`reports.tableStyles.${x}`)}</option>)}
             </SelectField>
             <Switch checked={d.showRangeBars} onChange={(v) => set({ showRangeBars: v })} label={t('reports.showRangeBars')} hint={t('reports.showRangeBarsHint')} />
+            <Switch checked={d.showSingleParameterCharts} onChange={(v) => set({ showSingleParameterCharts: v })} label={t('reports.showSingleParameterCharts')} hint={t('reports.showSingleParameterChartsHint')} />
             <Switch checked={d.colourFlags} onChange={(v) => set({ colourFlags: v })} label={t('reports.colourFlags')} hint={t('reports.colourFlagsHint')} />
             <Switch checked={d.showFlagWords} onChange={(v) => set({ showFlagWords: v })} label={t('reports.showFlagWords')} />
           </Section>
