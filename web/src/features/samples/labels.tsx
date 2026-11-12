@@ -54,7 +54,14 @@ export function PrintJob({ samples, settings, onDone }: { samples: SampleListIte
     return () => {
       window.clearTimeout(h)
       window.removeEventListener('afterprint', finish)
-      finish()
+      // Tidy up only: never record a print that has not happened. StrictMode's
+      // development remount runs this before the dialog is due, and calling
+      // onDone here would cancel the job (and the pending window.print) twice.
+      if (!finished) {
+        finished = true
+        style.remove()
+        document.body.classList.remove('printing-labels')
+      }
     }
     // The job is created once per print request.
     // eslint-disable-next-line react-hooks/exhaustive-deps

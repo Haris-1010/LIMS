@@ -542,7 +542,8 @@ input.urdu-input { height: 44px; }
 .field-with-action { display: flex; flex-direction: column; gap: 4px; }
 .field-with-action > .btn { align-self: flex-start; }
 .branch-single { font-size: var(--text-sm); font-weight: 550; color: var(--text); padding-inline-end: 6px; }
-.menu-trigger .profile:hover { background: var(--surface-hover); }
+/* The profile trigger lives in the dark header, so it keeps the chrome hover; the light surface hover would hide its white text. */
+.menu-trigger .profile:hover { background: var(--chrome-hover); }
 .menu-trigger:focus-visible { box-shadow: var(--ring); }
 .menu-trigger .icon-btn { pointer-events: none; }
 .menu-root:has(> .menu-trigger:hover) .icon-btn { background: var(--surface-hover); }
