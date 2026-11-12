@@ -1,3 +1,14 @@
+.license-expiry-page { padding-bottom: 0; }
+.license-expiry-page .banner { line-height: 1.5; }
+.license-expiry-action { margin-inline-start: auto; flex: none; }
+.license-details { display: flex; flex-wrap: wrap; gap: 12px 36px; margin: 0 0 16px; }
+.license-details > div { min-width: 180px; }
+.license-details dt { color: var(--muted); font-size: var(--text-xs); }
+.license-details dd { margin: 3px 0 0; color: var(--text); font-weight: 600; }
+.license-renewal-hint { margin: 14px 0 10px; }
+.license-upload { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.license-renewal-error { margin-top: 12px; }
+
 .license-steps { list-style: none; counter-reset: step; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-5); }
 .license-steps > li { counter-increment: step; position: relative; display: flex; flex-direction: column; gap: 6px; padding-inline-start: 36px; }
 .license-steps > li::before { content: counter(step); position: absolute; inset-inline-start: 0; top: -1px; width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;

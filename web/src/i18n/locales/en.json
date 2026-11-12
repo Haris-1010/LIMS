@@ -130,6 +130,23 @@
     "chooseFile": "Click to choose the file, or drop it here",
     "activate": "Activate",
     "offline": "Checked on this server. No internet needed.",
+    "manageTitle": "License",
+    "manageText": "View this server's license and install a renewed signed license file at any time.",
+    "customer": "Licensed to",
+    "expires": "Expires",
+    "perpetual": "No expiry",
+    "renewalHint": "Request a renewed license file from your HART supplier using this server's Installation ID. The file must be signed for this server; editing a license file will invalidate it.",
+    "installRenewal": "Install new license",
+    "installed": "New license installed",
+    "uploadExpired": "The selected license file has expired. Ask your HART supplier for a current one.",
+    "copyFailed": "Could not copy the Installation ID. Select and copy it manually.",
+    "expiry": {
+      "warning": "License expires in {{days}} days ({{date}}). Contact your system administrator or HART supplier to arrange renewal.",
+      "urgent": "Urgent: license expires in {{days}} days ({{date}}). Arrange renewal now to avoid losing access.",
+      "urgentOneDay": "Urgent: license expires in 1 day ({{date}}). Arrange renewal now to avoid losing access.",
+      "today": "License expires today ({{date}}). Contact your system administrator or HART supplier to renew.",
+      "todayUrgent": "Urgent: license expires today ({{date}}). Arrange renewal now to avoid losing access."
+    },
     "hero": {
       "eyebrow": "License",
       "title": "One license per server",

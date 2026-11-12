@@ -9,6 +9,7 @@ import { Button } from '../../components/ui/Button'
 import { Switch } from '../../components/ui/Controls'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { useToast } from '../../components/ui/Toast'
+import { LicenseManagementCard } from '../license/LicenseManagementCard'
 import './admin.css'
 
 type SettingKind = 1 | 2
@@ -28,6 +29,7 @@ export function SettingsPage() {
   return (
     <div className="page">
       <div className="page-head"><div><h2>{t('settings.title')}</h2><p>{t('settings.subtitle')}</p></div></div>
+      <div className="section-gap"><LicenseManagementCard /></div>
       {isLoading ? <section className="card"><div className="card-body"><Skeleton height={180} /></div></section> : (
         <div className="stack">
           {groups.map((g) => (

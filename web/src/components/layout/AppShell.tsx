@@ -11,6 +11,7 @@ import { Skeleton } from '../ui/Skeleton'
 import { Header } from './Header'
 import { Sidebar } from './Sidebar'
 import { LabelPrintHost } from '../../features/samples/LabelPrintHost'
+import { LicenseExpiryNotice } from '../../features/license/LicenseExpiryNotice'
 
 const COLLAPSE_KEY = 'lims.sidebar.collapsed'
 
@@ -73,6 +74,7 @@ export function AppShell() {
       <div className="main">
         <Header route={route} />
         <main id="content">
+          <LicenseExpiryNotice />
           {allowed ? (
             <Suspense fallback={<PageFallback />}>
               <Outlet />
