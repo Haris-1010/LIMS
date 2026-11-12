@@ -137,3 +137,10 @@ public sealed record WorklistItemDto(
     ResultStatus? ResultStatus, IReadOnlyList<string> ParameterCodes);
 
 public sealed record WorklistDetail(WorklistListItem Worklist, string BranchName, IReadOnlyList<WorklistItemDto> Items, string RowVersion);
+
+public sealed record HistoryPoint(
+    DateTime DateUtc, long ResultId, int TestId, string TestCode, string TestNameEn, string? TestNameUr,
+    int ParameterId, string ParameterCode, string ParameterNameEn, string? ParameterNameUr,
+    decimal Value, string? Unit, decimal? RangeLow, decimal? RangeHigh, ResultFlag Flag);
+
+public sealed record PatientHistory(int PatientId, int? Months, IReadOnlyList<HistoryPoint> Points);

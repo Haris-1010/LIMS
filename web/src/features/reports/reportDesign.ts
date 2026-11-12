@@ -17,6 +17,7 @@ export const CLASSIC: ReportDesign = {
   showFooterImage: false,
   showRangeBars: true,
   showSingleParameterCharts: true,
+  graphTests: [],
   showFlagWords: true,
   colourFlags: false,
   tableStyle: 'lines',
@@ -158,6 +159,15 @@ export function sampleView(): ReportView {
           }],
         },
       ],
+      history: [
+        { testCode: 'CBC', parameterCode: 'HB', nameEn: 'Haemoglobin', nameUr: null, unit: 'g/dL', points: [
+          { dateUtc: '2026-03-04T08:00:00Z', value: 13.1, low: 12, high: 15, flag: 1 },
+          { dateUtc: '2026-05-19T08:00:00Z', value: 12.4, low: 12, high: 15, flag: 1 },
+          { dateUtc: '2026-08-02T08:00:00Z', value: 11.6, low: 12, high: 15, flag: 2 },
+          { dateUtc: '2026-09-27T08:00:00Z', value: 11.1, low: 12, high: 15, flag: 2 },
+          { dateUtc: now, value: 10.8, low: 12, high: 15, flag: 2 },
+        ] },
+      ],
       pending: [{ code: 'VITD', nameEn: 'Vitamin D (25-OH)', nameUr: null }],
       signatories: [
         { userId: 0, nameEn: 'Dr. Sample Pathologist', nameUr: null, designation: 'Consultant Pathologist', registrationNo: 'PMDC 12345', hasSignature: false, approved: true },
@@ -220,7 +230,7 @@ export function gaugeScale(value: number | null | undefined, low: number | null 
 }
 
 /** 1, 2, 2.5 or 5 × a power of ten, at least `raw`. */
-function niceStep(raw: number): number {
+export function niceStep(raw: number): number {
   if (!(raw > 0) || !Number.isFinite(raw)) return 1
   const p = Math.pow(10, Math.floor(Math.log10(raw)))
   const f = raw / p

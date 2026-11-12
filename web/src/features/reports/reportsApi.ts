@@ -79,6 +79,8 @@ export interface SnapTest {
 }
 export interface SnapSection { departmentNameEn: string; departmentNameUr: string | null; tests: SnapTest[] }
 export interface SnapPendingTest { code: string; nameEn: string; nameUr: string | null }
+export interface SnapHistoryPoint { dateUtc: string; value: number; low: number | null; high: number | null; flag: 0 | 1 | 2 | 3 | 4 | 5 | 6 }
+export interface SnapHistorySeries { testCode: string; parameterCode: string; nameEn: string; nameUr: string | null; unit: string | null; points: SnapHistoryPoint[] }
 /** Signatory from the report template, frozen at issue (schema 3; absent on older reports). */
 export interface SnapFixedSignatory { id: number; nameEn: string; nameUr: string | null; qualification: string | null; designation: string | null; registrationNo: string | null; hasSignature: boolean }
 export interface SnapSignatory { userId: number; nameEn: string; nameUr: string | null; designation: string | null; registrationNo: string | null; hasSignature: boolean; approved: boolean }
@@ -101,6 +103,7 @@ export interface ReportSnapshot {
   pending: SnapPendingTest[]
   signatories: SnapSignatory[]
   fixedSignatories?: SnapFixedSignatory[] | null
+  history?: SnapHistorySeries[] | null
 }
 
 export interface ReportMeta {
@@ -172,6 +175,8 @@ export interface ReportDesign {
   showFooterImage: boolean
   showRangeBars: boolean
   showSingleParameterCharts: boolean
+  /** Codes of the tests whose historical graph is offered by default when printing. */
+  graphTests: string[]
   showFlagWords: boolean
   colourFlags: boolean
   tableStyle: TableStyle

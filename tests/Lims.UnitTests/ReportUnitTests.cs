@@ -240,7 +240,8 @@ public sealed class ReportDesignRulesTests
         Assert.Null(ReportDesignRules.Problem(d));
         var back = ReportDesignRules.Read(ReportDesignRules.Serialize(d));
         Assert.Equal(d.Blocks, back.Blocks);
-        Assert.Equal(d with { Blocks = back.Blocks }, back);
+        Assert.Equal(d.GraphTests, back.GraphTests);
+        Assert.Equal(d with { Blocks = back.Blocks, GraphTests = back.GraphTests }, back);
     }
 
     [Fact]
@@ -280,6 +281,14 @@ public sealed class ReportDesignRulesTests
             _ => d with { TableStyle = "fancy" },
         };
         Assert.Equal(setting, ReportDesignRules.Problem(bad));
+    }
+
+    [Fact]
+    public void Graph_tests_are_a_list_of_reasonable_test_codes()
+    {
+        Assert.Null(ReportDesignRules.Problem(new ReportDesign { GraphTests = ["HBA1C", "FBS"] }));
+        Assert.Equal("graphTests", ReportDesignRules.Problem(new ReportDesign { GraphTests = [" "] }));
+        Assert.Equal("graphTests", ReportDesignRules.Problem(new ReportDesign { GraphTests = [new string('X', 51)] }));
     }
 
     [Theory]

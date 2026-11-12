@@ -124,6 +124,7 @@ public sealed class StarterCatalogTests(DatabaseFixture fx)
             db.Tests.Add(new LabTest { OrganizationId = org, Code = "CBC", NameEn = "Our own CBC", CategoryId = cat.Id, DepartmentId = dept.Id, SampleTypeId = 1, Price = 650 });
             await db.SaveChangesAsync();
         }
+
         var result = await Seed(org);
         Assert.Equal(1, result.SkippedTests);
         Assert.Equal(StarterCatalog.Tests.Length - 1, result.Tests);
@@ -133,6 +134,43 @@ public sealed class StarterCatalogTests(DatabaseFixture fx)
             Assert.Equal("Our own CBC", cbc.NameEn);
             Assert.Empty(cbc.Parameters);
         }
+    }
+
+    [Fact]
+    public async Task Rate_list_is_imported_once_without_overwriting_custom_prices()
+    {
+        var org = await NewOrg();
+        await Seed(org);
+        await using (var db = fx.System())
+        {
+            var cbc = await db.Tests.SingleAsync(t => t.OrganizationId == org && t.Code == "CBC");
+            cbc.Price = 999;
+            await db.SaveChangesAsync();
+        }
+
+        await using var scope = fx.System();
+        var seeder = new StarterCatalogSeeder(scope);
+        var added = await seeder.SeedRateListAsync(org);
+        var uniqueRateCodes = RateListCatalog.Rates.Select(r => r.SourceCode).Distinct(StringComparer.OrdinalIgnoreCase).Count();
+        var existingRateCount = RateListCatalog.Rates.Select(r => r.SourceCode)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Count(RateListCatalog.ExistingTestSourceCodes.Contains);
+        Assert.Equal(uniqueRateCodes - existingRateCount, added);
+
+        await using (var db = fx.System())
+        {
+            Assert.Equal(999m, await db.Tests.Where(t => t.OrganizationId == org && t.Code == "CBC").Select(t => t.Price).SingleAsync());
+            Assert.Equal(uniqueRateCodes - existingRateCount + StarterCatalog.Tests.Length, await db.Tests.CountAsync(t => t.OrganizationId == org));
+            var imported = await db.Tests.Include(t => t.Parameters)
+                .Where(t => t.OrganizationId == org && t.Code.StartsWith("TZ-")).ToListAsync();
+            Assert.Contains(imported, t => t.Code == "TZ-0461" && t.Parameters.Any(p => p.Code == "HB"));
+            Assert.Contains(imported, t => t.Code == "TZ-0578" && t.Parameters.Any(p => p.Code == "ALT"));
+            Assert.All(imported.Where(t => t.Code != "TZ-0018" && t.Code != "TZ-0461" && t.Code != "TZ-0578"), t =>
+                Assert.DoesNotContain(t.Parameters, p => p.Code == "HB" || p.Code == "ALT"));
+        }
+
+        await using var secondDb = fx.System();
+        Assert.Equal(0, await new StarterCatalogSeeder(secondDb).SeedRateListAsync(org));
     }
 
     [Fact]

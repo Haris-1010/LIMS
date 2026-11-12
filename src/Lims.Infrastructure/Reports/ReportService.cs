@@ -182,8 +182,6 @@ public sealed class ReportService(LimsDbContext db, ResultReportSource source, R
 
         var live = await Visible().Where(r => r.OrderId == orderId && r.Status != ReportStatus.Superseded).SingleOrDefaultAsync(ct);
         var latest = await Visible().Where(r => r.OrderId == orderId).MaxAsync(r => (int?)r.Version, ct) ?? 0;
-        if (live is not null && !ReportRules.IsOutdated(live, state))
-            throw BusinessRuleException.Conflict("report_up_to_date", "The issued report already contains everything that has been released.");
         if (live is not null && string.IsNullOrWhiteSpace(req.Reason))
             throw new BusinessRuleException("report_reason_required", "Say why a new version is being issued.");
 

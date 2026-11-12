@@ -121,6 +121,35 @@ public sealed class ResultReportSource(LimsDbContext db, SampleService samples, 
                 r.Id, r.Version, r.ApprovedAtUtc!.Value, r.Comment, values));
         }
 
+        var currentParameters = releasedTests
+            .SelectMany(t => t.Values.Select(v => (Test: t, Value: v)))
+            .Where(x => x.Value.Type == ResultType.Numeric && x.Value.Number is not null)
+            .GroupBy(x => x.Value.ParameterId)
+            .ToDictionary(g => g.Key, g => (g.First().Test.Code, g.First().Value));
+        var history = new List<ReleasedHistorySeries>();
+        if (currentParameters.Count > 0)
+        {
+            var historyResults = await VisibleReleased()
+                .Include(r => r.Values)
+                .Where(r => r.PatientId == patient.Id && r.Values.Any(v => currentParameters.Keys.Contains(v.ParameterId) && v.ValueNumeric != null))
+                .OrderBy(r => r.ApprovedAtUtc)
+                .ToListAsync(ct);
+            foreach (var group in historyResults.SelectMany(r => r.Values
+                .Where(v => v.ValueNumeric is not null && currentParameters.ContainsKey(v.ParameterId))
+                .Select(v => (Result: r, Value: v)))
+                .GroupBy(x => x.Value.ParameterId))
+            {
+                var current = currentParameters[group.Key];
+                var points = group
+                    .Where(x => string.Equals(x.Value.UnitText, current.Value.Unit, StringComparison.Ordinal))
+                    .Select(x => new ReleasedHistoryPoint(
+                        x.Result.ApprovedAtUtc!.Value, x.Value.ValueNumeric!.Value, x.Value.RangeLow, x.Value.RangeHigh, x.Value.Flag))
+                    .ToList();
+                if (points.Count > 0)
+                    history.Add(new ReleasedHistorySeries(group.Key, current.Code, current.Value.Code, current.Value.NameEn, current.Value.NameUr, current.Value.Unit, points));
+            }
+        }
+
         var signerIds = results.SelectMany(r => new int?[] { r.VerifiedByUserId, r.ApprovedByUserId }).OfType<int>().Distinct().ToList();
         var approverIds = results.Select(r => r.ApprovedByUserId).OfType<int>().ToHashSet();
         var users = await db.Users.AsNoTracking().Where(u => signerIds.Contains(u.Id))
@@ -132,6 +161,6 @@ public sealed class ResultReportSource(LimsDbContext db, SampleService samples, 
             lab.Id, lab.NameEn, lab.NameUr, lab.AddressEn ?? org.AddressEn, lab.AddressUr ?? org.AddressUr, lab.Phone ?? org.Phone, lab.Email ?? org.Email, org.NameEn, org.NameUr,
             patient.Id, patient.PatientNo, patient.FullName, patient.FullNameUr, patient.Sex, patient.DateOfBirth, patient.IsDateOfBirthEstimated, patient.Mobile,
             years, months, days, collected, received, items.Count, results.Max(r => r.ApprovedAtUtc),
-            releasedTests, pending, signatories);
+            releasedTests, pending, signatories, history);
     }
 }

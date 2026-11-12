@@ -1,8 +1,8 @@
 import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, type CSSProperties, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { formatDateTime } from '../../lib/format'
-import { CLASSIC, designClasses, designVars, gaugeScale, rangeBar } from './reportDesign'
-import { docLang, NO_IMAGES, type DocLang, type ReportBlock, type ReportDesign, type ReportImages, type ReportLanguage, type ReportView, type SnapParameter } from './reportsApi'
+import { CLASSIC, designClasses, designVars, gaugeScale, niceStep, rangeBar } from './reportDesign'
+import { docLang, NO_IMAGES, type DocLang, type ReportBlock, type ReportDesign, type ReportImages, type ReportLanguage, type ReportView, type SnapParameter, type SnapHistorySeries } from './reportsApi'
 import './report.css'
 
 /**
@@ -21,7 +21,7 @@ import './report.css'
  * content is taller than the page, everything on that page (text, tables, images) is scaled down evenly until it fits, and the
  * footer sits at the bottom. Nothing is cut off. Tests still awaited are listed on the last page.
  */
-export function ReportDocument({ view, images = NO_IMAGES, design = CLASSIC, onlyTests, onlyParameters, language }: {
+export function ReportDocument({ view, images = NO_IMAGES, design = CLASSIC, onlyTests, onlyParameters, graphTests, language }: {
   view: ReportView
   /** Language of this copy; undefined = as issued. */
   language?: ReportLanguage
@@ -31,12 +31,15 @@ export function ReportDocument({ view, images = NO_IMAGES, design = CLASSIC, onl
   onlyTests?: number[]
   /** Parameter codes by order item id; undefined = every parameter. */
   onlyParameters?: Record<number, string[]>
+  /** Codes of the tests that get a historical graph; undefined = the design's list. */
+  graphTests?: string[]
 }) {
   const { i18n } = useTranslation()
   const { snapshot: s, meta } = view
   const lang = docLang(language ?? s.language)
   const fixed = { en: i18n.getFixedT('en'), ur: i18n.getFixedT('ur') }
   const dateLang = lang === 'ur' ? 'ur' : 'en'
+  const graphCodes = new Set(graphTests ?? design.graphTests ?? [])
 
   /** Label in the report language(s); bilingual shows both, English first. */
   const L = (key: string, opts?: Record<string, unknown>): ReactNode =>
@@ -161,6 +164,9 @@ export function ReportDocument({ view, images = NO_IMAGES, design = CLASSIC, onl
                   </table>
                   {t.comment && <p className="rp-comment" dir="auto"><strong>{L('comment')}:</strong> {t.comment}</p>}
                   {t.reportNotes && <p className="rp-notes" dir="auto">{t.reportNotes}</p>}
+                  {graphCodes.has(t.code) && (s.history ?? []).filter((h) => h.testCode === t.code && h.points.length > 1 && t.parameters.some((p) => p.code === h.parameterCode)).map((h) => (
+                    <HistoryChart key={`${h.testCode}-${h.parameterCode}`} series={h} Name={Name} t={fixed[lang === 'ur' ? 'ur' : 'en']} />
+                  ))}
                 </div>
               ))}
             </section>
@@ -391,6 +397,154 @@ function RangeBar({ p }: { p: SnapParameter }) {
       {g.highStart < 100 && <rect className="z-hi" x={g.highStart} y="3" width={100 - g.highStart} height="4" rx="1" />}
       <rect className="mk" x={g.marker - 1.2} y="0.5" width="2.4" height="9" rx="1" />
     </svg>
+  )
+}
+
+/** A smooth curve through the points that never overshoots them (monotone cubic), so a curve cannot suggest a value that was not measured. */
+function monotonePath(p: [number, number][]): string {
+  const n = p.length
+  if (n === 0) return ''
+  if (n === 1) return `M ${p[0]![0]} ${p[0]![1]}`
+  const dx: number[] = []
+  const m: number[] = []
+  for (let i = 0; i < n - 1; i++) { dx[i] = p[i + 1]![0] - p[i]![0]; m[i] = (p[i + 1]![1] - p[i]![1]) / dx[i]! }
+  const t: number[] = new Array(n).fill(0)
+  t[0] = m[0]!; t[n - 1] = m[n - 2]!
+  for (let i = 1; i < n - 1; i++) t[i] = m[i - 1]! * m[i]! <= 0 ? 0 : (m[i - 1]! + m[i]!) / 2
+  for (let i = 0; i < n - 1; i++) {
+    if (m[i] === 0) { t[i] = 0; t[i + 1] = 0; continue }
+    const a = t[i]! / m[i]!
+    const b = t[i + 1]! / m[i]!
+    const sq = a * a + b * b
+    if (sq > 9) { const k = 3 / Math.sqrt(sq); t[i] = k * a * m[i]!; t[i + 1] = k * b * m[i]! }
+  }
+  let d = `M ${p[0]![0]} ${p[0]![1]}`
+  for (let i = 0; i < n - 1; i++) {
+    const h = dx[i]! / 3
+    d += ` C ${p[i]![0] + h} ${p[i]![1] + t[i]! * h} ${p[i + 1]![0] - h} ${p[i + 1]![1] - t[i + 1]! * h} ${p[i + 1]![0]} ${p[i + 1]![1]}`
+  }
+  return d
+}
+
+const toneOf = (flag: number) => (flag === 4 || flag === 5 ? 'crit' : flag === 2 || flag === 3 || flag === 6 ? 'warn' : 'ok')
+const fmtNum = (v: number, step: number) => v.toFixed(Math.min(3, Math.max(0, -Math.floor(Math.log10(step) + 1e-9))))
+
+/**
+ * Historical graph of one parameter: the patient's approved results over time on a smooth, shaded curve, with the latest
+ * reference range as a green band, value labels, abnormal results coloured, and the change since the previous result. Drawn only
+ * from the snapshot's frozen history (the last 12 results); evenly spaced in order, dated on the axis.
+ */
+function HistoryChart({ series, Name, t }: {
+  series: SnapHistorySeries
+  Name: (props: { en: string; ur: string | null; className?: string }) => ReactNode
+  t: (key: string, opts?: Record<string, unknown>) => string
+}) {
+  const points = series.points.slice(-12)
+  const n = points.length
+  const W = 760, H = 250, L = 52, R = 28, T = 44, B = 46
+  const last = points[n - 1]!
+  const prev = points[n - 2]
+  const lo = last.low, hi = last.high
+  const nums = [...points.map((p) => p.value), ...(lo !== null ? [lo] : []), ...(hi !== null ? [hi] : [])]
+  let rawMin = Math.min(...nums), rawMax = Math.max(...nums)
+  if (rawMin === rawMax) { rawMin -= Math.max(Math.abs(rawMin) * 0.1, 1); rawMax += Math.max(Math.abs(rawMax) * 0.1, 1) }
+  const pad = (rawMax - rawMin) * 0.12
+  const step = niceStep((rawMax - rawMin + pad * 2) / 4)
+  let min = Math.floor((rawMin - pad) / step) * step
+  if (min < 0 && rawMin >= 0) min = 0
+  const max = Math.ceil((rawMax + pad) / step) * step
+  const ticks: number[] = []
+  for (let v = min; v <= max + step * 1e-6; v += step) ticks.push(v)
+  const plotH = H - T - B
+  const x = (i: number) => L + (n === 1 ? (W - L - R) / 2 : (i * (W - L - R)) / (n - 1))
+  const y = (v: number) => T + ((max - v) * plotH) / (max - min)
+  const coords = points.map((p, i) => [x(i), y(p.value)] as [number, number])
+  const line = monotonePath(coords)
+  const baseY = y(min)
+  const area = `${line} L ${x(n - 1)} ${baseY} L ${x(0)} ${baseY} Z`
+  const bandTop = hi !== null ? y(Math.min(hi, max)) : T
+  const bandBottom = lo !== null ? y(Math.max(lo, min)) : baseY
+  const hasBand = (lo !== null || hi !== null) && bandBottom > bandTop
+  const gid = `hg-${series.testCode}-${series.parameterCode}`.replace(/[^A-Za-z0-9_-]/g, '')
+  const labelAll = n <= 8
+  const values = points.map((p) => p.value)
+  const extremes = new Set([0, n - 1, values.indexOf(Math.max(...values)), values.indexOf(Math.min(...values))])
+  const diff = prev ? last.value - prev.value : 0
+  const pct = prev && prev.value !== 0 ? (diff / Math.abs(prev.value)) * 100 : null
+  const dir = Math.abs(diff) < step * 1e-3 ? 'same' : diff > 0 ? 'up' : 'down'
+  const tone = toneOf(last.flag)
+  const date = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })
+  const unit = series.unit ? ` ${series.unit}` : ''
+  const every = n > 9 ? 2 : 1
+  const rangeText = lo !== null && hi !== null ? `${fmtNum(lo, step)} – ${fmtNum(hi, step)}` : hi !== null ? `< ${fmtNum(hi, step)}` : lo !== null ? `> ${fmtNum(lo, step)}` : ''
+
+  return (
+    <figure className={`rp-history tone-${tone}`} aria-label={`${series.nameEn}: ${t('report.history')}`}>
+      <figcaption>
+        <div className="rp-history-title">
+          <strong><Name en={series.nameEn} ur={series.nameUr} /></strong>
+          <small>{t('report.history')}{series.unit ? ` · ${series.unit}` : ''} · {t('report.resultsCount', { count: n })}</small>
+        </div>
+        {prev && (
+          <div className="rp-history-delta" dir="ltr">
+            <span className="rp-delta-arrow">{dir === 'up' ? '▲' : dir === 'down' ? '▼' : '■'}</span>
+            <span className="num">{dir === 'same' ? t('report.noChange') : `${diff > 0 ? '+' : '−'}${fmtNum(Math.abs(diff), step / 10)}${unit}${pct !== null ? ` (${Math.abs(pct).toFixed(1)}%)` : ''}`}</span>
+            <small>{t('report.vsPrevious')}</small>
+          </div>
+        )}
+      </figcaption>
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={series.nameEn} direction="ltr">
+        <defs>
+          <linearGradient id={gid} x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0" className="h-grad-top" />
+            <stop offset="1" className="h-grad-bottom" />
+          </linearGradient>
+        </defs>
+        {hasBand && (
+          <g>
+            <rect className="h-band" x={L} y={bandTop} width={W - L - R} height={bandBottom - bandTop} />
+            {hi !== null && hi <= max && <line className="h-band-edge" x1={L} x2={W - R} y1={bandTop} y2={bandTop} />}
+            {lo !== null && lo >= min && <line className="h-band-edge" x1={L} x2={W - R} y1={bandBottom} y2={bandBottom} />}
+            {bandBottom - bandTop > 20 && <text className="h-band-label" x={W - R - 6} y={bandTop + 13} textAnchor="end">{t('report.normal')} · {rangeText}</text>}
+          </g>
+        )}
+        {ticks.map((v) => (
+          <g key={v}>
+            <line className="h-grid" x1={L} x2={W - R} y1={y(v)} y2={y(v)} />
+            <text className="h-tick" x={L - 9} y={y(v) + 3.5} textAnchor="end">{fmtNum(v, step)}</text>
+          </g>
+        ))}
+        <path className="h-area" d={area} fill={`url(#${gid})`} />
+        <path className="h-line" d={line} />
+        {points.map((pt, i) => {
+          const isLast = i === n - 1
+          const text = fmtNum(pt.value, step / 10)
+          const showLabel = labelAll || extremes.has(i)
+          const w = Math.max(38, text.length * 7.6 + 16)
+          return (
+            <g key={`${pt.dateUtc}-${i}`} className={`h-pt pt-${toneOf(pt.flag)}`}>
+              {isLast && <circle className="h-halo" cx={x(i)} cy={y(pt.value)} r={13} />}
+              <circle className="h-dot" cx={x(i)} cy={y(pt.value)} r={isLast ? 7 : 5}>
+                <title>{`${text}${unit} · ${date(pt.dateUtc)}`}</title>
+              </circle>
+              {showLabel && (isLast
+                ? (
+                  <g className="h-last">
+                    <rect x={x(i) - w / 2} y={y(pt.value) - 36} width={w} height={21} rx={6} />
+                    <path d={`M ${x(i) - 5} ${y(pt.value) - 16} L ${x(i)} ${y(pt.value) - 10} L ${x(i) + 5} ${y(pt.value) - 16} Z`} />
+                    <text x={x(i)} y={y(pt.value) - 21.5} textAnchor="middle">{text}</text>
+                  </g>
+                )
+                : <text className="h-val" x={x(i)} y={y(pt.value) - 12} textAnchor="middle">{text}</text>)}
+              {((n - 1 - i) % every === 0) && (
+                <text className={`h-date${isLast ? ' is-last' : ''}`} x={x(i)} y={H - B + 22} textAnchor="middle">{date(pt.dateUtc)}</text>
+              )}
+            </g>
+          )
+        })}
+        <line className="h-axis" x1={L} x2={W - R} y1={baseY} y2={baseY} />
+      </svg>
+    </figure>
   )
 }
 

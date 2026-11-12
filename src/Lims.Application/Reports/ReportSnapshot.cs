@@ -17,7 +17,8 @@ public sealed record ReportSnapshot(
     string IssuedByName, string? IssuedByNameUr, string? AmendmentReason, string? ReplacesReportNo,
     SnapLetterhead Letterhead, SnapPatient Patient, SnapOrder Order,
     IReadOnlyList<SnapSection> Sections, IReadOnlyList<SnapPendingTest> Pending, IReadOnlyList<SnapSignatory> Signatories,
-    IReadOnlyList<SnapFixedSignatory>? FixedSignatories = null);   // schema 3; null in reports issued before
+    IReadOnlyList<SnapFixedSignatory>? FixedSignatories = null,
+    IReadOnlyList<SnapHistorySeries>? History = null);   // schema 3; null in reports issued before
 
 public sealed record SnapLetterhead(
     string OrganizationNameEn, string? OrganizationNameUr, string LabNameEn, string? LabNameUr, string? AddressEn, string? AddressUr, string? Phone, string? Email,
@@ -52,6 +53,12 @@ public sealed record SnapPendingTest(string Code, string NameEn, string? NameUr)
 
 public sealed record SnapSignatory(int UserId, string NameEn, string? NameUr, string? Designation, string? RegistrationNo, bool HasSignature, bool Approved);
 
+public sealed record SnapHistoryPoint(DateTime DateUtc, decimal Value, decimal? Low, decimal? High, ResultFlag Flag);
+
+public sealed record SnapHistorySeries(
+    string TestCode, string ParameterCode, string NameEn, string? NameUr, string? Unit,
+    IReadOnlyList<SnapHistoryPoint> Points);
+
 // ======================================================================================
 // What the report is built from: the released results of one order, gathered by the result
 // module (which owns result visibility) together with patient, branch and template data.
@@ -70,6 +77,12 @@ public sealed record PendingTestData(long OrderItemId, string Code, string NameE
 
 public sealed record SignatoryData(int UserId, string NameEn, string? NameUr, string? Designation, string? RegistrationNo, bool HasSignature, bool Approved);
 
+public sealed record ReleasedHistoryPoint(DateTime DateUtc, decimal Value, decimal? Low, decimal? High, ResultFlag Flag);
+
+public sealed record ReleasedHistorySeries(
+    int ParameterId, string TestCode, string ParameterCode, string NameEn, string? NameUr, string? Unit,
+    IReadOnlyList<ReleasedHistoryPoint> Points);
+
 public sealed record ReleasedOrderData(
     long OrderId, string OrderNo, OrderPriority Priority, DateTime RegisteredAtUtc, string? ReferringDoctor,
     int OrderBranchId, string OrderBranchNameEn, string? OrderBranchNameUr,
@@ -78,7 +91,8 @@ public sealed record ReleasedOrderData(
     int PatientId, string PatientNo, string PatientNameEn, string? PatientNameUr, Sex Sex, DateOnly? DateOfBirth, bool DobEstimated, string? Mobile,
     int? AgeYears, int? AgeMonths, int? AgeDays, DateTime? CollectedAtUtc, DateTime? ReceivedAtUtc,
     int ActiveTestCount, DateTime? LatestApprovedAtUtc,
-    IReadOnlyList<ReleasedTest> Tests, IReadOnlyList<PendingTestData> Pending, IReadOnlyList<SignatoryData> Signatories)
+    IReadOnlyList<ReleasedTest> Tests, IReadOnlyList<PendingTestData> Pending, IReadOnlyList<SignatoryData> Signatories,
+    IReadOnlyList<ReleasedHistorySeries>? History = null)
 {
     public ReleaseState State => new(Tests.Count, ActiveTestCount, LatestApprovedAtUtc);
 }
@@ -122,7 +136,9 @@ public static class ReportSnapshotBuilder
             sections,
             d.Pending.OrderBy(p => p.OrderItemId).Select(p => new SnapPendingTest(p.Code, p.NameEn, p.NameUr)).ToList(),
             signatories,
-            t.Signatories?.ToList() ?? []);
+            t.Signatories?.ToList() ?? [],
+            d.History?.Select(h => new SnapHistorySeries(h.TestCode, h.ParameterCode, h.NameEn, h.NameUr, h.Unit,
+                h.Points.Select(p => new SnapHistoryPoint(p.DateUtc, p.Value, p.Low, p.High, p.Flag)).ToList())).ToList());
     }
 
     private static SnapTest ToTest(ReleasedTest x) => new(

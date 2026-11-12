@@ -82,6 +82,8 @@ public static class DatabaseCommands
         ctx.BecomeSystem();
         ctx.OrganizationId = orgId;
         var result = await scope.ServiceProvider.GetRequiredService<Lims.Infrastructure.Catalog.StarterCatalogSeeder>().SeedAsync(orgId);
+        var rateTests = await scope.ServiceProvider.GetRequiredService<Lims.Infrastructure.Catalog.StarterCatalogSeeder>().SeedRateListAsync(orgId);
+        log.LogInformation("Organisation {Code}: rate list imported ({Tests} tests added; existing custom prices were preserved)", orgCode, rateTests);
         if (!result.AlreadyAdded)
             log.LogInformation("Organisation {Code}: starter catalog added ({Tests} tests, {Parameters} parameters, {Ranges} reference ranges waiting for approval; {Skipped} skipped because the code is already used). Set prices and approve the ranges in the catalog screens",
                 orgCode, result.Tests, result.Parameters, result.Ranges, result.SkippedTests);

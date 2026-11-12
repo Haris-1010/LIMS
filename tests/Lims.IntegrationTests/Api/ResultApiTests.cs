@@ -143,6 +143,27 @@ public sealed class ResultApiTests(DatabaseFixture fx)
     }
 
     [Fact]
+    public async Task Patient_history_returns_only_approved_numeric_values()
+    {
+        var f = await Setup();
+        var (item, _, _) = await ReceivedItem(f, f.Hb);
+        var tech = await A("TECHNICIAN");
+        var patho = await A("PATHOLOGIST");
+        var saved = await ApiClient.Body(await tech.PutAsync($"/api/results/items/{item}/draft", Draft(null, (f.HbParam, "15", null))));
+        var submitted = await Do(tech, $"/api/results/{Rid(saved)}/submit", new { rowVersion = Rv(saved) });
+        var verified = await Do(patho, $"/api/results/{Rid(submitted)}/verify", new { rowVersion = Rv(submitted) });
+        await Do(patho, $"/api/results/{Rid(verified)}/approve", new { rowVersion = Rv(verified) });
+
+        var response = await patho.GetAsync($"/api/patients/{f.PatientId}/history?months=3");
+        var history = await ApiClient.Body(response);
+        ApiClient.Ok(response);
+        var point = Assert.Single(history.GetProperty("points").EnumerateArray());
+        Assert.Equal(f.HbParam, point.GetProperty("parameterId").GetInt32());
+        Assert.Equal(15m, point.GetProperty("value").GetDecimal());
+        Assert.Equal(1, point.GetProperty("flag").GetInt32());
+    }
+
+    [Fact]
     public async Task Flags_come_only_from_approved_ranges()
     {
         var f = await Setup();

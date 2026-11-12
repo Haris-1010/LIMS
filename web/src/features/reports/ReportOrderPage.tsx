@@ -16,10 +16,12 @@ import { EmptyState } from '../../components/ui/EmptyState'
 import { Modal } from '../../components/ui/Modal'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { useToast } from '../../components/ui/Toast'
+import { GraphOptions } from './GraphOptions'
+import { useGraphChoice } from './graphChoice'
 import { PrintReport } from './PrintReport'
 import { ReportDocument } from './ReportDocument'
 import { defaultLayout, designFor } from './reportDesign'
-import { imagesOf, reportKeys, reportTone, type ReportLanguage, type ReportLayoutDto, type ReportVersion, type ReportView, type TemplateDto } from './reportsApi'
+import { imagesOf, reportKeys, reportTone, type ReportDesign, type ReportLanguage, type ReportLayoutDto, type ReportVersion, type ReportView, type TemplateDto } from './reportsApi'
 import './report.css'
 
 /** One order's report: preview what would be issued, issue it, open earlier versions, print and check integrity. */
@@ -62,7 +64,8 @@ export function ReportOrderPage() {
   const v = view.data
 
   const refresh = async () => { await qc.invalidateQueries({ queryKey: reportKeys.all }) }
-  const canIssue = can('reports.issue') && (!live || live.isOutdated)
+  // A new version may also be needed after patient demographic changes, even when released results are unchanged.
+  const canIssue = can('reports.issue') && (!!live || effective === 'preview')
 
   const verify = useMutation({
     mutationFn: () => api<{ intact: boolean; fingerprint: string }>(`/api/reports/${v!.meta.id}/verify`),
@@ -150,12 +153,12 @@ export function ReportOrderPage() {
         onClose={() => setIssuing(false)} onIssued={async (r) => { setIssuing(false); setSelected(r.meta.id); await refresh() }} />}
       {printOptions && v && !v.isPreview && (
         <PrintDialog view={v} layouts={layouts.data ?? []} layoutId={layoutId} onLayout={setLayoutChoice} language={copyLang ?? v.snapshot.language} onLanguage={setCopyLang} onClose={() => setPrintOptions(false)}
-          onPrint={(onlyTests, onlyParameters) => { setPrintOptions(false); setPrinting({ view: v, layoutId, onlyTests, onlyParameters, language: copyLang ?? undefined }) }} />
+          onPrint={(onlyTests, onlyParameters, graphTests) => { setPrintOptions(false); setPrinting({ view: v, layoutId, onlyTests, onlyParameters, graphTests, language: copyLang ?? undefined }) }} />
       )}
       {sharing && v && !v.isPreview && (
-        <ShareDialog view={v} onClose={() => setSharing(false)} onSavePdf={() => setPrinting({ view: v, layoutId, onlyTests: undefined, onlyParameters: undefined, language: copyLang ?? undefined })} />
+        <ShareDialog view={v} design={designFor(layouts.data, layoutId)} onClose={() => setSharing(false)} onSavePdf={(onlyTests, onlyParameters, graphTests) => { setSharing(false); setPrinting({ view: v, layoutId, onlyTests, onlyParameters, graphTests, language: copyLang ?? undefined }) }} />
       )}
-      {printing && <PrintReport view={printing.view} images={imagesOf(template.data)} design={designFor(layouts.data, printing.layoutId)} onlyTests={printing.onlyTests} onlyParameters={printing.onlyParameters} language={printing.language}
+      {printing && <PrintReport view={printing.view} images={imagesOf(template.data)} design={designFor(layouts.data, printing.layoutId)} onlyTests={printing.onlyTests} onlyParameters={printing.onlyParameters} graphTests={printing.graphTests} language={printing.language}
         onDone={() => { const job = printing; setPrinting(null); if (job.view.meta.id) printed.mutate(job) }} />}
     </div>
   )
@@ -196,6 +199,7 @@ interface PrintJob {
   layoutId: number | null
   onlyTests: number[] | undefined
   onlyParameters: Record<number, string[]> | undefined
+  graphTests: string[]
   /** undefined = the language the report was issued in. */
   language: ReportLanguage | undefined
 }
@@ -203,21 +207,23 @@ interface PrintJob {
 /** Choose the design and which tests go on this copy. Choosing every test is a normal full print. */
 function PrintDialog({ view, layouts, layoutId, onLayout, language, onLanguage, onClose, onPrint }: {
   view: ReportView; layouts: ReportLayoutDto[]; layoutId: number | null; onLayout: (id: number | null) => void
-  language: ReportLanguage; onLanguage: (l: ReportLanguage) => void; onClose: () => void; onPrint: (onlyTests: number[] | undefined, onlyParameters: Record<number, string[]> | undefined) => void
+  language: ReportLanguage; onLanguage: (l: ReportLanguage) => void; onClose: () => void; onPrint: (onlyTests: number[] | undefined, onlyParameters: Record<number, string[]> | undefined, graphTests: string[]) => void
 }) {
   const { t, i18n } = useTranslation()
+  const graph = useGraphChoice(view, designFor(layouts, layoutId))
   const tests = view.snapshot.sections.flatMap((sec) => sec.tests)
   const [chosen, setChosen] = useState<(number | string)[]>(tests.map((x) => x.orderItemId))
   const [chosenParameters, setChosenParameters] = useState<Record<number, string[]>>(
     () => Object.fromEntries(tests.map((x) => [x.orderItemId, x.parameters.map((p) => p.code)])),
   )
+  const [customizeParameters, setCustomizeParameters] = useState(false)
   const all = chosen.length === tests.length
   const parametersComplete = tests.every((test) => chosen.includes(test.orderItemId) ? (chosenParameters[test.orderItemId]?.length ?? 0) > 0 : true)
   const ur = i18n.language === 'ur'
   return (
     <Modal open title={t('reports.printOptions')} subtitle={t('reports.printOptionsHint')} onClose={onClose} size="md"
       footer={<><Button variant="ghost" onClick={onClose}>{t('common.cancel')}</Button>
-        <Button variant="primary" icon={<Printer size={16} />} disabled={chosen.length === 0 || !parametersComplete} onClick={() => onPrint(all ? undefined : chosen.map(Number), parametersComplete && chosen.every((id) => (chosenParameters[Number(id)]?.length ?? 0) === (tests.find((x) => x.orderItemId === Number(id))?.parameters.length ?? 0)) ? undefined : chosenParameters)}>{t('reports.printNow')}</Button></>}>
+        <Button variant="primary" icon={<Printer size={16} />} disabled={customizeParameters && (chosen.length === 0 || !parametersComplete)} onClick={() => onPrint(!customizeParameters || all ? undefined : chosen.map(Number), !customizeParameters || (parametersComplete && chosen.every((id) => (chosenParameters[Number(id)]?.length ?? 0) === (tests.find((x) => x.orderItemId === Number(id))?.parameters.length ?? 0))) ? undefined : chosenParameters, graph.value)}>{t('reports.printNow')}</Button></>}>
       <div className="form-stack">
         <SelectField label={t('reports.design')} value={layoutId ?? ''} onChange={(e) => onLayout(e.target.value === '' ? null : Number(e.target.value))}>
           <option value="">{t('reports.builtIn')}</option>
@@ -226,7 +232,12 @@ function PrintDialog({ view, layouts, layoutId, onLayout, language, onLanguage, 
         <SelectField label={t('reports.copyLanguage')} hint={t('reports.copyLanguageHint')} value={language} onChange={(e) => onLanguage(Number(e.target.value) as ReportLanguage)}>
           {[0, 1, 2].map((l) => <option key={l} value={l}>{t(`reportLanguage.${l}`)}{l === view.snapshot.language ? ` (${t('reports.asIssued')})` : ''}</option>)}
         </SelectField>
-        <div>
+        <GraphOptions graph={graph} />
+        <label className="report-option-toggle">
+          <input type="checkbox" checked={customizeParameters} onChange={(e) => setCustomizeParameters(e.target.checked)} />
+          <span><strong>{t('reports.removeParameters')}</strong><small>{t('reports.removeParametersHint')}</small></span>
+        </label>
+        {customizeParameters && <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
             <strong>{t('reports.testsToPrint')}</strong>
             <span className="toolbar">
@@ -251,7 +262,7 @@ function PrintDialog({ view, layouts, layoutId, onLayout, language, onLanguage, 
           <p className="field-hint" style={{ marginTop: 8 }}>{t('reports.testsChosen', { count: chosen.length, total: tests.length })}</p>
           {chosen.length === 0 && <p className="field-error">{t('reports.chooseTests')}</p>}
           {chosen.length > 0 && !all && <div className="notice is-info" role="status" style={{ marginTop: 8 }}><span>{t('reports.partialNote')}</span></div>}
-        </div>
+        </div>}
       </div>
     </Modal>
   )
@@ -262,15 +273,33 @@ function PrintDialog({ view, layouts, layoutId, onLayout, language, onLanguage, 
  * wa.me with the number and message in a new tab. A file cannot be attached through a link, so staff save the PDF first and
  * attach it in WhatsApp.
  */
-function ShareDialog({ view, onClose, onSavePdf }: { view: ReportView; onClose: () => void; onSavePdf: () => void }) {
+function ShareDialog({ view, design, onClose, onSavePdf }: {
+  view: ReportView
+  design: ReportDesign
+  onClose: () => void
+  onSavePdf: (onlyTests: number[] | undefined, onlyParameters: Record<number, string[]> | undefined, graphTests: string[]) => void
+}) {
   const { t, i18n } = useTranslation()
+  const graph = useGraphChoice(view, design)
   const toast = useToast()
   const s = view.snapshot
-  const name = i18n.language === 'ur' && s.patient.nameUr ? s.patient.nameUr : s.patient.nameEn
-  const lab = i18n.language === 'ur' && s.letterhead.organizationNameUr ? s.letterhead.organizationNameUr : s.letterhead.organizationNameEn
   const [phone, setPhone] = useState(s.patient.mobile ?? '')
-  const [message, setMessage] = useState(t('reports.whatsappDefault', { name, reportNo: view.meta.reportNo, lab }))
+  const [messageLanguage, setMessageLanguage] = useState<'en' | 'ur'>(i18n.language === 'ur' ? 'ur' : 'en')
+  const messageText = (language: 'en' | 'ur') => i18n.getFixedT(language)('reports.whatsappDefault', { name: language === 'ur' && s.patient.nameUr ? s.patient.nameUr : s.patient.nameEn, reportNo: view.meta.reportNo, lab: language === 'ur' && s.letterhead.organizationNameUr ? s.letterhead.organizationNameUr : s.letterhead.organizationNameEn })
+  const [message, setMessage] = useState(() => messageText(i18n.language === 'ur' ? 'ur' : 'en'))
   const [error, setError] = useState<string | null>(null)
+  const tests = view.snapshot.sections.flatMap((sec) => sec.tests)
+  const [chosen, setChosen] = useState<(number | string)[]>(tests.map((test) => test.orderItemId))
+  const [chosenParameters, setChosenParameters] = useState<Record<number, string[]>>(
+    () => Object.fromEntries(tests.map((test) => [test.orderItemId, test.parameters.map((parameter) => parameter.code)])),
+  )
+  const [customizeParameters, setCustomizeParameters] = useState(false)
+  const allTests = chosen.length === tests.length
+  const complete = chosen.every((id) => (chosenParameters[Number(id)]?.length ?? 0) > 0)
+  const allParameters = complete && chosen.every((id) => {
+    const test = tests.find((item) => item.orderItemId === Number(id))
+    return (chosenParameters[Number(id)]?.length ?? 0) === (test?.parameters.length ?? 0)
+  })
   const share = useMutation({
     mutationFn: () => api<{ phone: string }>(`/api/reports/${view.meta.id}/share`, { method: 'POST', body: { channel: 'whatsapp', phone } }),
     onSuccess: (r) => {
@@ -284,17 +313,44 @@ function ShareDialog({ view, onClose, onSavePdf }: { view: ReportView; onClose: 
   return (
     <Modal open title={t('reports.whatsappTitle')} subtitle={t('reports.whatsappHint')} onClose={onClose} size="md"
       footer={<Button variant="ghost" onClick={onClose}>{t('common.cancel')}</Button>}>
-      <div className="form-stack">
-        <div>
-          <strong>{t('reports.whatsappStep1')}</strong>
-          <p className="field-hint">{t('reports.whatsappStep1Hint')}</p>
-          <Button icon={<FileDown size={16} />} onClick={onSavePdf}>{t('reports.savePdf')}</Button>
-        </div>
-        <strong>{t('reports.whatsappStep2')}</strong>
-        <Field label={t('reports.whatsappNumber')} hint={t('reports.whatsappNumberHint')} value={phone} inputMode="tel" dir="ltr" maxLength={30}
-          error={error ?? undefined} onChange={(e) => setPhone(e.target.value)} />
-        <TextAreaField label={t('reports.whatsappMessage')} value={message} rows={4} maxLength={1000} onChange={(e) => setMessage(e.target.value)} />
-        <div><Button variant="primary" icon={<MessageCircle size={16} />} loading={share.isPending} disabled={!phone.trim()} onClick={() => share.mutate()}>{t('reports.openWhatsapp')}</Button></div>
+      <div className="form-stack whatsapp-share-form">
+        <section className="whatsapp-share-section">
+          <div className="whatsapp-share-heading"><span className="whatsapp-step">1</span><div><strong>{t('reports.whatsappStep1')}</strong><p className="field-hint">{t('reports.whatsappStep1Hint')}</p></div></div>
+          <GraphOptions graph={graph} />
+          <label className="report-option-toggle">
+            <input type="checkbox" checked={customizeParameters} onChange={(e) => setCustomizeParameters(e.target.checked)} />
+            <span><strong>{t('reports.removeParameters')}</strong><small>{t('reports.removeParametersHint')}</small></span>
+          </label>
+          {customizeParameters && <div className="whatsapp-parameter-options">
+          <div className="print-tests">
+            <CheckList columns={1} selected={chosen} onChange={setChosen}
+              items={tests.map((test) => ({ id: test.orderItemId, label: i18n.language === 'ur' && test.nameUr ? test.nameUr : test.nameEn, sub: test.code }))} />
+          </div>
+          <strong>{t('reports.parametersToPrint')}</strong>
+          {tests.filter((test) => chosen.includes(test.orderItemId)).map((test) => (
+            <div key={test.orderItemId} className="print-parameter-group">
+              <span className="cell-strong">{i18n.language === 'ur' && test.nameUr ? test.nameUr : test.nameEn}</span>
+              <CheckList columns={1} selected={chosenParameters[test.orderItemId] ?? []}
+                onChange={(next) => setChosenParameters((current) => ({ ...current, [test.orderItemId]: next.map(String) }))}
+                items={test.parameters.map((parameter) => ({ id: parameter.code, label: i18n.language === 'ur' && parameter.nameUr ? parameter.nameUr : parameter.nameEn, sub: parameter.unit ?? undefined }))} />
+            </div>
+          ))}
+          {!complete && <p className="field-error">{t('reports.chooseParameters')}</p>}
+          </div>}
+          <Button icon={<FileDown size={16} />} disabled={chosen.length === 0 || !complete}
+            onClick={() => onSavePdf(!customizeParameters || allTests ? undefined : chosen.map(Number), !customizeParameters || allParameters ? undefined : chosenParameters, graph.value)}>{t('reports.savePdf')}</Button>
+        </section>
+        <section className="whatsapp-share-section">
+          <div className="whatsapp-share-heading"><span className="whatsapp-step">2</span><div><strong>{t('reports.whatsappStep2')}</strong><p className="field-hint">{t('reports.whatsappStep2Hint')}</p></div></div>
+          <Field label={t('reports.whatsappNumber')} hint={t('reports.whatsappNumberHint')} value={phone} inputMode="tel" dir="ltr" maxLength={30}
+            error={error ?? undefined} onChange={(e) => setPhone(e.target.value)} />
+          <SelectField label={t('reports.whatsappMessageLanguage')} value={messageLanguage} onChange={(e) => { const language = e.target.value as 'en' | 'ur'; setMessageLanguage(language); setMessage(messageText(language)) }}>
+            <option value="en">{t('reportLanguage.0')}</option>
+            <option value="ur">{t('reportLanguage.1')}</option>
+          </SelectField>
+          <TextAreaField label={t('reports.whatsappMessage')} value={message} rows={4} maxLength={1000} onChange={(e) => setMessage(e.target.value)} />
+          <div className="whatsapp-share-action"><Button variant="primary" icon={<MessageCircle size={16} />} loading={share.isPending} disabled={!phone.trim()} onClick={() => share.mutate()}>{t('reports.openWhatsapp')}</Button></div>
+        </section>
       </div>
     </Modal>
   )

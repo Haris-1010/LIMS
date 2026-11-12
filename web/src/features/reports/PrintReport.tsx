@@ -10,12 +10,13 @@ import { NO_IMAGES, type ReportDesign, type ReportImages, type ReportLanguage, t
  * print dialog produces the PDF with the same layout. The design's margins become the page margins. Each test is its own page,
  * fitted to one sheet, so the print waits for fonts and images (logo, header, footer, signatures) before opening the dialog.
  */
-export function PrintReport({ view, images = NO_IMAGES, design = CLASSIC, onlyTests, onlyParameters, language, onDone }: {
+export function PrintReport({ view, images = NO_IMAGES, design = CLASSIC, onlyTests, onlyParameters, graphTests, language, onDone }: {
   view: ReportView
   images?: ReportImages
   design?: ReportDesign
   onlyTests?: number[]
   onlyParameters?: Record<number, string[]>
+  graphTests?: string[]
   language?: ReportLanguage
   onDone: () => void
 }) {
@@ -54,5 +55,5 @@ export function PrintReport({ view, images = NO_IMAGES, design = CLASSIC, onlyTe
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  return createPortal(<div className="report-print-root" ref={root}><ReportDocument view={view} images={images} design={design} onlyTests={onlyTests} onlyParameters={onlyParameters} language={language} /></div>, document.body)
+  return createPortal(<div className="report-print-root" ref={root}><ReportDocument view={view} images={images} design={design} onlyTests={onlyTests} onlyParameters={onlyParameters} graphTests={graphTests} language={language} /></div>, document.body)
 }

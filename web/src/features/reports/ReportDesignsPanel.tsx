@@ -8,13 +8,15 @@ import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
-import { SelectField, Switch } from '../../components/ui/Controls'
+import { CheckList, SelectField, Switch } from '../../components/ui/Controls'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { Field } from '../../components/ui/Field'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { useToast } from '../../components/ui/Toast'
 import { ReportDocument } from './ReportDocument'
 import { ACCENT_SWATCHES, CLASSIC, PRESETS, sampleView, withPreset } from './reportDesign'
+import type { Paged } from '../admin/adminApi'
+import { catalogKeys, type TestListItem } from '../catalog/catalogApi'
 import { reportKeys, type DesignStyle, type LogoPosition, type ReportDesign, type ReportImages, type ReportLayoutDto, type TableStyle } from './reportsApi'
 
 type HeaderMode = 'logo' | 'image' | 'none'
@@ -192,6 +194,10 @@ export function ReportDesignsPanel({ images }: { images: ReportImages }) {
             <Switch checked={d.showFlagWords} onChange={(v) => set({ showFlagWords: v })} label={t('reports.showFlagWords')} />
           </Section>
 
+          <Section title={t('reports.graphTestsTitle')}>
+            <GraphTestsPicker value={d.graphTests ?? []} onChange={(graphTests) => set({ graphTests })} />
+          </Section>
+
           <Section title={t('reports.blocksTitle')}>
             <p className="field-hint" style={{ margin: 0 }}>{t('reports.blocksHint')}</p>
             <ol className="block-order">
@@ -211,7 +217,7 @@ export function ReportDesignsPanel({ images }: { images: ReportImages }) {
       <div className="design-preview">
         <Card title={t('reports.livePreview')} subtitle={t('reports.onePageNote')} flush>
           <div className="report-stage">
-            <div className="report-stage-scale"><ReportDocument view={sample} images={images} design={d} /></div>
+            <div className="report-stage-scale"><ReportDocument view={sample} images={images} design={d} graphTests={['CBC']} /></div>
           </div>
         </Card>
       </div>
@@ -251,5 +257,44 @@ function PresetThumb({ style, accent }: { style: DesignStyle; accent: string }) 
       <span className="pt-row" />
       <span className="pt-row" />
     </span>
+  )
+}
+
+/** Test codes that usually need a trend graph; only those that exist in this organisation's catalogue are added. */
+const RECOMMENDED = ['HBA1C', 'FBS', 'RBS', 'CBC', 'HB', 'RFT', 'LFT', 'LIPID', 'TSH', 'VITD', 'B12', 'FERR', 'UA', 'CA']
+
+/** Choose the tests that are offered with a historical graph when a report is printed. */
+function GraphTestsPicker({ value, onChange }: { value: string[]; onChange: (codes: string[]) => void }) {
+  const { t, i18n } = useTranslation()
+  const [search, setSearch] = useState('')
+  const tests = useQuery({
+    queryKey: catalogKeys.tests({ picker: search, graph: true }),
+    queryFn: () => api<Paged<TestListItem>>('/api/catalog/tests', { query: { search, isActive: true, pageSize: 100 } }),
+  })
+  const items = tests.data?.items ?? []
+  const label = (x: TestListItem) => (i18n.language === 'ur' && x.nameUr ? x.nameUr : x.nameEn)
+  const addRecommended = () => {
+    const found = items.map((x) => x.code).filter((c) => RECOMMENDED.includes(c.toUpperCase()))
+    onChange([...new Set([...value, ...found])])
+  }
+  return (
+    <div className="graph-options">
+      <p className="field-hint" style={{ margin: 0 }}>{t('reports.graphTestsHint')}</p>
+      <div className="graph-picked">
+        {value.length === 0 && <span className="field-hint">{t('reports.graphTestsNone')}</span>}
+        {value.map((c) => (
+          <span key={c} className="chip"><span className="num">{c}</span>
+            <button type="button" aria-label={t('reports.graphTestsRemove', { code: c })} onClick={() => onChange(value.filter((x) => x !== c))}>×</button>
+          </span>
+        ))}
+      </div>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <Button size="sm" onClick={addRecommended}>{t('reports.graphTestsAddRecommended')}</Button>
+        {value.length > 0 && <Button size="sm" variant="ghost" onClick={() => onChange([])}>{t('reports.graphTestsClear')}</Button>}
+      </div>
+      <Field label={t('reports.graphTestsSearch')} value={search} onChange={(e) => setSearch(e.target.value)} />
+      <CheckList columns={1} selected={value} onChange={(next) => onChange(next.map(String))}
+        items={items.map((x) => ({ id: x.code, label: label(x), sub: x.code }))} />
+    </div>
   )
 }

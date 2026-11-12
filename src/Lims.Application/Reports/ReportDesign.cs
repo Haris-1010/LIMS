@@ -35,6 +35,8 @@ public sealed record ReportDesign
     public bool ShowFlagWords { get; init; } = true;
     /// <summary>Colour abnormal results (red high, blue low). Off keeps the report readable on black-and-white copies only.</summary>
     public bool ColourFlags { get; init; } = false;
+    /// <summary>Codes of the tests whose historical (trend) graph is offered by default when printing; staff can change the choice per print.</summary>
+    public string[] GraphTests { get; init; } = [];
     /// <summary>lines, zebra or boxed.</summary>
     public string TableStyle { get; init; } = "lines";
     /// <summary>Order of the report body, top to bottom. Must contain every block exactly once.</summary>
@@ -62,6 +64,7 @@ public static class ReportDesignRules
         if (d.MarginSideMm is < 5 or > 30) return "marginSideMm";
         if (!LogoPositions.Contains(d.LogoPosition)) return "logoPosition";
         if (!TableStyles.Contains(d.TableStyle)) return "tableStyle";
+        if (d.GraphTests is null || d.GraphTests.Length > 200 || d.GraphTests.Any(c => string.IsNullOrWhiteSpace(c) || c.Length > 50)) return "graphTests";
         if (d.Blocks is null || d.Blocks.Length != AllBlocks.Length || d.Blocks.Distinct().Count() != AllBlocks.Length || d.Blocks.Any(b => !AllBlocks.Contains(b)))
             return "blocks";
         return null;

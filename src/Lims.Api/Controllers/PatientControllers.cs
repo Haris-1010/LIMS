@@ -2,13 +2,14 @@ using Lims.Api.Security;
 using Lims.Application.Patients;
 using Lims.Domain.Security;
 using Lims.Infrastructure.Patients;
+using Lims.Infrastructure.Results;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Lims.Api.Controllers;
 
 [ApiController]
 [Route("api/patients")]
-public sealed class PatientsController(PatientService patients) : ControllerBase
+public sealed class PatientsController(PatientService patients, ResultService results) : ControllerBase
 {
     [HttpGet]
     [HasPermission(Permissions.PatientsView)]
@@ -17,6 +18,11 @@ public sealed class PatientsController(PatientService patients) : ControllerBase
     [HttpGet("{id:int}")]
     [HasPermission(Permissions.PatientsView)]
     public async Task<IActionResult> Get(int id, CancellationToken ct) => Ok(await patients.GetAsync(id, ct));
+
+    [HttpGet("{id:int}/history")]
+    [HasPermission(Permissions.PatientsView, Permissions.ResultsView)]
+    public async Task<IActionResult> History(int id, [FromQuery] int? months, CancellationToken ct) =>
+        Ok(await results.PatientHistoryAsync(id, months, ct));
 
     /// <summary>Possible duplicates for the details being entered (live check in the registration form).</summary>
     [HttpGet("duplicates")]

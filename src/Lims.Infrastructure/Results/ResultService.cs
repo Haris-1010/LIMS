@@ -712,6 +712,34 @@ public sealed class ResultService(LimsDbContext db, SampleService samples, ILabC
         return steps.Select(s => new ApprovalStepDto(s.Step, s.AtUtc, users.GetValueOrDefault(s.UserId), s.Comment)).ToList();
     }
 
+    public async Task<PatientHistory> PatientHistoryAsync(int patientId, int? months, CancellationToken ct)
+    {
+        if (!await db.Patients.AsNoTracking().AnyAsync(p => p.Id == patientId, ct))
+            throw BusinessRuleException.NotFound("Patient");
+
+        var fromUtc = months is int m && m > 0
+            ? clock.UtcNow.AddMonths(-Math.Min(m, 120))
+            : (DateTime?)null;
+
+        var query =
+            from r in Visible().AsNoTracking() // VISIBILITY-GATE
+            join v in db.TestResultValues.AsNoTracking() on r.Id equals v.ResultId
+            join i in db.OrderItems.AsNoTracking() on r.OrderItemId equals i.Id
+            join p in db.TestParameters.AsNoTracking() on v.ParameterId equals p.Id
+            where r.PatientId == patientId
+                  && r.Status == ResultStatus.Approved
+                  && r.ApprovedAtUtc != null
+                  && v.ValueNumeric != null
+                  && (fromUtc == null || r.ApprovedAtUtc >= fromUtc)
+            orderby r.ApprovedAtUtc, p.SortOrder
+            select new HistoryPoint(
+                r.ApprovedAtUtc!.Value, r.Id, i.TestId, i.TestCode, i.TestNameEn, i.TestNameUr,
+                p.Id, p.Code, p.NameEn, p.NameUr, v.ValueNumeric!.Value, v.UnitText,
+                v.RangeLow, v.RangeHigh, v.Flag);
+
+        return new PatientHistory(patientId, months, await query.ToListAsync(ct));
+    }
+
     /// <summary>Entry model for a result id (verification screens open results, not order items).</summary>
     public async Task<EntryModel> GetByResultAsync(long resultId, CancellationToken ct)
     {

@@ -117,22 +117,81 @@
   .patient-hero { flex-wrap: wrap; }
   .dup-panel li { grid-template-columns: 1fr 1fr; }
   .details-grid { grid-template-columns: 1fr; }
+  .patient-order-row { align-items: flex-start; flex-direction: column; }
 }
 
-/* ---------- Printing: only the registration slip ---------- */
-.print-slip { display: none; }
+/* ---------- Result history chart ---------- */
+.history-toolbar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+.history-print-heading { display: none; }
+.history-chart-wrap { overflow-x: auto; padding: 18px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: linear-gradient(145deg, var(--primary-25), var(--surface) 48%); }
+.history-chart-title { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 12px; }
+.history-chart-title > div { display: flex; flex-direction: column; gap: 3px; }
+.history-chart-title strong { font-size: var(--text-lg); color: var(--text); }
+.history-chart-title span { color: var(--muted); font-size: var(--text-sm); }
+.history-chart-title > b { padding: 5px 10px; border-radius: var(--radius-full); color: var(--primary-700); background: var(--primary-50); font-size: var(--text-sm); }
+.history-chart { display: block; min-width: 560px; width: 100%; height: auto; overflow: visible; }
+.history-axis { stroke: var(--border-strong); stroke-width: 1; }
+.history-grid { stroke: var(--border); stroke-width: 1; stroke-dasharray: 4 5; }
+.history-axis-label, .history-date { fill: var(--muted); font-size: 11px; }
+.history-value { fill: var(--text); font-size: 11px; font-weight: 700; }
+.history-line { fill: none; stroke: var(--primary-600); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.history-range-low, .history-range-high { stroke: var(--success-600); stroke-width: 1.5; stroke-dasharray: 4 4; opacity: .55; }
+.history-point { stroke: var(--surface); stroke-width: 3; fill: var(--primary-600); }
+.history-point.flag-2, .history-point.flag-3 { fill: var(--warning-600); }
+.history-point.flag-4, .history-point.flag-5 { fill: var(--danger-600); }
+.history-points { width: 100%; margin-top: 16px; border-collapse: collapse; font-size: var(--text-sm); }
+.history-points th, .history-points td { padding: 7px 10px; border-bottom: 1px solid var(--border); text-align: start; }
+.history-points th { color: var(--muted); font-weight: 600; }
+.history-print-document { display: none; }
+
+/* Patient orders and issued reports */
+.patient-order-list { display: flex; flex-direction: column; }
+.patient-order-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+.patient-order-row:last-child { border-bottom: 0; }
+.patient-order-main, .patient-order-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px; }
+.patient-order-main { color: var(--muted); font-size: var(--text-sm); }
+.patient-order-number { color: var(--primary-700); font-weight: 700; }
+.patient-order-total { color: var(--muted); font-size: var(--text-sm); }
+.patient-order-total b { color: var(--text); }
+.patient-order-pagination { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-top: 12px; }
+
+/* ---------- Patient slip preview ---------- */
+.patient-slip-sheet { padding: 24px; border: 1px solid var(--border); border-radius: var(--radius-md); background: #fff; color: #17212b; }
+.patient-slip-sheet > header { display: flex; flex-direction: column; gap: 3px; padding-bottom: 14px; border-bottom: 1px solid #cbd2da; }
+.patient-slip-sheet > header strong { font-size: 1.15rem; }
+.patient-slip-sheet .slip-no { margin: 18px 0; color: var(--primary-700); font-size: 1.8rem; font-weight: 750; letter-spacing: .04em; text-align: center; }
+.patient-slip-sheet table { width: 100%; border-collapse: collapse; }
+.patient-slip-sheet th, .patient-slip-sheet td { padding: 8px 4px; border-bottom: 1px solid #e1e5e9; text-align: start; vertical-align: top; }
+.patient-slip-sheet th { width: 40%; color: #56616d; font-weight: 600; }
+.patient-slip-sheet > footer { margin-top: 20px; color: #56616d; font-size: .85rem; text-align: center; }
+
 @media print {
-  @page { size: A5 portrait; margin: 12mm; }
+  @page { size: A4 portrait; margin: 12mm; }
   body { background: #fff; }
   .sidebar, .header, .no-print, .toasts { display: none !important; }
   .main { margin: 0 !important; }
   .page { padding: 0; max-width: none; }
-  .print-slip { display: block; color: #000; font-size: 11pt; }
-  .print-slip header { display: flex; flex-direction: column; gap: 2px; padding-bottom: 6mm; border-bottom: 1px solid #000; }
-  .print-slip header strong { font-size: 14pt; }
-  .slip-no { margin: 6mm 0; font-size: 26pt; font-weight: 700; letter-spacing: 0.04em; text-align: center; }
-  .print-slip table { width: 100%; border-collapse: collapse; }
-  .print-slip th, .print-slip td { padding: 2mm 0; border-bottom: 0.5pt solid #bbb; text-align: start; vertical-align: top; }
-  .print-slip th { width: 38%; font-weight: 600; color: #333; }
-  .print-slip footer { margin-top: 8mm; font-size: 9pt; color: #444; text-align: center; }
+  body.printing-history > *:not(.history-print-document) { display: none !important; }
+  body.printing-history > .history-print-document { display: block !important; }
+  body.printing-history .history-print-document { color: #111; font-size: 10pt; }
+  body.printing-history .history-print-document > header { display: flex; flex-wrap: wrap; gap: 4mm 8mm; align-items: baseline; margin-bottom: 8mm; padding-bottom: 4mm; border-bottom: 1px solid #adb5bd; }
+  body.printing-history .history-print-document > header strong { font-size: 15pt; }
+  body.printing-history .history-print-document > header h1 { width: 100%; margin: 0; font-size: 13pt; }
+  body.printing-history .history-chart-wrap { overflow: visible; padding: 5mm; border-color: #b8c0c8; background: #fff; }
+  body.printing-history .history-chart { min-width: 0; }
+  body.printing-history .history-points { break-inside: avoid; }
+  body.printing-history .history-points thead { display: table-header-group; }
+
+  body.printing-patient-slip > *:not(.overlay) { display: none !important; }
+  body.printing-patient-slip .overlay { position: static; display: block; padding: 0; overflow: visible; background: #fff; }
+  body.printing-patient-slip .modal { width: auto; max-width: none; max-height: none; overflow: visible; border: 0; box-shadow: none; }
+  body.printing-patient-slip .modal-header, body.printing-patient-slip .modal-footer { display: none !important; }
+  body.printing-patient-slip .modal-body { padding: 0; overflow: visible; }
+  body.printing-patient-slip .patient-slip-sheet { min-height: 150mm; padding: 8mm; border: 0; border-radius: 0; color: #000; font-size: 11pt; }
+  body.printing-patient-slip .patient-slip-sheet > header { padding-bottom: 6mm; border-bottom: 1px solid #000; }
+  body.printing-patient-slip .patient-slip-sheet > header strong { font-size: 14pt; }
+  body.printing-patient-slip .patient-slip-sheet .slip-no { margin: 6mm 0; color: #000; font-size: 26pt; }
+  body.printing-patient-slip .patient-slip-sheet th, body.printing-patient-slip .patient-slip-sheet td { padding: 2mm 0; border-bottom: .5pt solid #bbb; }
+  body.printing-patient-slip .patient-slip-sheet th { color: #333; }
+  body.printing-patient-slip .patient-slip-sheet > footer { margin-top: 8mm; color: #444; font-size: 9pt; }
 }
