@@ -125,7 +125,7 @@ public sealed class Phase12ApiTests(DatabaseFixture fx)
         var admin = await A("SYSADMIN");
         Assert.Equal("range_invalid", await ApiClient.Code(await admin.GetAsync("/api/dashboard/summary?range=year")));
         Assert.Equal(30, (await Get(admin, "/api/dashboard/summary?range=d30")).GetProperty("trend").GetArrayLength());
-        Assert.Equal(14, (await Get(admin, "/api/dashboard/summary?range=d7")).GetProperty("trend").GetArrayLength());
+        Assert.Equal(7, (await Get(admin, "/api/dashboard/summary?range=d7")).GetProperty("trend").GetArrayLength());
         Assert.Equal(HttpStatusCode.Unauthorized, (await (await Api.ClientAsync()).GetAsync("/api/dashboard/summary")).StatusCode);
 
         var before = (await Get(admin, "/api/dashboard/summary?range=today")).GetProperty("stats").GetProperty("totalPatients").GetInt32();

@@ -33,6 +33,18 @@
   flex-shrink: 0;
   overflow: hidden;
 }
+/* The brand block itself opens the dashboard. */
+a.sidebar-brand {
+  color: inherit;
+  transition: background var(--transition);
+}
+a.sidebar-brand:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: inherit;
+}
+a.sidebar-brand:focus-visible {
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.45);
+}
 .brand-mark {
   width: 32px;
   height: 32px;

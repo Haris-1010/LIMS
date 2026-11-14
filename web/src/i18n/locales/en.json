@@ -182,9 +182,15 @@
     "subtitle": "Here's what's happening across your laboratory.",
     "range": {
       "today": "Today",
-      "d7": "7 days",
-      "d30": "30 days"
+      "yesterday": "Yesterday",
+      "d7": "Last 7 days",
+      "d30": "Last 30 days",
+      "this_month": "This month",
+      "last_month": "Last month",
+      "all": "All time",
+      "custom": "Custom dates"
     },
+    "period": "Period",
     "export": "Export",
     "refresh": "Refresh",
     "vsPrevious": "vs previous period",

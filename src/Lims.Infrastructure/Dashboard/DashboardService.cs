@@ -28,17 +28,24 @@ public sealed class DashboardService(LimsDbContext db, SampleService samples, Re
 
     public async Task<DashboardSummary> SummaryAsync(DashboardQuery q, CancellationToken ct)
     {
-        if (q.Range is not ("today" or "d7" or "d30" or "custom")) throw new BusinessRuleException("range_invalid", "Choose a valid dashboard date range.");
+        if (q.Range is not ("today" or "yesterday" or "d7" or "d30" or "this_month" or "last_month" or "all" or "custom")) throw new BusinessRuleException("range_invalid", "Choose a valid dashboard date range.");
         var ctx = db.Request;
         var branch = ctx.ActiveBranchId;
         var now = clock.UtcNow;
         var today = DateOnly.FromDateTime(clock.LocalNow);
-        var from = q.Range == "custom" ? q.From : today.AddDays(-(DashboardRules.DaysOf(q.Range) - 1));
-        var to = q.Range == "custom" ? q.To : today;
-        if (from is null || to is null || from > to) throw new BusinessRuleException("range_invalid", "Choose a valid date range.");
-        var days = to.Value.DayNumber - from.Value.DayNumber + 1;
-        var since = clock.LocalDateStartUtc(from.Value);
-        var prevSince = clock.LocalDateStartUtc(from.Value.AddDays(-days));
+        DateOnly from, to;
+        if (q.Range == "custom")
+        {
+            if (q.From is null || q.To is null || q.From > q.To) throw new BusinessRuleException("range_invalid", "Choose a valid date range.");
+            (from, to) = (q.From.Value, q.To.Value);
+        }
+        else
+        {
+            (from, to) = DashboardRules.Period(q.Range, today);
+        }
+        var days = to.DayNumber - from.DayNumber + 1;
+        var since = clock.LocalDateStartUtc(from);
+        var prevSince = clock.LocalDateStartUtc(from.AddDays(-days));
 
         var s = new DashboardSections(
             Patients: ctx.Can(Permissions.PatientsView), Orders: ctx.Can(Permissions.OrdersView), Samples: ctx.Can(Permissions.SamplesView), Results: ctx.Can(Permissions.ResultsView),
@@ -97,12 +104,12 @@ public sealed class DashboardService(LimsDbContext db, SampleService samples, Re
             prevCash = await pay.Where(p => p.ReceivedAtUtc >= prevSince && p.ReceivedAtUtc < since).SumAsync(p => (decimal?)p.Amount, ct) ?? 0;
 
             var trendDays = Math.Min(days, 31);
-            var trendSince = clock.LocalDateStartUtc(to.Value.AddDays(-(trendDays - 1)));
+            var trendSince = clock.LocalDateStartUtc(to.AddDays(-(trendDays - 1)));
             var payRows = await pay.Where(p => p.ReceivedAtUtc >= trendSince).Select(p => new { p.ReceivedAtUtc, p.Amount }).ToListAsync(ct);
             var creditRows = await inv.Where(i => i.CorporateClientId != null && i.CreatedAtUtc >= trendSince).Select(i => new { i.CreatedAtUtc, i.Net }).ToListAsync(ct);
             var cashByDay = payRows.GroupBy(r => DateOnly.FromDateTime(clock.ToLocal(r.ReceivedAtUtc))).ToDictionary(g => g.Key, g => g.Sum(r => r.Amount));
             var creditByDay = creditRows.GroupBy(r => DateOnly.FromDateTime(clock.ToLocal(r.CreatedAtUtc))).ToDictionary(g => g.Key, g => g.Sum(r => r.Net));
-            for (var d = to.Value.AddDays(-(trendDays - 1)); d <= to.Value; d = d.AddDays(1))
+            for (var d = to.AddDays(-(trendDays - 1)); d <= to; d = d.AddDays(1))
                 trend.Add(new TrendPoint(d.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), cashByDay.GetValueOrDefault(d), creditByDay.GetValueOrDefault(d)));
         }
         if (s.Corporate)

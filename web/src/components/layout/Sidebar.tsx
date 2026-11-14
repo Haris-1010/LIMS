@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ChevronRight, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { navigation, type NavItem } from '../../app/navigation'
@@ -28,13 +28,13 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
   return (
     <aside className="sidebar" aria-label={t('app.name')}>
-      <div className="sidebar-brand">
+      <Link to="/" className="sidebar-brand" aria-label={t('nav.dashboard')}>
         <BrandMark />
         <div className="brand-text">
           <span className="brand-name">{t('app.name')}</span>
           <span className="brand-tag">{t('app.tagline')}</span>
         </div>
-      </div>
+      </Link>
 
       <nav className="sidebar-nav">
         {navigation.map((group) => {

@@ -11,6 +11,33 @@
   box-shadow: var(--shadow-sm);
 }
 
+/* Period selector in the dashboard toolbar */
+.period-filter {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.period-filter-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-sm);
+  color: var(--muted);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.period-filter-label svg {
+  color: var(--warning-text);
+}
+.period-select {
+  width: auto;
+  min-width: 170px;
+}
+@media (max-width: 640px) {
+  .period-filter { width: 100%; }
+  .period-select { flex: 1; min-width: 0; }
+}
+
 /* Chart tooltip */
 .chart-tip {
   min-width: 180px;

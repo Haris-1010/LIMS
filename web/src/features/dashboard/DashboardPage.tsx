@@ -12,6 +12,7 @@ import {
   ClipboardCheck,
   ClipboardList,
   FileCheck2,
+  Filter,
   FlaskConical,
   RefreshCw,
   Table2,
@@ -30,19 +31,23 @@ import { EmptyState } from '../../components/ui/EmptyState'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { StatCard } from '../../components/ui/StatCard'
 import { formatCompact, formatLongDate, formatMoney, formatNumber, formatShortDate } from '../../lib/format'
-import { dashboardKeys, fetchDashboardSummary, type ActivityType, type DashboardRange, type DashboardSummary } from './dashboardApi'
+import { dashboardKeys, dashboardRanges, fetchDashboardSummary, type ActivityType, type DashboardRange, type DashboardSummary } from './dashboardApi'
 import './dashboard.css'
 
 export function DashboardPage() {
   const { t, i18n } = useTranslation()
-  const { user } = useSession()
+  const { user, can } = useSession()
   const branchId = user?.activeBranchId ?? 'all'
   const [range, setRange] = useState<DashboardRange>('today')
   const [dates, setDates] = useState<DateRangeValue>({ from: '', to: '' })
 
+  // "Custom dates" needs both ends; until they are chosen the page keeps showing today.
+  const effectiveRange = range === 'custom' && !(dates.from && dates.to) ? 'today' : range
+  const queryDates = effectiveRange === 'custom' ? dates : undefined
+
   const { data, isLoading, isFetching, refetch } = useQuery({
-    queryKey: dashboardKeys.summary(range, branchId, dates),
-    queryFn: () => fetchDashboardSummary(range, dates),
+    queryKey: dashboardKeys.summary(range, branchId, queryDates),
+    queryFn: () => fetchDashboardSummary(effectiveRange, queryDates),
     refetchInterval: 60_000, // the figures are live: refresh once a minute while the page is open
   })
 
@@ -50,6 +55,8 @@ export function DashboardPage() {
   const s = data?.stats
   // While loading everything shows as a skeleton; afterwards a part the person may not see is left out.
   const show = (k: keyof DashboardSummary['sections']) => !data || data.sections[k]
+  // Every card opens the first of these pages the person is allowed to see, so a click never lands on "not permitted".
+  const linkTo = (...targets: [path: string, permission: string][]) => targets.find(([, permission]) => can(permission))?.[0]
 
   return (
     <div className="page">
@@ -61,14 +68,23 @@ export function DashboardPage() {
           </p>
         </div>
         <div className="toolbar">
-          <div className="segmented" role="group" aria-label="Date range">
-            {(['today', 'd7', 'd30'] as const).map((r) => (
-              <button key={r} type="button" aria-pressed={range === r} onClick={() => setRange(r)}>
-                {t(`dashboard.range.${r}`)}
-              </button>
-            ))}
+          <div className="period-filter">
+            <label htmlFor="dashboard-period" className="period-filter-label">
+              <Filter size={16} aria-hidden />
+              {t('dashboard.period')}
+            </label>
+            <select
+              id="dashboard-period"
+              className="select period-select"
+              value={range}
+              onChange={(e) => setRange(e.target.value as DashboardRange)}
+            >
+              {dashboardRanges.map((r) => (
+                <option key={r} value={r}>{t(`dashboard.range.${r}`)}</option>
+              ))}
+            </select>
           </div>
-          <DateRangeFilter value={dates} onChange={(v) => { setDates(v); setRange(v.from && v.to ? 'custom' : 'today') }} />
+          {range === 'custom' && <DateRangeFilter value={dates} onChange={setDates} />}
           <Button
             iconOnly
             aria-label={t('dashboard.refresh')}
@@ -87,6 +103,7 @@ export function DashboardPage() {
             value={s ? formatNumber(s.totalPatients) : ''}
             icon={<Users size={18} />}
             foot={t('dashboard.stats.allTime')}
+            to={linkTo(['/patients', 'patients.view'])}
           />
         )}
         {show('patients') && (
@@ -96,8 +113,9 @@ export function DashboardPage() {
             value={s ? formatNumber(s.registrations) : ''}
             icon={<UserPlus size={18} />}
             tone="accent"
-            delta={s?.registrationsDelta}
-            foot={t('dashboard.vsPrevious')}
+            delta={range === 'all' ? undefined : s?.registrationsDelta}
+            foot={range === 'all' ? t('dashboard.stats.allTime') : t('dashboard.vsPrevious')}
+            to={linkTo(['/patients', 'patients.view'])}
           />
         )}
         {show('orders') && (
@@ -106,8 +124,9 @@ export function DashboardPage() {
             label={t('dashboard.stats.todayOrders')}
             value={s ? formatNumber(s.orders) : ''}
             icon={<ClipboardList size={18} />}
-            delta={s?.ordersDelta}
-            foot={t('dashboard.vsPrevious')}
+            delta={range === 'all' ? undefined : s?.ordersDelta}
+            foot={range === 'all' ? t('dashboard.stats.allTime') : t('dashboard.vsPrevious')}
+            to={linkTo(['/orders', 'orders.view'])}
           />
         )}
         {show('money') && (
@@ -117,8 +136,9 @@ export function DashboardPage() {
             value={s ? formatMoney(s.cashCollected) : ''}
             icon={<Banknote size={18} />}
             tone="success"
-            delta={s?.cashDelta}
-            foot={t('dashboard.vsPrevious')}
+            delta={range === 'all' ? undefined : s?.cashDelta}
+            foot={range === 'all' ? t('dashboard.stats.allTime') : t('dashboard.vsPrevious')}
+            to={linkTo(['/billing/payments', 'payments.collect'], ['/billing/invoices', 'billing.view'])}
           />
         )}
       </div>
@@ -132,6 +152,7 @@ export function DashboardPage() {
             icon={<TestTube2 size={18} />}
             tone="warning"
             foot={s && <span className="text-warning">{t('dashboard.stats.toCollect', { count: s.overdueSamples })}</span>}
+            to={linkTo(['/samples/collection', 'samples.collect'], ['/samples/tracking', 'samples.view'])}
           />
         )}
         {show('results') && (
@@ -141,6 +162,7 @@ export function DashboardPage() {
             value={s ? formatNumber(s.testsInProgress) : ''}
             icon={<FlaskConical size={18} />}
             foot={s && t('dashboard.stats.acrossDepartments', { count: s.departments })}
+            to={linkTo(['/results/entry', 'results.enter'])}
           />
         )}
         {show('results') && (
@@ -151,6 +173,11 @@ export function DashboardPage() {
             icon={<ClipboardCheck size={18} />}
             tone="danger"
             foot={s && (s.awaitingApproval > 0 ? t('dashboard.stats.oldest', { time: waitLabel(s.oldestWaitingMinutes, t) }) : t('dashboard.stats.nothingWaiting'))}
+            to={linkTo(
+              ['/results/verification', 'results.verify'],
+              ['/critical-alerts', 'results.critical'],
+              ['/results/entry', 'results.enter'],
+            )}
           />
         )}
         {show('reports') && (
@@ -161,6 +188,7 @@ export function DashboardPage() {
             icon={<FileCheck2 size={18} />}
             tone="success"
             foot={s && t('dashboard.stats.readyToPrint', { count: s.readyToPrint })}
+            to={linkTo(['/reports', 'reports.view'])}
           />
         )}
         {show('corporate') && (
@@ -171,6 +199,7 @@ export function DashboardPage() {
             icon={<Building2 size={18} />}
             tone="accent"
             foot={s && t('dashboard.stats.clients', { count: s.corporateClients })}
+            to={linkTo(['/corporate/invoices', 'corporate.invoice'], ['/corporate/clients', 'corporate.view'])}
           />
         )}
       </div>

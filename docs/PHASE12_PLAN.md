@@ -3,7 +3,7 @@
 _Status: **built and tested** (see `IMPLEMENTATION_STATUS.md`). The decisions below (39-45 in `DECISIONS.md`) were taken as sensible defaults so the phase could proceed; they are open for the owner to change._
 
 ## 1. Scope
-**Live dashboard** (`GET /api/dashboard/summary?range=today|d7|d30`) replaces the sample data of the Phase 1 prototype. For the working branch (every branch the user may see when none is selected), all from live data:
+**Live dashboard** (`GET /api/dashboard/summary?range=today|yesterday|d7|d30|this_month|last_month|all|custom`) replaces the sample data of the Phase 1 prototype. For the working branch (every branch the user may see when none is selected), all from live data:
 - **Patients and orders**: total patients (organisation-wide), new registrations and orders in the period, each with the change against the previous period of the same length (a change from nothing shows as +100%).
 - **Samples**: waiting to be collected or on their way, and *overdue* = still planned or collected more than 24 hours after being created.
 - **Results**: in progress (drafted, submitted or verified, not released), the departments they are in, awaiting approval (verified) with the oldest wait, the six oldest waiting for approval (with a critical/abnormal/normal flag), and released in the period.

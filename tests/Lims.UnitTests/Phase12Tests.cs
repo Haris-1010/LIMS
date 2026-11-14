@@ -19,13 +19,23 @@ public class Phase12Tests
     public void The_change_against_the_previous_period_is_a_rounded_percentage(int current, int previous, double expected) =>
         Assert.Equal(expected, DashboardRules.Delta(current, previous));
 
-    [Theory]
-    [InlineData(null, 1)]
-    [InlineData("today", 1)]
-    [InlineData("d7", 7)]
-    [InlineData("d30", 30)]
-    [InlineData("anything", 1)]
-    public void Ranges_map_to_a_number_of_days(string? range, int days) => Assert.Equal(days, DashboardRules.DaysOf(range));
+    [Fact]
+    public void Periods_map_to_a_local_date_range()
+    {
+        var today = new DateOnly(2026, 11, 14);
+        Assert.Equal((today, today), DashboardRules.Period("today", today));
+        Assert.Equal((today.AddDays(-1), today.AddDays(-1)), DashboardRules.Period("yesterday", today));
+        Assert.Equal((today.AddDays(-6), today), DashboardRules.Period("d7", today));
+        Assert.Equal((today.AddDays(-29), today), DashboardRules.Period("d30", today));
+        Assert.Equal((new DateOnly(2026, 11, 1), today), DashboardRules.Period("this_month", today));
+        Assert.Equal((new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 31)), DashboardRules.Period("last_month", today));
+        Assert.Equal((DashboardRules.AllTimeFrom, today), DashboardRules.Period("all", today));
+        Assert.Equal((today, today), DashboardRules.Period("anything", today));
+
+        // January: the previous month is December of the year before.
+        var january = new DateOnly(2027, 1, 15);
+        Assert.Equal((new DateOnly(2026, 12, 1), new DateOnly(2026, 12, 31)), DashboardRules.Period("last_month", january));
+    }
 
     [Fact]
     public void Audit_changes_are_read_from_row_changes_and_from_named_actions()

@@ -312,6 +312,30 @@
   padding: var(--space-4) var(--space-5);
   min-height: 118px;
 }
+/* A card that opens a page: the whole tile is one link. */
+.stat-link {
+  color: inherit;
+  transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
+}
+.stat-link:hover {
+  color: inherit;
+  border-color: var(--primary-300);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+.stat-link:focus-visible {
+  border-color: var(--primary-300);
+  box-shadow: var(--ring);
+}
+.stat-go {
+  margin-inline-start: auto;
+  color: var(--subtle);
+  transition: color var(--transition);
+}
+.stat-link:hover .stat-label,
+.stat-link:hover .stat-go {
+  color: var(--primary-600);
+}
 .stat-top {
   display: flex;
   align-items: center;
@@ -934,7 +958,7 @@
   font-size: var(--text-sm);
 }
 .splash-inner { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); }
-.splash .brand-mark { width: 44px; height: 44px; animation: pulse 1.4s ease-in-out infinite; }
+.splash .brand-mark { width: 44px; height: 44px; border-radius: 10px; animation: pulse 1.4s ease-in-out infinite; }
 @keyframes pulse { 50% { opacity: 0.55; } }
 .tabs { scrollbar-width: none; }
 .tabs::-webkit-scrollbar { display: none; }

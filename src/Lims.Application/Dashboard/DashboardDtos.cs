@@ -1,6 +1,8 @@
 namespace Lims.Application.Dashboard;
 
-/// <summary>today = the current local day, d7 = last 7 days including today, d30 = last 30 days including today.</summary>
+/// <summary>
+/// The selected period: today, yesterday, d7/d30 (including today), this_month, last_month, all or custom (with From/To).
+/// </summary>
 public sealed record DashboardQuery
 {
     public string Range { get; init; } = "today";

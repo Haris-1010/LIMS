@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
-import { ArrowDownRight, ArrowUpRight } from 'lucide-react'
+import { ArrowDownRight, ArrowRight, ArrowUpRight } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { Skeleton } from './Skeleton'
 
 interface StatCardProps {
@@ -13,9 +14,11 @@ interface StatCardProps {
   upIsGood?: boolean
   foot?: ReactNode
   loading?: boolean
+  /** When set, the whole card links to this page. */
+  to?: string
 }
 
-export function StatCard({ label, value, icon, tone = 'primary', delta, upIsGood = true, foot, loading }: StatCardProps) {
+export function StatCard({ label, value, icon, tone = 'primary', delta, upIsGood = true, foot, loading, to }: StatCardProps) {
   if (loading) {
     return (
       <div className="card stat" aria-busy>
@@ -30,8 +33,8 @@ export function StatCard({ label, value, icon, tone = 'primary', delta, upIsGood
   }
 
   const good = delta === undefined ? undefined : delta >= 0 === upIsGood
-  return (
-    <div className="card stat">
+  const body = (
+    <>
       <div className="stat-top">
         <span className="stat-label">{label}</span>
         <span className={`stat-icon tone-${tone}`} aria-hidden>
@@ -47,7 +50,16 @@ export function StatCard({ label, value, icon, tone = 'primary', delta, upIsGood
           </span>
         )}
         {foot}
+        {to && <ArrowRight size={14} className="stat-go flip-rtl" aria-hidden />}
       </span>
-    </div>
+    </>
+  )
+
+  return to ? (
+    <Link to={to} className="card stat stat-link">
+      {body}
+    </Link>
+  ) : (
+    <div className="card stat">{body}</div>
   )
 }

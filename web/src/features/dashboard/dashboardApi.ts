@@ -1,7 +1,10 @@
 /* Contract of GET /api/dashboard/summary (see Lims.Application.Dashboard). Every figure comes from live data. */
 import { api } from '../../lib/api'
 
-export type DashboardRange = 'today' | 'd7' | 'd30' | 'custom'
+export type DashboardRange = 'today' | 'yesterday' | 'd7' | 'd30' | 'this_month' | 'last_month' | 'all' | 'custom'
+
+/** Order of the period menu in the toolbar. */
+export const dashboardRanges: DashboardRange[] = ['today', 'yesterday', 'd7', 'd30', 'this_month', 'last_month', 'all', 'custom']
 export type PipelineStage = 'awaitingCollection' | 'collected' | 'received' | 'inProcess' | 'completed' | 'rejected'
 export type ActivityType = 'registration' | 'payment' | 'approval' | 'rejection' | 'critical'
 
